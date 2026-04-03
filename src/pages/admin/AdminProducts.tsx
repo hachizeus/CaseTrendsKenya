@@ -3,38 +3,47 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Plus, Pencil, Trash2, Upload, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
+const colorOptions = ["Black", "White", "Blue", "Red", "Green", "Gold", "Silver", "Pink", "Purple", "Gray", "Orange", "Yellow"];
+
 const AdminProducts = () => {
   const [products, setProducts] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
   const [editing, setEditing] = useState<any>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [form, setForm] = useState({ name: "", description: "", price: "", original_price: "", category: "", brand: "", stock_status: "in_stock", is_featured: false, is_trending: false });
+  const [form, setForm] = useState({ name: "", description: "", price: "", original_price: "", category: "", brand: "", color: "", stock_status: "in_stock", is_featured: false, is_trending: false });
 
-  useEffect(() => { loadProducts(); }, []);
+  useEffect(() => { loadProducts(); loadCategories(); }, []);
 
   const loadProducts = async () => {
     const { data } = await supabase.from("products").select("*, product_images(*)").order("created_at", { ascending: false });
     setProducts(data || []);
   };
 
+  const loadCategories = async () => {
+    const { data } = await supabase.from("categories").select("name").eq("is_active", true).order("display_order");
+    setCategories(data || []);
+  };
+
   const openNew = () => {
     setEditing(null);
-    setForm({ name: "", description: "", price: "", original_price: "", category: "", brand: "", stock_status: "in_stock", is_featured: false, is_trending: false });
+    setForm({ name: "", description: "", price: "", original_price: "", category: categories[0]?.name || "", brand: "", color: "", stock_status: "in_stock", is_featured: false, is_trending: false });
     setDialogOpen(true);
   };
 
   const openEdit = (p: any) => {
     setEditing(p);
-    setForm({ name: p.name, description: p.description || "", price: String(p.price), original_price: p.original_price ? String(p.original_price) : "", category: p.category, brand: p.brand, stock_status: p.stock_status, is_featured: p.is_featured, is_trending: p.is_trending });
+    setForm({ name: p.name, description: p.description || "", price: String(p.price), original_price: p.original_price ? String(p.original_price) : "", category: p.category, brand: p.brand, color: p.color || "", stock_status: p.stock_status, is_featured: p.is_featured, is_trending: p.is_trending });
     setDialogOpen(true);
   };
 
   const handleSave = async () => {
-    const payload = { name: form.name, description: form.description || null, price: Number(form.price), original_price: form.original_price ? Number(form.original_price) : null, category: form.category, brand: form.brand, stock_status: form.stock_status, is_featured: form.is_featured, is_trending: form.is_trending };
+    if (!form.name || !form.price || !form.category || !form.brand) { toast.error("Fill in required fields"); return; }
+    const payload = { name: form.name, description: form.description || null, price: Number(form.price), original_price: form.original_price ? Number(form.original_price) : null, category: form.category, brand: form.brand, color: form.color || null, stock_status: form.stock_status, is_featured: form.is_featured, is_trending: form.is_trending };
     if (editing) {
       const { error } = await supabase.from("products").update(payload).eq("id", editing.id);
       if (error) { toast.error(error.message); return; }
@@ -69,14 +78,12 @@ const AdminProducts = () => {
       const ext = file.name.split(".").pop();
       const path = `${productId}/${Date.now()}_${i}.${ext}`;
 
-      // Try background removal via edge function
       let processedFile = file;
       try {
         const formData = new FormData();
         formData.append("image", file);
         const res = await supabase.functions.invoke("remove-bg", { body: formData });
         if (res.data && !res.error) {
-          // Convert base64 back to file
           const byteString = atob(res.data.image);
           const ab = new ArrayBuffer(byteString.length);
           const ia = new Uint8Array(ab);
@@ -110,7 +117,7 @@ const AdminProducts = () => {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Products</h1>
+        <h1 className="text-2xl font-bold">Products ({products.length})</h1>
         <Button onClick={openNew}><Plus className="w-4 h-4 mr-2" /> Add Product</Button>
       </div>
 
@@ -120,7 +127,7 @@ const AdminProducts = () => {
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1">
                 <h3 className="font-semibold">{p.name}</h3>
-                <p className="text-sm text-muted-foreground">{p.brand} · {p.category} · KSh {Number(p.price).toLocaleString()}</p>
+                <p className="text-sm text-muted-foreground">{p.brand} · {p.category}{p.color ? ` · ${p.color}` : ""} · KSh {Number(p.price).toLocaleString()}</p>
                 <div className="flex gap-1 mt-2 flex-wrap">
                   {p.product_images?.sort((a: any, b: any) => a.display_order - b.display_order).map((img: any) => (
                     <div key={img.id} className="relative group">
@@ -154,23 +161,38 @@ const AdminProducts = () => {
             <DialogTitle>{editing ? "Edit Product" : "New Product"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div><Label>Name</Label><Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} /></div>
+            <div><Label>Name *</Label><Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} /></div>
             <div><Label>Description</Label><textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} className="w-full p-3 border rounded-lg text-sm h-20 resize-none bg-background" /></div>
             <div className="grid grid-cols-2 gap-4">
-              <div><Label>Price (KSh)</Label><Input type="number" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} /></div>
+              <div><Label>Price (KSh) *</Label><Input type="number" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} /></div>
               <div><Label>Original Price</Label><Input type="number" value={form.original_price} onChange={e => setForm(f => ({ ...f, original_price: e.target.value }))} placeholder="Leave empty if no discount" /></div>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div><Label>Category</Label><Input value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} /></div>
-              <div><Label>Brand</Label><Input value={form.brand} onChange={e => setForm(f => ({ ...f, brand: e.target.value }))} /></div>
+              <div>
+                <Label>Category *</Label>
+                <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} className="w-full p-2 border rounded-lg bg-background text-sm">
+                  <option value="">Select category</option>
+                  {categories.map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
+                </select>
+              </div>
+              <div><Label>Brand *</Label><Input value={form.brand} onChange={e => setForm(f => ({ ...f, brand: e.target.value }))} /></div>
             </div>
-            <div>
-              <Label>Stock Status</Label>
-              <select value={form.stock_status} onChange={e => setForm(f => ({ ...f, stock_status: e.target.value }))} className="w-full p-2 border rounded-lg bg-background text-sm">
-                <option value="in_stock">In Stock</option>
-                <option value="out_of_stock">Out of Stock</option>
-                <option value="low_stock">Low Stock</option>
-              </select>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Color</Label>
+                <select value={form.color} onChange={e => setForm(f => ({ ...f, color: e.target.value }))} className="w-full p-2 border rounded-lg bg-background text-sm">
+                  <option value="">No color</option>
+                  {colorOptions.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+              <div>
+                <Label>Stock Status</Label>
+                <select value={form.stock_status} onChange={e => setForm(f => ({ ...f, stock_status: e.target.value }))} className="w-full p-2 border rounded-lg bg-background text-sm">
+                  <option value="in_stock">In Stock</option>
+                  <option value="out_of_stock">Out of Stock</option>
+                  <option value="low_stock">Low Stock</option>
+                </select>
+              </div>
             </div>
             <div className="flex gap-4">
               <label className="flex items-center gap-2 text-sm">

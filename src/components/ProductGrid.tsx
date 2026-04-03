@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import ProductCard from "./ProductCard";
 
@@ -11,7 +12,8 @@ const ProductGrid = () => {
       const { data } = await supabase
         .from("products")
         .select("*, product_images(*)")
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .limit(10);
       setProducts(data || []);
       setLoading(false);
     };
@@ -22,7 +24,9 @@ const ProductGrid = () => {
     return (
       <section id="products" className="pb-12">
         <div className="container">
-          <h2 className="text-xl sm:text-2xl font-bold mb-6">Latest in Stock</h2>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl sm:text-2xl font-bold">Latest in Stock</h2>
+          </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
             {Array.from({ length: 10 }).map((_, i) => (
               <div key={i} className="bg-card rounded-lg border border-border animate-pulse">
@@ -43,7 +47,10 @@ const ProductGrid = () => {
   return (
     <section id="products" className="pb-12">
       <div className="container">
-        <h2 className="text-xl sm:text-2xl font-bold mb-6">Latest in Stock</h2>
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl sm:text-2xl font-bold">Latest in Stock</h2>
+          <Link to="/products" className="text-sm text-primary hover:underline font-medium">View All →</Link>
+        </div>
         {products.length === 0 ? (
           <p className="text-center text-muted-foreground py-12">No products available yet.</p>
         ) : (
