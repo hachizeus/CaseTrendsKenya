@@ -74,6 +74,39 @@ export type Database = {
         }
         Relationships: []
       }
+      categories: {
+        Row: {
+          created_at: string
+          display_order: number
+          icon: string | null
+          id: string
+          is_active: boolean
+          name: string
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       favorites: {
         Row: {
           created_at: string
@@ -181,6 +214,7 @@ export type Database = {
         Row: {
           brand: string
           category: string
+          color: string | null
           created_at: string
           description: string | null
           id: string
@@ -195,6 +229,7 @@ export type Database = {
         Insert: {
           brand: string
           category: string
+          color?: string | null
           created_at?: string
           description?: string | null
           id?: string
@@ -209,6 +244,7 @@ export type Database = {
         Update: {
           brand?: string
           category?: string
+          color?: string | null
           created_at?: string
           description?: string | null
           id?: string

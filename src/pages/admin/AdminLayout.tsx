@@ -1,10 +1,11 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { Navigate, Outlet, Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Package, Image, Users, ArrowLeft } from "lucide-react";
+import { LayoutDashboard, Package, Image, Users, ArrowLeft, FolderTree } from "lucide-react";
 
 const adminLinks = [
   { path: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { path: "/admin/products", label: "Products", icon: Package },
+  { path: "/admin/categories", label: "Categories", icon: FolderTree },
   { path: "/admin/slides", label: "Hero Slides", icon: Image },
   { path: "/admin/users", label: "Users", icon: Users },
 ];
