@@ -1,105 +1,227 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ShoppingBag } from "lucide-react";
+import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import heroBannerFallback from "@/assets/hero-banner.jpg";
 
 const HeroBanner = () => {
   const [slides, setSlides] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [current, setCurrent] = useState(0);
+  const [direction, setDirection] = useState(1);
 
   useEffect(() => {
-    const load = async () => {
-      const { data } = await supabase.from("hero_slides").select("*").eq("is_active", true).order("display_order");
-      setSlides(data || []);
-    };
-    load();
+    setLoading(true);
+    // Try to fetch section 1 (Main Hero) with type bypass for newly created table
+    (supabase
+      .from("hero_sections" as any)
+      .select("*")
+      .eq("section_number", 1)
+      .maybeSingle() as any)
+      .then(({ data: section, error }: any) => {
+        if (error) {
+          console.error("HeroBanner - Error fetching hero_sections:", error);
+          setSlides([]);
+          setLoading(false);
+          return;
+        }
+        
+        if (!section) {
+          console.warn("HeroBanner - No hero section 1 found. Make sure you've inserted hero_sections data.");
+          setSlides([]);
+          setLoading(false);
+          return;
+        }
+        
+        supabase
+          .from("hero_slides")
+          .select("*")
+          .eq("section_id", section.id)
+          .eq("is_active", true)
+          .order("display_order")
+          .then(({ data }) => {
+            setSlides(data || []);
+            setLoading(false);
+          })
+          .catch((err) => {
+            console.error("HeroBanner - Error fetching hero slides:", err);
+            setSlides([]);
+            setLoading(false);
+          });
+      })
+      .catch((err: any) => {
+        console.error("HeroBanner - Catch error fetching hero_sections:", err);
+        setSlides([]);
+        setLoading(false);
+      });
   }, []);
+
+  const go = useCallback((idx: number) => {
+    setDirection(idx > current ? 1 : -1);
+    setCurrent(idx);
+  }, [current]);
+
+  const next = useCallback(() => {
+    if (slides.length > 1) go((current + 1) % slides.length);
+  }, [current, slides.length, go]);
 
   useEffect(() => {
     if (slides.length <= 1) return;
-    const timer = setInterval(() => setCurrent(c => (c + 1) % slides.length), 5000);
-    return () => clearInterval(timer);
-  }, [slides.length]);
+    const t = setInterval(next, 5000);
+    return () => clearInterval(t);
+  }, [slides.length, next]);
 
-  // Fallback to static banner if no slides
-  if (slides.length === 0) {
-    return (
-      <section className="relative overflow-hidden">
-        <div className="relative w-full h-[200px] sm:h-[300px] md:h-[380px]">
-          <img src={heroBannerFallback} alt="Latest smartphones" className="w-full h-full object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-r from-foreground/60 via-foreground/20 to-transparent" />
-          <div className="absolute inset-0 flex items-center">
-            <div className="container">
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-md text-primary-foreground">
-                <span className="inline-block bg-accent text-accent-foreground text-xs font-bold px-3 py-1 rounded-full mb-3">🔥 HOT DEALS</span>
-                <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold leading-tight mb-2">Latest Smartphones at Unbeatable Prices</h1>
-                <p className="text-sm sm:text-base opacity-90 mb-4">Free delivery across Nairobi. Genuine products with warranty.</p>
-                <a href="#products" className="inline-block bg-accent text-accent-foreground px-6 py-2.5 rounded-lg font-semibold text-sm hover:opacity-90 transition-opacity">Shop Now</a>
-              </motion.div>
-            </div>
-          </div>
-        </div>
-      </section>
-    );
-  }
+  // Skip animations on low-end devices
+  const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   const slide = slides[current];
 
-  return (
-    <section className="relative overflow-hidden">
-      <div className="relative w-full h-[200px] sm:h-[300px] md:h-[380px]">
-        <AnimatePresence mode="wait">
-          <motion.img
-            key={slide.id}
-            src={slide.image_url}
-            alt={slide.title}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.5 }}
-            className="w-full h-full object-cover absolute inset-0"
-          />
-        </AnimatePresence>
-        <div className="absolute inset-0 bg-gradient-to-r from-foreground/60 via-foreground/20 to-transparent" />
-        <div className="absolute inset-0 flex items-center">
-          <div className="container">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={slide.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.5 }}
-                className="max-w-md text-primary-foreground"
-              >
-                <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold leading-tight mb-2">{slide.title}</h1>
-                {slide.subtitle && <p className="text-sm sm:text-base opacity-90 mb-4">{slide.subtitle}</p>}
-                {slide.cta_text && (
-                  <a href={slide.cta_link || "#products"} className="inline-block bg-accent text-accent-foreground px-6 py-2.5 rounded-lg font-semibold text-sm hover:opacity-90 transition-opacity">
-                    {slide.cta_text}
-                  </a>
-                )}
-              </motion.div>
-            </AnimatePresence>
-          </div>
-        </div>
+  const variants = {
+    enter: (d: number) => ({ x: d > 0 ? "100%" : "-100%", opacity: 0 }),
+    center: { x: 0, opacity: 1 },
+    exit: (d: number) => ({ x: d > 0 ? "-100%" : "100%", opacity: 0 }),
+  };
 
-        {slides.length > 1 && (
-          <>
-            <button onClick={() => setCurrent(c => (c - 1 + slides.length) % slides.length)} className="absolute left-4 top-1/2 -translate-y-1/2 p-2 bg-card/80 rounded-full shadow-lg">
-              <ChevronLeft className="w-5 h-5" />
-            </button>
-            <button onClick={() => setCurrent(c => (c + 1) % slides.length)} className="absolute right-4 top-1/2 -translate-y-1/2 p-2 bg-card/80 rounded-full shadow-lg">
-              <ChevronRight className="w-5 h-5" />
-            </button>
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
-              {slides.map((_: any, i: number) => (
-                <button key={i} onClick={() => setCurrent(i)} className={`w-2 h-2 rounded-full transition-colors ${i === current ? "bg-primary-foreground" : "bg-primary-foreground/40"}`} />
-              ))}
+  const contentVariants = {
+    hidden: { opacity: 0, y: 30 },
+    visible: (delay: number) => ({
+      opacity: 1,
+      y: 0,
+      transition: {
+        delay: delay,
+        duration: 0.6,
+        ease: "easeOut",
+      },
+    }),
+    exit: { opacity: 0, y: -30, transition: { duration: 0.3 } },
+  };
+
+  return (
+    <section className="relative overflow-hidden bg-slate-100">
+      <div className="px-4 sm:px-[max(1rem,calc((100vw-1400px)/2))]">
+        <div className="relative overflow-hidden" style={{ height: "clamp(260px, 45vw, 480px)" }}>
+          {loading ? (
+            // Skeleton state
+            <div className="w-full h-full bg-gradient-to-r from-slate-200 to-slate-100 animate-pulse" />
+          ) : slides.length === 0 ? (
+            // Empty state
+            <div className="w-full h-full bg-slate-50 flex items-center justify-center border border-dashed border-border">
+              <div className="text-center text-muted-foreground">
+                <div className="text-lg font-semibold">No Hero Slides</div>
+                <div className="text-xs mt-1">Add slides in Admin → Hero Slides to display here</div>
+              </div>
             </div>
-          </>
-        )}
+          ) : (
+            // Carousel content
+            <>
+              <AnimatePresence custom={direction} mode="popLayout">
+                <motion.div
+                  key={slide.id}
+                  custom={direction}
+                  variants={variants}
+                  initial="enter"
+                  animate="center"
+                  exit="exit"
+                  transition={{ 
+                    type: "tween", 
+                    duration: prefersReducedMotion ? 0 : 0.6, 
+                    ease: "easeInOut" 
+                  }}
+                  className="absolute inset-0 flex will-change-transform"
+                >
+                  {/* Background Image with loading optimization */}
+                  <img
+                    src={slide.image_url}
+                    alt={slide.title || "Hero slide"}
+                    width={1400}
+                    height={480}
+                    className="w-full h-full object-cover object-top"
+                    loading="eager"
+                    decoding="sync"
+                  />
+                  
+                  {/* Dark Overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-black/65 via-black/35 to-transparent" />
+
+                  {/* Content - Title, Subtitle, Button */}
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="relative z-10 px-6 sm:px-12 lg:px-20 max-w-2xl">
+                      <AnimatePresence mode="wait">
+                        <motion.div
+                          key={`content-${slide.id}`}
+                          variants={contentVariants}
+                          initial="hidden"
+                          animate="visible"
+                          exit="exit"
+                          custom={0.35}
+                        >
+                          {/* Badge */}
+                          {slide.subtitle && (
+                            <motion.span
+                              variants={contentVariants}
+                              initial="hidden"
+                              animate="visible"
+                              custom={0.35}
+                              className="inline-block bg-primary text-white text-[10px] sm:text-xs font-bold tracking-widest uppercase px-3 sm:px-4 py-1.5 mb-3 sm:mb-4"
+                            >
+                              Featured
+                            </motion.span>
+                          )}
+
+                          {/* Title */}
+                          {slide.title && (
+                            <motion.h1
+                              variants={contentVariants}
+                              initial="hidden"
+                              animate="visible"
+                              custom={0.42}
+                              className="text-2xl sm:text-4xl lg:text-5xl font-black text-white leading-tight mb-2 sm:mb-4 max-w-lg"
+                            >
+                              {slide.title}
+                            </motion.h1>
+                          )}
+
+                          {/* Subtitle */}
+                          {slide.subtitle && (
+                            <motion.p
+                              variants={contentVariants}
+                              initial="hidden"
+                              animate="visible"
+                              custom={0.50}
+                              className="text-sm sm:text-base text-white/85 mb-4 sm:mb-6 leading-relaxed max-w-md"
+                            >
+                              {slide.subtitle}
+                            </motion.p>
+                          )}
+
+                          {/* CTA Button */}
+                          {slide.cta_text && (
+                            <motion.div
+                              variants={contentVariants}
+                              initial="hidden"
+                              animate="visible"
+                              custom={0.58}
+                            >
+                              <Link
+                                to={slide.cta_link || "/products"}
+                                className="inline-flex items-center gap-2 bg-white text-slate-900 px-6 sm:px-8 py-3 sm:py-4 font-bold text-sm sm:text-base hover:bg-primary hover:text-white transition-all duration-300 hover:gap-3"
+                              >
+                                <ShoppingBag className="w-4 h-4 sm:w-5 sm:h-5" />
+                                <span>{slide.cta_text}</span>
+                              </Link>
+                            </motion.div>
+                          )}
+                        </motion.div>
+                      </AnimatePresence>
+                    </div>
+                  </div>
+                </motion.div>
+              </AnimatePresence>
+
+              {/* Auto-rotating carousel - no controls */}
+            </>
+          )}
+        </div>
       </div>
     </section>
   );

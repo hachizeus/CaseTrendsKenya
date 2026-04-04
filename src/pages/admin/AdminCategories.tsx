@@ -4,22 +4,30 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Plus, Pencil, Trash2, GripVertical } from "lucide-react";
+import { Plus, Pencil, Trash2, Smartphone, Tablet, Headphones, Gamepad2, Watch, Cable, Tv, Camera, Laptop, Speaker, Battery, Wifi } from "lucide-react";
 import { toast } from "sonner";
+import { TableSkeleton } from "@/components/SkeletonVariants";
+import type { LucideIcon } from "lucide-react";
 
-const iconOptions = ["Smartphone", "Tablet", "Headphones", "Gamepad2", "Watch", "Cable", "Tv", "Camera", "Laptop", "Speaker", "Battery", "Wifi"];
+const iconMap: Record<string, LucideIcon> = { Smartphone, Tablet, Headphones, Gamepad2, Watch, Cable, Tv, Camera, Laptop, Speaker, Battery, Wifi };
+const iconOptions = Object.keys(iconMap);
 
 const AdminCategories = () => {
   const [categories, setCategories] = useState<any[]>([]);
   const [editing, setEditing] = useState<any>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [form, setForm] = useState({ name: "", slug: "", icon: "Smartphone", display_order: "0", is_active: true });
 
-  useEffect(() => { loadCategories(); }, []);
+  useEffect(() => { 
+    loadCategories(); 
+  }, []);
 
   const loadCategories = async () => {
+    setLoading(true);
     const { data } = await supabase.from("categories").select("*").order("display_order");
     setCategories(data || []);
+    setLoading(false);
   };
 
   const openNew = () => {
@@ -40,7 +48,6 @@ const AdminCategories = () => {
     if (!form.name.trim()) { toast.error("Name is required"); return; }
     const slug = form.slug || generateSlug(form.name);
     const payload = { name: form.name, slug, icon: form.icon, display_order: Number(form.display_order), is_active: form.is_active };
-
     if (editing) {
       const { error } = await supabase.from("categories").update(payload).eq("id", editing.id);
       if (error) { toast.error(error.message); return; }
@@ -50,16 +57,14 @@ const AdminCategories = () => {
       if (error) { toast.error(error.message); return; }
       toast.success("Category created!");
     }
-    setDialogOpen(false);
-    loadCategories();
+    setDialogOpen(false); loadCategories();
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this category?")) return;
     const { error } = await supabase.from("categories").delete().eq("id", id);
     if (error) { toast.error(error.message); return; }
-    toast.success("Deleted");
-    loadCategories();
+    toast.success("Deleted"); loadCategories();
   };
 
   const toggleActive = async (cat: any) => {
@@ -68,75 +73,103 @@ const AdminCategories = () => {
   };
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Categories</h1>
-        <Button onClick={openNew}><Plus className="w-4 h-4 mr-2" /> Add Category</Button>
+    <div className="space-y-5">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-bold">Categories</h1>
+          <p className="text-sm text-muted-foreground">{categories.length} categories</p>
+        </div>
+        <Button onClick={openNew} className="gap-2"><Plus className="w-4 h-4" /> Add Category</Button>
       </div>
 
-      <div className="bg-card border border-border rounded-xl overflow-hidden">
+      <div className="bg-white border border-border overflow-hidden">
+        {loading ? (
+          <TableSkeleton rows={5} columns={5} />
+        ) : (
+          <>
         <table className="w-full text-sm">
-          <thead className="bg-secondary">
+          <thead className="bg-secondary border-b border-border">
             <tr>
-              <th className="text-left p-3 w-12">#</th>
-              <th className="text-left p-3">Name</th>
-              <th className="text-left p-3 hidden sm:table-cell">Slug</th>
-              <th className="text-left p-3 hidden md:table-cell">Icon</th>
-              <th className="text-center p-3">Status</th>
-              <th className="text-right p-3">Actions</th>
+              <th className="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wide text-muted-foreground w-10">#</th>
+              <th className="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wide text-muted-foreground">Category</th>
+              <th className="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wide text-muted-foreground hidden sm:table-cell">Slug</th>
+              <th className="text-center px-4 py-3 font-semibold text-xs uppercase tracking-wide text-muted-foreground">Status</th>
+              <th className="text-right px-4 py-3 font-semibold text-xs uppercase tracking-wide text-muted-foreground">Actions</th>
             </tr>
           </thead>
-          <tbody>
-            {categories.map(cat => (
-              <tr key={cat.id} className="border-t border-border">
-                <td className="p-3 text-muted-foreground">{cat.display_order}</td>
-                <td className="p-3 font-medium">{cat.name}</td>
-                <td className="p-3 hidden sm:table-cell text-muted-foreground">{cat.slug}</td>
-                <td className="p-3 hidden md:table-cell text-muted-foreground">{cat.icon}</td>
-                <td className="p-3 text-center">
-                  <button onClick={() => toggleActive(cat)} className={`text-xs px-2 py-0.5 rounded-full ${cat.is_active ? "bg-badge-new text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
-                    {cat.is_active ? "Active" : "Inactive"}
-                  </button>
-                </td>
-                <td className="p-3 text-right">
-                  <div className="flex justify-end gap-1">
-                    <Button variant="ghost" size="icon" onClick={() => openEdit(cat)}><Pencil className="w-4 h-4" /></Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleDelete(cat.id)}><Trash2 className="w-4 h-4" /></Button>
-                  </div>
-                </td>
-              </tr>
-            ))}
+          <tbody className="divide-y divide-border">
+            {categories.map(cat => {
+              const Icon = iconMap[cat.icon] || Smartphone;
+              return (
+                <tr key={cat.id} className="hover:bg-secondary/30 transition-colors">
+                  <td className="px-4 py-3 text-muted-foreground text-xs">{cat.display_order}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-secondary border border-border flex items-center justify-center flex-shrink-0">
+                        <Icon className="w-4 h-4 text-foreground" />
+                      </div>
+                      <span className="font-medium">{cat.name}</span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-muted-foreground hidden sm:table-cell font-mono text-xs">{cat.slug}</td>
+                  <td className="px-4 py-3 text-center">
+                    <button onClick={() => toggleActive(cat)} className={`text-[10px] font-semibold px-2.5 py-1 transition-colors ${cat.is_active ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200" : "bg-secondary text-muted-foreground hover:bg-muted"}`}>
+                      {cat.is_active ? "Active" : "Inactive"}
+                    </button>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex justify-end gap-1">
+                      <button onClick={() => openEdit(cat)} className="p-1.5 hover:bg-secondary border border-transparent hover:border-border transition-colors"><Pencil className="w-3.5 h-3.5" /></button>
+                      <button onClick={() => handleDelete(cat.id)} className="p-1.5 hover:bg-red-50 hover:text-red-600 border border-transparent hover:border-red-200 transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
-        {categories.length === 0 && <p className="text-muted-foreground text-center py-12">No categories yet.</p>}
+        {categories.length === 0 && <p className="text-muted-foreground text-center py-12 text-sm">No categories yet.</p>}
+        </>
+        )}
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader><DialogTitle>{editing ? "Edit Category" : "New Category"}</DialogTitle></DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-4 pt-2">
             <div>
               <Label>Name</Label>
-              <Input value={form.name} onChange={e => { setForm(f => ({ ...f, name: e.target.value, slug: generateSlug(e.target.value) })); }} />
+              <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value, slug: generateSlug(e.target.value) }))} />
             </div>
             <div>
               <Label>Slug</Label>
-              <Input value={form.slug} onChange={e => setForm(f => ({ ...f, slug: e.target.value }))} />
+              <Input value={form.slug} onChange={e => setForm(f => ({ ...f, slug: e.target.value }))} className="font-mono text-sm" />
             </div>
             <div>
               <Label>Icon</Label>
-              <select value={form.icon} onChange={e => setForm(f => ({ ...f, icon: e.target.value }))} className="w-full p-2 border rounded-lg bg-background text-sm">
-                {iconOptions.map(ico => <option key={ico} value={ico}>{ico}</option>)}
-              </select>
+              <div className="grid grid-cols-6 gap-2 mt-1">
+                {iconOptions.map(ico => {
+                  const Ico = iconMap[ico];
+                  return (
+                    <button key={ico} type="button" onClick={() => setForm(f => ({ ...f, icon: ico }))}
+                      className={`flex flex-col items-center gap-1 p-2 border text-[10px] transition-colors ${form.icon === ico ? "border-primary bg-primary/5 text-primary" : "border-border hover:border-primary"}`}
+                    >
+                      <Ico className="w-4 h-4" />
+                      <span className="truncate w-full text-center">{ico}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
             <div>
               <Label>Display Order</Label>
               <Input type="number" value={form.display_order} onChange={e => setForm(f => ({ ...f, display_order: e.target.value }))} />
             </div>
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={form.is_active} onChange={e => setForm(f => ({ ...f, is_active: e.target.checked }))} /> Active
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <input type="checkbox" checked={form.is_active} onChange={e => setForm(f => ({ ...f, is_active: e.target.checked }))} className="w-4 h-4" />
+              Active (visible on storefront)
             </label>
-            <Button onClick={handleSave} className="w-full">{editing ? "Update" : "Create"} Category</Button>
+            <Button onClick={handleSave} className="w-full">{editing ? "Update Category" : "Create Category"}</Button>
           </div>
         </DialogContent>
       </Dialog>

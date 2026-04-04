@@ -34,7 +34,7 @@
     --input: 210 20% 92%;
     --ring: 207 90% 45%;
 
-    --radius: 0.75rem;
+    --radius: 0rem;
 
     --topbar: 220 20% 15%;
     --topbar-foreground: 210 20% 90%;
@@ -77,5 +77,12 @@
 @layer utilities {
   .text-balance {
     text-wrap: balance;
+  }
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
   }
 }

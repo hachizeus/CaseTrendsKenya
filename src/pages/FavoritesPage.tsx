@@ -8,20 +8,27 @@ import { useCart } from "@/contexts/CartContext";
 import TopBar from "@/components/TopBar";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import { ProductCardSkeleton } from "@/components/SkeletonVariants";
 
 const FavoritesPage = () => {
   const { user } = useAuth();
   const { addToCart } = useCart();
   const [favorites, setFavorites] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) return;
+    setLoading(true);
+    if (!user) {
+      setLoading(false);
+      return;
+    }
     const load = async () => {
       const { data } = await supabase
         .from("favorites")
         .select("*, products(*, product_images(*))")
         .eq("user_id", user.id);
       setFavorites(data || []);
+      setLoading(false);
     };
     load();
   }, [user]);
@@ -54,11 +61,17 @@ const FavoritesPage = () => {
         <Link to="/" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary mb-6">
           <ArrowLeft className="w-4 h-4" /> Back to Shop
         </Link>
-        <h1 className="text-2xl font-bold mb-6">My Wishlist ({favorites.length})</h1>
-        {favorites.length === 0 ? (
+        <h1 className="text-2xl font-bold mb-6">My Wishlist ({loading ? "..." : favorites.length})</h1>
+        {loading ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
+            {Array(4).fill(null).map((_, i) => (
+              <ProductCardSkeleton key={i} />
+            ))}
+          </div>
+        ) : favorites.length === 0 ? (
           <p className="text-muted-foreground">No favorites yet. Browse products and add some!</p>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
             {favorites.map(fav => {
               const p = fav.products;
               if (!p) return null;

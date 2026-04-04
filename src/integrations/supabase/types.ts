@@ -175,6 +175,77 @@ export type Database = {
         }
         Relationships: []
       }
+      orders: {
+        Row: {
+          confirmation_email_sent: boolean | null
+          confirmation_email_sent_at: string | null
+          created_at: string
+          customer_email: string | null
+          customer_name: string
+          customer_phone: string
+          delivery_address: string | null
+          delivery_method: string
+          id: string
+          items: Json
+          last_email_sent_status: string | null
+          notes: string | null
+          status: string
+          status_update_email_sent: boolean | null
+          status_update_email_sent_at: string | null
+          total_amount: number
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          confirmation_email_sent?: boolean | null
+          confirmation_email_sent_at?: string | null
+          created_at?: string
+          customer_email?: string | null
+          customer_name: string
+          customer_phone: string
+          delivery_address?: string | null
+          delivery_method?: string
+          id?: string
+          items?: Json
+          last_email_sent_status?: string | null
+          notes?: string | null
+          status?: string
+          status_update_email_sent?: boolean | null
+          status_update_email_sent_at?: string | null
+          total_amount?: number
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          confirmation_email_sent?: boolean | null
+          confirmation_email_sent_at?: string | null
+          created_at?: string
+          customer_email?: string | null
+          customer_name?: string
+          customer_phone?: string
+          delivery_address?: string | null
+          delivery_method?: string
+          id?: string
+          items?: Json
+          last_email_sent_status?: string | null
+          notes?: string | null
+          status?: string
+          status_update_email_sent?: boolean | null
+          status_update_email_sent_at?: string | null
+          total_amount?: number
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_images: {
         Row: {
           created_at: string
@@ -223,7 +294,12 @@ export type Database = {
           name: string
           original_price: number | null
           price: number
+          stock_quantity: number | null
           stock_status: string
+          sku: string | null
+          tags: string[] | null
+          warranty: string | null
+          weight: string | null
           updated_at: string
         }
         Insert: {
@@ -238,7 +314,12 @@ export type Database = {
           name: string
           original_price?: number | null
           price: number
+          stock_quantity?: number | null
           stock_status?: string
+          sku?: string | null
+          tags?: string[] | null
+          warranty?: string | null
+          weight?: string | null
           updated_at?: string
         }
         Update: {
@@ -253,10 +334,85 @@ export type Database = {
           name?: string
           original_price?: number | null
           price?: number
+          stock_quantity?: number | null
           stock_status?: string
+          sku?: string | null
+          tags?: string[] | null
+          warranty?: string | null
+          weight?: string | null
           updated_at?: string
         }
         Relationships: []
+      }
+      product_colors: {
+        Row: {
+          color: string
+          created_at: string
+          display_order: number
+          id: string
+          product_id: string
+          status: string
+        }
+        Insert: {
+          color: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          product_id: string
+          status?: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          product_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_colors_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_specifications: {
+        Row: {
+          created_at: string
+          display_order: number
+          id: string
+          product_id: string
+          spec_key: string
+          spec_value: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          product_id: string
+          spec_key: string
+          spec_value: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          product_id?: string
+          spec_key?: string
+          spec_value?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_specifications_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {

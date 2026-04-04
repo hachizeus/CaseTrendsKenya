@@ -1,13 +1,14 @@
 import { useEffect, useState, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import TopBar from "@/components/TopBar";
 import Header from "@/components/Header";
 import CategoryNav from "@/components/CategoryNav";
 import Footer from "@/components/Footer";
 import ProductCard from "@/components/ProductCard";
-import { SlidersHorizontal, X, ChevronDown, ChevronUp } from "lucide-react";
+import { useProductsPaginated, useCategories } from "@/hooks/queries";
+import { SlidersHorizontal, X, ChevronDown, ChevronUp, ChevronLeft, ChevronRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Button } from "@/components/ui/button";
 
 const priceRanges = [
   { label: "Under KSh 5,000", min: 0, max: 5000 },
@@ -22,10 +23,17 @@ const colorOptions = ["Black", "White", "Blue", "Red", "Green", "Gold", "Silver"
 
 const ProductsPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [products, setProducts] = useState<any[]>([]);
-  const [categories, setCategories] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  const PAGE_SIZE = 12;
+
+  // Fetch paginated products and categories
+  const { data: paginatedData, isLoading, error } = useProductsPaginated(page, PAGE_SIZE);
+  const { data: categories = [], isLoading: categoriesLoading } = useCategories();
+
+  const products = paginatedData?.data || [];
+  const totalProducts = paginatedData?.total || 0;
+  const totalPages = Math.ceil(totalProducts / PAGE_SIZE);
 
   // Filter state
   const selectedCategory = searchParams.get("category") || "";
@@ -43,38 +51,29 @@ const ProductsPage = () => {
 
   const toggleSection = (key: string) => setOpenSections(s => ({ ...s, [key]: !s[key] }));
 
-  useEffect(() => {
-    const load = async () => {
-      const [{ data: prods }, { data: cats }] = await Promise.all([
-        supabase.from("products").select("*, product_images(*)").order("created_at", { ascending: false }),
-        supabase.from("categories").select("*").eq("is_active", true).order("display_order"),
-      ]);
-      setProducts(prods || []);
-      setCategories(cats || []);
-      setLoading(false);
-    };
-    load();
-  }, []);
-
-  // Derive unique brands from products
+  // Derive unique brands from current products
   const brands = useMemo(() => {
     const set = new Set(products.map(p => p.brand).filter(Boolean));
     return Array.from(set).sort();
   }, [products]);
 
-  // Derive unique colors from products
+  // Derive unique colors from current products
   const availableColors = useMemo(() => {
     const set = new Set(products.map(p => p.color).filter(Boolean));
     return Array.from(set).sort();
   }, [products]);
 
-  // Apply filters
+  // Apply client-side filters to paginated results
   const filtered = useMemo(() => {
     let result = [...products];
 
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
-      result = result.filter(p => p.name.toLowerCase().includes(q) || p.brand.toLowerCase().includes(q) || p.category.toLowerCase().includes(q));
+      result = result.filter(p => 
+        p.name.toLowerCase().includes(q) || 
+        p.brand.toLowerCase().includes(q) || 
+        p.category.toLowerCase().includes(q)
+      );
     }
     if (selectedCategory) result = result.filter(p => p.category === selectedCategory);
     if (selectedBrand) result = result.filter(p => p.brand === selectedBrand);
@@ -245,9 +244,15 @@ const ProductsPage = () => {
               )}
 
               {/* Product grid */}
-              {loading ? (
+              {error ? (
+                <div className="text-center py-16">
+                  <p className="text-lg font-medium text-destructive">Failed to load products</p>
+                  <p className="text-sm text-muted-foreground mb-4">{error instanceof Error ? error.message : "Please try again later"}</p>
+                  <Button onClick={() => window.location.reload()}>Retry</Button>
+                </div>
+              ) : isLoading ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4">
-                  {Array.from({ length: 12 }).map((_, i) => (
+                  {Array.from({ length: PAGE_SIZE }).map((_, i) => (
                     <div key={i} className="bg-card rounded-lg border border-border animate-pulse">
                       <div className="aspect-square bg-secondary" />
                       <div className="p-4 space-y-2">
@@ -264,22 +269,60 @@ const ProductsPage = () => {
                   <button onClick={clearFilters} className="mt-3 text-primary hover:underline text-sm">Clear all filters</button>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4">
-                  {filtered.map((product, i) => (
-                    <ProductCard
-                      key={product.id}
-                      id={product.id}
-                      name={product.name}
-                      images={product.product_images || []}
-                      price={Number(product.price)}
-                      originalPrice={product.original_price ? Number(product.original_price) : null}
-                      category={product.category}
-                      brand={product.brand}
-                      stockStatus={product.stock_status}
-                      index={i}
-                    />
-                  ))}
-                </div>
+                <>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4">
+                    {filtered.map((product, i) => (
+                      <ProductCard
+                        key={product.id}
+                        id={product.id}
+                        name={product.name}
+                        images={product.product_images || []}
+                        price={Number(product.price)}
+                        originalPrice={product.original_price ? Number(product.original_price) : null}
+                        category={product.category}
+                        brand={product.brand}
+                        stockStatus={product.stock_status}
+                        index={i}
+                      />
+                    ))}
+                  </div>
+
+                  {/* Pagination */}
+                  {totalPages > 1 && (
+                    <div className="flex items-center justify-center gap-2 mt-8 pt-6 border-t border-border">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => { setPage(p => Math.max(1, p - 1)); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+                        disabled={page === 1}
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                      </Button>
+                      {Array.from({ length: Math.min(5, totalPages) }).map((_, i) => {
+                        const pageNum = page > 3 ? page + i - 2 : i + 1;
+                        if (pageNum > totalPages) return null;
+                        return (
+                          <Button
+                            key={pageNum}
+                            variant={page === pageNum ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => { setPage(pageNum); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+                          >
+                            {pageNum}
+                          </Button>
+                        );
+                      })}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => { setPage(p => Math.min(totalPages, p + 1)); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+                        disabled={page === totalPages}
+                      >
+                        <ChevronRight className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </div>
@@ -303,7 +346,7 @@ const ProductsPage = () => {
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="fixed right-0 top-0 bottom-0 w-80 bg-card z-50 overflow-y-auto p-4 lg:hidden"
+              className="fixed right-0 top-0 bottom-0 w-[85vw] max-w-sm bg-card z-50 overflow-y-auto p-4 lg:hidden"
             >
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-bold">Filters</h3>

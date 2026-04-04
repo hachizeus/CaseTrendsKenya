@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+
+  <!-- 
+    IMPORTANT: This is a template for product sitemaps.
+    
+    In production, this file should be DYNAMICALLY GENERATED from your database:
+    1. Query all products from Supabase
+    2. Generate URLs for each product
+    3. Include product images
+    4. Update lastmod based on product updated_at
+    5. Regenerate on product updates
+    
+    For immediate implementation, you can either:
+    A) Manually add frequently updated products below
+    B) Create an API endpoint (e.g., /api/sitemap-products) that generates this dynamically
+    C) Add a scheduled job to regenerate this file daily
+  -->
+
+  <!-- Example Product Entry (replace with actual products) -->
+  <url>
+    <loc>https://casetrends.co.ke/product/example-product-id</loc>
+    <lastmod>2026-04-03</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+    <image:image>
+      <image:loc>https://casetrends.co.ke/images/product-image.jpg</image:loc>
+      <image:title>Product Image</image:title>
+    </image:image>
+  </url>
+
+  <!-- 
+    To populate this automatically, create an API route in your backend:
+    
+    Example endpoint: GET /api/sitemap-products
+    This would query all active products and return XML
+    Then update your server configuration to serve this as sitemap-products.xml
+  -->
+
+</urlset>

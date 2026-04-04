@@ -1,15 +1,18 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { queryOptionalTable } from "@/lib/supabaseHelpers";
 import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { ShoppingCart, Heart, ArrowLeft, Star, ChevronLeft, ChevronRight } from "lucide-react";
+import { ShoppingCart, Heart, ArrowLeft, Star, ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import TopBar from "@/components/TopBar";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import { ProductDetailsSkeleton } from "@/components/SkeletonVariants";
+import ImageLightbox from "@/components/ImageLightbox";
 
 const ProductPage = () => {
   const { id } = useParams();
@@ -22,30 +25,135 @@ const ProductPage = () => {
   const [isFav, setIsFav] = useState(false);
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [existingReview, setExistingReview] = useState<any>(null);
   const [relatedProducts, setRelatedProducts] = useState<any[]>([]);
+  const [specifications, setSpecifications] = useState<any[]>([]);
+  const [colors, setColors] = useState<string[]>([]);
+  const [selectedColor, setSelectedColor] = useState<string>("");
+  const [loading, setLoading] = useState(true);
+  const [zoomLevel, setZoomLevel] = useState(1);
+  const [zoomX, setZoomX] = useState(0);
+  const [zoomY, setZoomY] = useState(0)
 
+  // Load product data only when id changes
   useEffect(() => {
     if (!id) return;
     loadProduct();
     loadReviews();
-    if (user) checkFavorite();
-  }, [id, user]);
+  }, [id]);
+
+  // Check favorite only when user changes
+  useEffect(() => {
+    if (!id || !user) return;
+    checkFavorite();
+  }, [user]);
+
+  // Pre-fill form if user already reviewed this product
+  useEffect(() => {
+    if (!user || reviews.length === 0) return;
+    const mine = reviews.find(r => r.user_id === user.id);
+    if (mine) {
+      setExistingReview(mine);
+      setRating(mine.rating);
+      setComment(mine.comment || "");
+    } else {
+      setExistingReview(null);
+      setRating(5);
+      setComment("");
+    }
+  }, [reviews, user]);
+
+  // Reset meta tags when component unmounts
+  useEffect(() => {
+    return () => {
+      document.title = "Case Trends Kenya";
+    };
+  }, []);
+
+  // Handle image zoom on mouse move
+  const handleImageMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width;
+    const y = (e.clientY - rect.top) / rect.height;
+    setZoomX(x * 100);
+    setZoomY(y * 100);
+  };
+
+  const handleImageMouseEnter = () => {
+    setZoomLevel(1.8);
+  };
+
+  const handleImageMouseLeave = () => {
+    setZoomLevel(1);
+    setZoomX(0);
+    setZoomY(0);
+  };
 
   const loadProduct = async () => {
-    const { data } = await supabase.from("products").select("*, product_images(*)").eq("id", id!).single();
-    if (data) {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.from("products").select("*, product_images(*)").eq("id", id!).single();
+      if (error || !data) {
+        console.error("Product not found:", error);
+        setProduct(null);
+        setLoading(false);
+        return;
+      }
+      
       setProduct(data);
       const sorted = (data.product_images || []).sort((a: any, b: any) => a.display_order - b.display_order);
       setImages(sorted);
-      // Load related
+      
+      // Set SEO meta tags
+      const discount = data.original_price ? Math.round(((data.original_price - data.price) / data.original_price) * 100) : 0;
+      document.title = `${data.name} | Case Trends Kenya`;
+      let metaDescription = document.querySelector('meta[name="description"]');
+      if (!metaDescription) {
+        metaDescription = document.createElement('meta');
+        metaDescription.setAttribute('name', 'description');
+        document.head.appendChild(metaDescription);
+      }
+      metaDescription.setAttribute('content', `Buy ${data.name} for KSh ${data.price.toLocaleString()} at Case Trends Kenya. ${discount > 0 ? `Save ${discount}% off!` : ''} ${data.description || ''}`.substring(0, 160));
+      
+      // Fetch product specifications and colors (silently handles 404s for pending migrations)
+      const [specsData, colorsData] = await Promise.all([
+        queryOptionalTable<any>("product_specifications", "*", [{ column: "product_id", value: id! }], { column: "display_order", asc: true }),
+        queryOptionalTable<any>("product_colors", "color", [{ column: "product_id", value: id! }], { column: "display_order", asc: true })
+      ]);
+
+      setSpecifications(specsData);
+      
+      if (colorsData.length > 0) {
+        const colorList = colorsData.map((c: any) => c.color);
+        setColors(colorList);
+        setSelectedColor(colorList[0]);
+      }
+      
       const { data: related } = await supabase.from("products").select("*, product_images(*)").eq("category", data.category).neq("id", id!).limit(4);
       setRelatedProducts(related || []);
+    } finally {
+      setLoading(false);
     }
   };
 
   const loadReviews = async () => {
-    const { data } = await supabase.from("reviews").select("*, profiles(display_name)").eq("product_id", id!).order("created_at", { ascending: false });
-    setReviews(data || []);
+    const { data: reviewData } = await supabase
+      .from("reviews")
+      .select("*")
+      .eq("product_id", id!)
+      .order("created_at", { ascending: false });
+    if (!reviewData || reviewData.length === 0) { setReviews([]); return; }
+
+    // Fetch display names from profiles for each reviewer
+    const userIds = [...new Set(reviewData.map((r: any) => r.user_id))];
+    const { data: profileData } = await supabase
+      .from("profiles")
+      .select("user_id, display_name")
+      .in("user_id", userIds);
+
+    const profileMap = Object.fromEntries((profileData || []).map((p: any) => [p.user_id, p.display_name]));
+    setReviews(reviewData.map((r: any) => ({ ...r, display_name: profileMap[r.user_id] || "Anonymous" })));
   };
 
   const checkFavorite = async () => {
@@ -70,145 +178,376 @@ const ProductPage = () => {
   const submitReview = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) { toast.error("Please sign in to review"); return; }
-    const { error } = await supabase.from("reviews").upsert({ user_id: user.id, product_id: id!, rating, comment }, { onConflict: "user_id,product_id" });
-    if (error) { toast.error(error.message); return; }
-    toast.success("Review submitted!");
-    setComment("");
-    loadReviews();
+    setSubmitting(true);
+    try {
+      // Check if user already has a review for this product
+      const { data: existingUserReview } = await supabase
+        .from("reviews")
+        .select("id")
+        .eq("product_id", id!)
+        .eq("user_id", user.id)
+        .maybeSingle();
+      
+      if (existingUserReview) {
+        toast.error("You can only post one review per product. Delete your current review to post a new one.");
+        setSubmitting(false);
+        return;
+      }
+      
+      // Insert new review
+      const { error } = await supabase
+        .from("reviews")
+        .insert({ user_id: user.id, product_id: id!, rating, comment: comment || null });
+      if (error) { toast.error(error.message); setSubmitting(false); return; }
+      toast.success("Review posted!");
+      setRating(5);
+      setComment("");
+      await loadReviews();
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  const avgRating = reviews.length ? (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1) : "N/A";
+  const deleteReview = async (reviewId: string) => {
+    if (!window.confirm("Delete this review?")) return;
+    const { error } = await supabase.from("reviews").delete().eq("id", reviewId);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Review deleted");
+    await loadReviews();
+  };
 
-  if (!product) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  const avgRating = reviews.length
+    ? reviews.reduce((s, r) => s + r.rating, 0) / reviews.length
+    : 0;
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <TopBar />
+        <Header />
+        <main className="flex-1">
+          <div className="container py-6">
+            <div className="mb-6 h-4 bg-secondary rounded w-32" />
+            <ProductDetailsSkeleton />
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (!product) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <TopBar />
+        <Header />
+        <div className="flex-1 flex items-center justify-center bg-secondary">
+          <div className="text-center px-4 py-12">
+            <p className="text-2xl font-bold text-foreground mb-2">Product Not Found</p>
+            <p className="text-muted-foreground mb-6">The product you're looking for doesn't exist or has been removed.</p>
+            <div className="flex gap-3 justify-center flex-wrap">
+              <Link to="/products" className="inline-block bg-primary text-primary-foreground px-6 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+                Browse All Products
+              </Link>
+              <Link to="/" className="inline-block bg-card border border-border px-6 py-2 rounded-lg hover:bg-secondary transition-colors">
+                Go to Home
+              </Link>
+            </div>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
 
   const primaryImage = images[activeImg]?.image_url || "/placeholder.svg";
   const discount = product.original_price ? Math.round(((product.original_price - product.price) / product.original_price) * 100) : 0;
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-background">
       <TopBar />
       <Header />
       <main className="flex-1">
-        <div className="container py-6">
-          <Link to="/" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary mb-6">
-            <ArrowLeft className="w-4 h-4" /> Back to Products
-          </Link>
+        {/* Product Hero Section - Fits in viewport */}
+        <div className="border-b border-border bg-white">
+          <div className="container py-4 md:py-6">
+            <Link to="/" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary mb-4">
+              <ArrowLeft className="w-4 h-4" /> Back
+            </Link>
 
-          <div className="grid md:grid-cols-2 gap-8">
-            {/* Image gallery */}
-            <div>
-              <motion.div
-                key={activeImg}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="relative aspect-square bg-secondary rounded-xl overflow-hidden mb-4"
-              >
-                <img src={primaryImage} alt={product.name} className="w-full h-full object-contain p-8" />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 lg:gap-8 min-h-[calc(100vh-220px)] md:min-h-auto">
+              {/* Image gallery - constrained height */}
+              <div className="md:col-span-1 flex flex-col max-h-[calc(100vh-300px)] md:max-h-[500px]">
+                <motion.div
+                  key={activeImg}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="relative flex-1 bg-secondary rounded-xl overflow-hidden mb-2 sm:mb-3 flex items-center justify-center group cursor-zoom-in"
+                  onMouseMove={handleImageMouseMove}
+                  onMouseEnter={handleImageMouseEnter}
+                  onMouseLeave={handleImageMouseLeave}
+                >
+                  <img 
+                    src={primaryImage} 
+                    alt={product.name} 
+                    width={500} 
+                    height={500} 
+                    className="w-full h-full object-contain p-3 sm:p-4 max-w-full transition-transform duration-200 ease-out" 
+                    style={{
+                      transform: `scale(${zoomLevel})`,
+                      transformOrigin: `${zoomX}% ${zoomY}%`,
+                    }}
+                  />
+                  <ImageLightbox images={images} initialIndex={activeImg} />
+                  {images.length > 1 && (
+                    <>
+                      <button 
+                        aria-label="Previous image" 
+                        onClick={() => setActiveImg(i => (i - 1 + images.length) % images.length)} 
+                        className="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 bg-card rounded-full shadow-lg hover:bg-primary hover:text-white transition-colors"
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                      </button>
+                      <button 
+                        aria-label="Next image" 
+                        onClick={() => setActiveImg(i => (i + 1) % images.length)} 
+                        className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 bg-card rounded-full shadow-lg hover:bg-primary hover:text-white transition-colors"
+                      >
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
+                    </>
+                  )}
+                </motion.div>
+                
+                {/* Thumbnails */}
                 {images.length > 1 && (
-                  <>
-                    <button onClick={() => setActiveImg(i => (i - 1 + images.length) % images.length)} className="absolute left-2 top-1/2 -translate-y-1/2 p-2 bg-card rounded-full shadow-lg">
-                      <ChevronLeft className="w-5 h-5" />
-                    </button>
-                    <button onClick={() => setActiveImg(i => (i + 1) % images.length)} className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-card rounded-full shadow-lg">
-                      <ChevronRight className="w-5 h-5" />
-                    </button>
-                  </>
+                  <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
+                    {images.map((img: any, i: number) => (
+                      <button
+                        key={img.id}
+                        aria-label={`View image ${i + 1} of ${images.length}`}
+                        onClick={() => setActiveImg(i)}
+                        className={`flex-shrink-0 w-12 h-12 sm:w-14 sm:h-14 rounded-lg border-2 overflow-hidden transition-all hover:border-primary ${i === activeImg ? "border-primary ring-2 ring-primary/30" : "border-border"}`}
+                      >
+                        <img src={img.image_url} alt={`Thumbnail ${i + 1}: ${product.name}`} width={56} height={56} loading="lazy" className="w-full h-full object-contain p-1 bg-secondary" />
+                      </button>
+                    ))}
+                  </div>
                 )}
-              </motion.div>
-              <div className="flex gap-2">
-                {images.map((img: any, i: number) => (
-                  <button
-                    key={img.id}
-                    onClick={() => setActiveImg(i)}
-                    className={`w-16 h-16 rounded-lg border-2 overflow-hidden ${i === activeImg ? "border-primary" : "border-border"}`}
-                  >
-                    <img src={img.image_url} alt="" className="w-full h-full object-contain p-1" />
-                  </button>
-                ))}
               </div>
-            </div>
 
-            {/* Product info */}
-            <div>
-              <p className="text-sm text-muted-foreground">{product.brand} · {product.category}</p>
-              <h1 className="text-2xl font-bold mt-1 mb-4">{product.name}</h1>
-              <div className="flex items-center gap-3 mb-4">
-                <span className="text-3xl font-bold text-primary">KSh {Number(product.price).toLocaleString()}</span>
-                {product.original_price && (
-                  <>
-                    <span className="text-lg text-muted-foreground line-through">KSh {Number(product.original_price).toLocaleString()}</span>
-                    <span className="bg-badge-sale text-primary-foreground text-xs font-bold px-2 py-0.5 rounded">-{discount}%</span>
-                  </>
+              {/* Product info - optimized layout */}
+              <div className="md:col-span-2 flex flex-col justify-between">
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-xs sm:text-sm font-medium text-primary uppercase tracking-widest">{product.brand}</p>
+                    <h1 className="text-2xl sm:text-3xl font-bold mt-1.5 mb-2 leading-tight">{product.name}</h1>
+                    <p className="text-xs sm:text-sm text-muted-foreground">{product.category}</p>
+                  </div>
+
+                  {/* Price section */}
+                  <div className="bg-secondary/50 p-4 rounded-lg">
+                    <div className="flex items-baseline gap-3 mb-2">
+                      <span className="text-3xl sm:text-4xl font-bold text-primary">KSh {Number(product.price).toLocaleString()}</span>
+                      {product.original_price && (
+                        <>
+                          <span className="text-sm sm:text-base text-muted-foreground line-through">KSh {Number(product.original_price).toLocaleString()}</span>
+                          <span className="bg-red-100 text-red-700 text-xs font-bold px-2 py-1 rounded">-{discount}%</span>
+                        </>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="flex gap-0.5">
+                        {[1, 2, 3, 4, 5].map(s => (
+                          <Star key={s} className={`w-4 h-4 ${s <= Math.round(avgRating) ? "text-yellow-400 fill-yellow-400" : "text-muted-foreground"}`} />
+                        ))}
+                      </div>
+                      <span className="text-xs text-muted-foreground">
+                        {reviews.length > 0 ? `${avgRating.toFixed(1)} (${reviews.length})` : "No reviews"}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Description */}
+                  {product.description && (
+                    <p className="text-sm text-muted-foreground leading-relaxed line-clamp-3">{product.description}</p>
+                  )}
+
+                  {/* Stock & Trust badges */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                    <div className="flex items-center gap-2 text-muted-foreground flex-col sm:flex-row">
+                      <span className={`px-2 py-1 rounded text-xs font-semibold ${product.stock_status === "in_stock" ? "bg-green-100 text-green-700" : product.stock_status === "low_stock" ? "bg-yellow-100 text-yellow-700" : "bg-red-100 text-red-700"}`}>
+                        {product.stock_status === "in_stock" ? "In Stock" : product.stock_status === "low_stock" ? "Low Stock" : "Sold Out"}
+                      </span>
+                      {product.stock_quantity > 0 && (
+                        <span className="text-muted-foreground text-xs">
+                          ({product.stock_quantity} available)
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-muted-foreground space-y-0.5">
+                      <p>✅ Genuine product</p>
+                      <p>🚚 Free delivery over KSh 5,000</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Color Selector */}
+                {colors.length > 0 && (
+                  <div className="border-t border-border pt-4 space-y-3">
+                    <div>
+                      <p className="text-sm font-semibold mb-3">Select Color</p>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                        {colors.map(color => (
+                          <button
+                            key={color}
+                            onClick={() => setSelectedColor(color)}
+                            className={`px-3 py-2 text-xs sm:text-sm font-medium rounded-lg border-2 transition-all ${
+                              selectedColor === color
+                                ? "border-primary bg-primary text-primary-foreground"
+                                : "border-border hover:border-primary text-foreground"
+                            }`}
+                          >
+                            {color}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
                 )}
-              </div>
-              <div className="flex items-center gap-2 mb-4">
-                <div className="flex">{[1, 2, 3, 4, 5].map(s => <Star key={s} className={`w-4 h-4 ${s <= Math.round(Number(avgRating)) ? "text-accent fill-accent" : "text-muted"}`} />)}</div>
-                <span className="text-sm text-muted-foreground">({reviews.length} reviews)</span>
-              </div>
-              {product.description && <p className="text-muted-foreground mb-6">{product.description}</p>}
-              <div className="flex gap-3 mb-6">
-                <Button size="lg" onClick={() => addToCart({ id: product.id, name: product.name, price: product.price, image: primaryImage })} disabled={product.stock_status === "out_of_stock"}>
-                  <ShoppingCart className="w-4 h-4 mr-2" /> {product.stock_status === "out_of_stock" ? "Out of Stock" : "Add to Cart"}
-                </Button>
-                <Button size="lg" variant="outline" onClick={toggleFavorite}>
-                  <Heart className={`w-4 h-4 ${isFav ? "fill-destructive text-destructive" : ""}`} />
-                </Button>
-              </div>
-              <div className="text-sm text-muted-foreground space-y-1">
-                <p>✅ Genuine product with warranty</p>
-                <p>🚚 Free delivery in Nairobi for orders over KSh 5,000</p>
-                <p>💳 M-Pesa accepted</p>
+
+                {/* CTA Buttons */}
+                <div className="flex gap-3 pt-4 border-t border-border">
+                  <Button 
+                    size="lg" 
+                    className="flex-1" 
+                    onClick={() => addToCart({ 
+                      id: product.id, 
+                      name: product.name, 
+                      price: product.price, 
+                      image: primaryImage,
+                      color: selectedColor || undefined
+                    })} 
+                    disabled={product.stock_status === "out_of_stock"}
+                  >
+                    <ShoppingCart className="w-4 h-4 mr-2" /> 
+                    {product.stock_status === "out_of_stock" ? "Out of Stock" : "Add to Cart"}
+                  </Button>
+                  <Button 
+                    size="lg" 
+                    variant="outline"
+                    onClick={toggleFavorite}
+                    className="px-3"
+                    title={isFav ? "Remove from favorites" : "Add to favorites"}
+                  >
+                    <Heart className={`w-5 h-5 ${isFav ? "fill-red-500 text-red-500" : ""}`} />
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
+        </div>
 
-          {/* Reviews */}
-          <div className="mt-12">
-            <h2 className="text-xl font-bold mb-6">Reviews ({reviews.length})</h2>
-            {user && (
-              <form onSubmit={submitReview} className="bg-secondary p-4 rounded-xl mb-6">
-                <p className="font-medium mb-2">Leave a Review</p>
-                <div className="flex gap-1 mb-3">
-                  {[1, 2, 3, 4, 5].map(s => (
-                    <button type="button" key={s} onClick={() => setRating(s)}>
-                      <Star className={`w-5 h-5 ${s <= rating ? "text-accent fill-accent" : "text-muted"}`} />
-                    </button>
+        {/* Below the fold content */}
+        <div className="container py-8 md:py-12 space-y-12">
+          {/* Product Specifications */}
+          {specifications.length > 0 && (
+            <div>
+              <h2 className="text-xl font-bold mb-6">Specifications</h2>
+              <div className="bg-card rounded-xl border border-border p-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {specifications.map((spec: any) => (
+                    <div key={spec.id} className="pb-4 border-b border-border last:border-b-0 md:last-of-type:border-b-0">
+                      <p className="text-sm font-medium text-muted-foreground mb-1">{spec.spec_key}</p>
+                      <p className="text-base font-semibold">{spec.spec_value}</p>
+                    </div>
                   ))}
                 </div>
-                <textarea
-                  value={comment}
-                  onChange={e => setComment(e.target.value)}
-                  placeholder="Share your experience..."
-                  className="w-full p-3 rounded-lg border border-border bg-background text-sm resize-none h-20 mb-3"
-                />
-                <Button type="submit" size="sm">Submit Review</Button>
-              </form>
+              </div>
+            </div>
+          )}
+
+          {/* Reviews */}
+          <div>
+            <h2 className="text-xl font-bold mb-6">Reviews ({reviews.length})</h2>
+
+            {user ? (
+              !existingReview ? (
+                <form onSubmit={submitReview} className="bg-secondary p-4 rounded-xl mb-6">
+                  <p className="font-medium mb-2">Leave a Review</p>
+                  <div className="flex gap-1 mb-3">
+                    {[1, 2, 3, 4, 5].map(s => (
+                      <button type="button" key={s} onClick={() => setRating(s)}>
+                        <Star className={`w-5 h-5 ${s <= rating ? "text-yellow-400 fill-yellow-400" : "text-muted-foreground"}`} />
+                      </button>
+                    ))}
+                  </div>
+                  <textarea
+                    value={comment}
+                    onChange={e => setComment(e.target.value)}
+                    placeholder="Share your experience..."
+                    className="w-full p-3 rounded-lg border border-border bg-background text-sm resize-none h-20 mb-3"
+                  />
+                  <Button type="submit" size="sm" disabled={submitting}>
+                    {submitting ? "Saving..." : "Submit Review"}
+                  </Button>
+                </form>
+              ) : (
+                <div className="bg-secondary p-4 rounded-xl mb-6">
+                  <p className="font-medium mb-3">Your Review</p>
+                  <p className="text-sm text-muted-foreground mb-2">You can only have one review per product. Delete your current review to post a new one.</p>
+                </div>
+              )
+            ) : (
+              <div className="bg-secondary p-4 rounded-xl mb-6 text-center">
+                <p className="text-sm text-muted-foreground mb-2">Sign in to leave a review</p>
+                <Link to="/auth">
+                  <Button size="sm" variant="outline">Sign In</Button>
+                </Link>
+              </div>
             )}
+
             <div className="space-y-4">
               {reviews.map(r => (
-                <div key={r.id} className="bg-card p-4 rounded-xl border border-border">
+                <div key={r.id} className="bg-card p-4 rounded-xl border border-border group relative">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="font-medium text-sm">{r.profiles?.display_name || "Anonymous"}</span>
-                    <div className="flex">{[1, 2, 3, 4, 5].map(s => <Star key={s} className={`w-3 h-3 ${s <= r.rating ? "text-accent fill-accent" : "text-muted"}`} />)}</div>
+                    <span className="font-medium text-sm">{r.display_name}</span>
+                    <div className="flex">
+                      {[1, 2, 3, 4, 5].map(s => (
+                        <Star key={s} className={`w-3 h-3 ${s <= r.rating ? "text-yellow-400 fill-yellow-400" : "text-muted-foreground"}`} />
+                      ))}
+                    </div>
                   </div>
                   {r.comment && <p className="text-sm text-muted-foreground">{r.comment}</p>}
                   <p className="text-xs text-muted-foreground mt-2">{new Date(r.created_at).toLocaleDateString()}</p>
+                  
+                  {/* Delete button - appears on hover for review author */}
+                  {user && user.id === r.user_id && (
+                    <button
+                      onClick={() => deleteReview(r.id)}
+                      aria-label="Delete review"
+                      title="Delete review"
+                      className="absolute top-3 right-3 p-2 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-red-50 rounded-lg"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
               ))}
               {reviews.length === 0 && <p className="text-muted-foreground text-sm">No reviews yet. Be the first!</p>}
             </div>
           </div>
 
-          {/* Related */}
+          {/* Related Products */}
           {relatedProducts.length > 0 && (
-            <div className="mt-12">
+            <div>
               <h2 className="text-xl font-bold mb-6">Related Products</h2>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
                 {relatedProducts.map((p: any) => {
                   const img = p.product_images?.find((i: any) => i.is_primary)?.image_url || p.product_images?.[0]?.image_url || "/placeholder.svg";
                   return (
                     <Link key={p.id} to={`/product/${p.id}`} className="bg-card rounded-lg border border-border p-4 hover:shadow-card-hover transition-shadow">
-                      <img src={img} alt={p.name} className="w-full aspect-square object-contain mb-3" />
+                      <img src={img} alt={p.name} width={200} height={200} className="w-full aspect-square object-contain mb-3" />
                       <p className="text-sm font-medium line-clamp-2">{p.name}</p>
                       <p className="text-sm font-bold text-primary mt-1">KSh {Number(p.price).toLocaleString()}</p>
                     </Link>

@@ -1,10 +1,13 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const BrandFilter = () => {
+  const [searchParams] = useSearchParams();
   const [brands, setBrands] = useState<string[]>([]);
-  const [active, setActive] = useState("All Brands");
+  const [loading, setLoading] = useState(true);
+  const currentBrand = searchParams.get("brand") || "";
 
   useEffect(() => {
     supabase.from("products").select("brand").then(({ data }) => {
@@ -12,33 +15,53 @@ const BrandFilter = () => {
         const unique = Array.from(new Set(data.map(d => d.brand).filter(Boolean))).sort();
         setBrands(unique);
       }
+      setLoading(false);
     });
   }, []);
 
-  return (
-    <section className="py-8">
-      <div className="container">
-        <div className="flex items-center justify-between mb-5">
-          <h2 className="text-xl sm:text-2xl font-bold">Shop by Brand</h2>
-          <Link to="/products" className="text-sm text-primary hover:underline">View All →</Link>
+  if (loading) {
+    return (
+      <section className="py-6 border-b border-border bg-white">
+        <div className="container">
+          <div className="flex items-center gap-3 sm:gap-4 overflow-x-auto scrollbar-hide">
+            <Skeleton className="flex-shrink-0 h-4 w-32" />
+            <div className="w-px h-4 bg-border flex-shrink-0" />
+            {Array(5).fill(null).map((_, i) => (
+              <Skeleton key={i} className="flex-shrink-0 h-8 w-20" />
+            ))}
+          </div>
         </div>
-        <div className="flex flex-wrap gap-2">
+      </section>
+    );
+  }
+
+  if (brands.length === 0) return null;
+
+  return (
+    <section className="py-6 border-b border-border bg-white">
+      <div className="container">
+        <div className="flex items-center gap-3 sm:gap-4 overflow-x-auto scrollbar-hide">
+          <span className="flex-shrink-0 text-xs font-bold uppercase tracking-widest text-muted-foreground">Shop by Brand</span>
+          <div className="w-px h-4 bg-border flex-shrink-0" />
           <Link
             to="/products"
-            className={`px-4 py-2 rounded-full text-sm font-medium border transition-all ${
-              active === "All Brands"
-                ? "bg-primary text-primary-foreground border-primary"
-                : "bg-card text-foreground border-border hover:border-primary hover:text-primary"
+            className={`flex-shrink-0 px-4 py-1.5 text-xs font-semibold border transition-colors ${
+              !currentBrand
+                ? "bg-primary text-white border-primary hover:bg-primary/90"
+                : "border-border text-foreground hover:border-primary hover:text-primary"
             }`}
-            onClick={() => setActive("All Brands")}
           >
-            All Brands
+            All
           </Link>
-          {brands.map((brand) => (
+          {brands.map(brand => (
             <Link
               key={brand}
               to={`/products?brand=${encodeURIComponent(brand)}`}
-              className={`px-4 py-2 rounded-full text-sm font-medium border transition-all bg-card text-foreground border-border hover:border-primary hover:text-primary`}
+              className={`flex-shrink-0 px-4 py-1.5 text-xs font-semibold border transition-colors ${
+                currentBrand === brand
+                  ? "bg-primary text-white border-primary hover:bg-primary/90"
+                  : "border-border text-foreground hover:border-primary hover:text-primary"
+              }`}
             >
               {brand}
             </Link>

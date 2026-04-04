@@ -16,13 +16,13 @@ const CategoryNav = () => {
   }, []);
 
   return (
-    <nav className="bg-card border-b border-border hidden md:block">
+    <nav className="bg-card border-b border-border">
       <div className="container">
-        <ul className="flex items-center gap-1 overflow-x-auto">
-          <li>
+        <ul className="flex items-center gap-1 overflow-x-auto scrollbar-hide">
+          <li className="flex-shrink-0">
             <Link
               to="/products"
-              className="flex items-center gap-1.5 px-4 py-3 text-sm font-medium text-nav-foreground hover:text-nav-hover transition-colors whitespace-nowrap"
+              className="flex items-center gap-1.5 px-3 py-2.5 text-xs sm:text-sm font-medium text-nav-foreground hover:text-nav-hover transition-colors whitespace-nowrap"
             >
               All Products
             </Link>
@@ -30,12 +30,12 @@ const CategoryNav = () => {
           {categories.map((cat) => {
             const Icon = iconMap[cat.icon] || Smartphone;
             return (
-              <li key={cat.id}>
+              <li key={cat.id} className="flex-shrink-0">
                 <Link
                   to={`/products?category=${encodeURIComponent(cat.name)}`}
-                  className="flex items-center gap-1.5 px-4 py-3 text-sm font-medium text-nav-foreground hover:text-nav-hover transition-colors whitespace-nowrap"
+                  className="flex items-center gap-1.5 px-3 py-2.5 text-xs sm:text-sm font-medium text-nav-foreground hover:text-nav-hover transition-colors whitespace-nowrap"
                 >
-                  <Icon className="w-4 h-4" />
+                  <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   {cat.name}
                 </Link>
               </li>

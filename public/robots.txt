@@ -1,14 +1,47 @@
-User-agent: Googlebot
-Allow: /
-
-User-agent: Bingbot
-Allow: /
-
-User-agent: Twitterbot
-Allow: /
-
-User-agent: facebookexternalhit
-Allow: /
+# Case Trends Kenya - robots.txt
+# Block crawlers from admin and private pages
 
 User-agent: *
 Allow: /
+Allow: /products
+Allow: /product/
+Allow: /auth
+Allow: /checkout
+Allow: /favorites
+
+Disallow: /admin
+Disallow: /admin/
+Disallow: /.env
+Disallow: /private
+Disallow: /api/
+
+# Specific rules for major search engines
+User-agent: Googlebot
+Allow: /
+Disallow: /admin
+Disallow: /.env
+Crawl-delay: 1
+
+User-agent: Bingbot
+Allow: /
+Disallow: /admin
+Disallow: /.env
+Crawl-delay: 2
+
+# Twitter/X bot
+User-agent: Twitterbot
+Allow: /
+Disallow: /admin
+
+# Facebook
+User-agent: facebookexternalhit
+Allow: /
+Disallow: /admin
+
+# Pinterest
+User-agent: Pinterestbot
+Allow: /
+
+# Sitemap location
+Sitemap: https://casetrends.co.ke/sitemap.xml
+Sitemap: https://casetrends.co.ke/sitemap-products.xml
