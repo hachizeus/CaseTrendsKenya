@@ -255,7 +255,7 @@ Order Details:
 Order Number: ${orderData.id}
 Status: ${orderData.status.toUpperCase()}
 
-${statusMessages[orderData.status as keyof typeof statusMessages] || "Thank you for your business!"}
+${statusMessages[orderData.status] || "Thank you for your business!"}
 
 View your full order details at: ${orderLink}
 
@@ -324,7 +324,7 @@ visit: https://casetrendskenya.com
                 </div>
               </div>
               
-              <p>${statusMessages[orderData.status as keyof typeof statusMessages] || "Thank you for your business!"}</p>
+              <p>${statusMessages[orderData.status] || "Thank you for your business!"}</p>
               
               <p>If you have any questions about your order, feel free to reach out to us at <strong>support@casetrendskenya.com</strong> or reply directly to this email.</p>
               
