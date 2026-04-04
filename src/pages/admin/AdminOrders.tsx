@@ -45,39 +45,59 @@ const AdminOrders = () => {
     setLoading(false);
   };
 
-  const sendStatusUpdateEmail = async (order: any) => {
+  const sendStatusUpdateEmail = async (order: any, isManual: boolean = false) => {
     if (!order.customer_email) {
-      toast.error("No email address on file for this order");
+      if (isManual) {
+        toast.error("No email address on file for this order");
+      }
+      console.warn("No email address on file for order:", order.id);
       return;
     }
 
-    setSendingEmail(true);
+    if (isManual) {
+      setSendingEmail(true);
+    }
+
     try {
+      const emailBody = {
+        to: order.customer_email,
+        type: "status_update",
+        data: order,
+      };
+      
+      console.log("Sending status update email for order", order.id, "to", order.customer_email);
+      
       const response = await fetch(`${API_URL}/api/send-email`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          to: order.customer_email,
-          type: "status_update",
-          data: order,
-        }),
+        body: JSON.stringify(emailBody),
       });
 
+      const responseData = await response.json();
+      
       if (!response.ok) {
-        const error = await response.json();
-        console.error("Email send error:", error);
-        toast.error("Failed to send email. Check browser console for details.");
-        return;
+        console.error("Email send failed - Status:", response.status, "Response:", responseData);
+        if (isManual) {
+          toast.error(`Email failed: ${responseData.error || "Unknown error"}`);
+        }
+        throw new Error(responseData.error || "Failed to send email");
       }
 
-      toast.success(`Status update email sent to ${order.customer_email}`);
+      console.log("Status update email sent successfully to", order.customer_email);
+      if (isManual) {
+        toast.success(`Status update email sent to ${order.customer_email}`);
+      }
     } catch (err) {
       console.error("Error sending email:", err);
-      toast.error("Failed to send email. Check if Node.js server is running on port 3000.");
+      if (isManual) {
+        toast.error(`Failed to send email: ${err instanceof Error ? err.message : "Unknown error"}`);
+      }
     } finally {
-      setSendingEmail(false);
+      if (isManual) {
+        setSendingEmail(false);
+      }
     }
   };
 
@@ -94,12 +114,17 @@ const AdminOrders = () => {
         setOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o));
         if (selected?.id === id) setSelected((s: any) => ({ ...s, status }));
         
-        // Send status update email
+        toast.success(`Order marked as ${status}`);
+        
+        // Send status update email automatically (without toasts)
         const updatedOrder = { ...order, status };
-        await sendStatusUpdateEmail(updatedOrder);
+        try {
+          await sendStatusUpdateEmail(updatedOrder, false);
+        } catch (emailErr) {
+          console.error("Email send failed but order status was updated:", emailErr);
+          // Don't fail order update if email fails - just log it
+        }
       }
-      
-      toast.success(`Order marked as ${status}`);
     } catch (err) {
       console.error("Error updating order:", err);
       toast.error("Failed to update order");
@@ -262,7 +287,7 @@ const AdminOrders = () => {
                 {/* Resend Email Button */}
                 {selected.customer_email && (
                   <Button
-                    onClick={() => sendStatusUpdateEmail(selected)}
+                    onClick={() => sendStatusUpdateEmail(selected, true)}
                     disabled={sendingEmail}
                     variant="outline"
                     size="sm"

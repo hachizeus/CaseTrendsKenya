@@ -43,11 +43,11 @@ const ProductPage = () => {
     loadReviews();
   }, [id]);
 
-  // Check favorite only when user changes
+  // Check favorite when user or product changes
   useEffect(() => {
-    if (!id || !user) return;
+    if (!id) return;
     checkFavorite();
-  }, [user]);
+  }, [id, user]);
 
   // Pre-fill form if user already reviewed this product
   useEffect(() => {
@@ -157,21 +157,42 @@ const ProductPage = () => {
   };
 
   const checkFavorite = async () => {
-    if (!user) return;
-    const { data } = await supabase.from("favorites").select("id").eq("user_id", user.id).eq("product_id", id!).maybeSingle();
-    setIsFav(!!data);
+    if (user) {
+      const { data } = await supabase.from("favorites").select("id").eq("user_id", user.id).eq("product_id", id!).maybeSingle();
+      setIsFav(!!data);
+    } else {
+      // Check guest favorites in localStorage
+      const guestFavIds = JSON.parse(localStorage.getItem("guestFavorites") || "[]");
+      setIsFav(guestFavIds.includes(id));
+    }
   };
 
   const toggleFavorite = async () => {
-    if (!user) { toast.error("Please sign in to add favorites"); return; }
-    if (isFav) {
-      await supabase.from("favorites").delete().eq("user_id", user.id).eq("product_id", id!);
-      setIsFav(false);
-      toast.success("Removed from favorites");
+    if (user) {
+      // Logged-in user: use database
+      if (isFav) {
+        await supabase.from("favorites").delete().eq("user_id", user.id).eq("product_id", id!);
+        setIsFav(false);
+        toast.success("Removed from favorites");
+      } else {
+        await supabase.from("favorites").insert({ user_id: user.id, product_id: id! });
+        setIsFav(true);
+        toast.success("Added to favorites!");
+      }
     } else {
-      await supabase.from("favorites").insert({ user_id: user.id, product_id: id! });
-      setIsFav(true);
-      toast.success("Added to favorites!");
+      // Guest user: use localStorage
+      const guestFavIds = JSON.parse(localStorage.getItem("guestFavorites") || "[]");
+      if (isFav) {
+        const updated = guestFavIds.filter((pid: string) => pid !== id);
+        localStorage.setItem("guestFavorites", JSON.stringify(updated));
+        setIsFav(false);
+        toast.success("Removed from favorites");
+      } else {
+        guestFavIds.push(id);
+        localStorage.setItem("guestFavorites", JSON.stringify(guestFavIds));
+        setIsFav(true);
+        toast.success("Added to favorites!");
+      }
     }
   };
 
