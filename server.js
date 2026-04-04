@@ -295,8 +295,13 @@ app.get("/health", (req, res) => {
 
 // SPA fallback - serve index.html for all non-API routes
 // This allows React Router to handle client-side routing
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+app.use((req, res) => {
+  // Only serve index.html for non-API routes
+  if (!req.path.startsWith('/api/') && !req.path.startsWith('/health')) {
+    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+  } else {
+    res.status(404).json({ error: "Not found" });
+  }
 });
 
 const PORT = process.env.PORT || 3000;
