@@ -172,6 +172,12 @@ const Header = () => {
             <Search className="w-5 h-5" />
           </button>
 
+          {!user && (
+            <Link to="/favorites" className="md:hidden p-2 text-muted-foreground hover:text-primary transition-colors">
+              <Heart className="w-5 h-5" />
+            </Link>
+          )}
+
           {user ? (
             <div className="hidden sm:flex items-center gap-3">
               <DropdownMenu>
@@ -213,10 +219,15 @@ const Header = () => {
               </DropdownMenu>
             </div>
           ) : (
-            <Link to="/auth" className="hidden sm:flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary transition-colors">
-              <User className="w-5 h-5" />
-              <span className="hidden lg:inline">Login / Register</span>
-            </Link>
+            <div className="hidden sm:flex items-center gap-3">
+              <Link to="/favorites" className="p-2 text-muted-foreground hover:text-primary transition-colors hover:bg-secondary rounded-lg">
+                <Heart className="w-5 h-5" />
+              </Link>
+              <Link to="/auth" className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary transition-colors">
+                <User className="w-5 h-5" />
+                <span className="hidden lg:inline">Login / Register</span>
+              </Link>
+            </div>
           )}
 
           <button
@@ -274,6 +285,9 @@ const Header = () => {
               <Link to="/account/orders" className="block py-2 text-sm font-medium hover:text-primary" onClick={() => setMobileMenuOpen(false)}>My Orders</Link>
               <Link to="/favorites" className="block py-2 text-sm font-medium hover:text-primary" onClick={() => setMobileMenuOpen(false)}>Wishlist</Link>
             </>
+          )}
+          {!user && (
+            <Link to="/favorites" className="block py-2 text-sm font-medium hover:text-primary" onClick={() => setMobileMenuOpen(false)}>Wishlist</Link>
           )}
           {user ? (
             <>

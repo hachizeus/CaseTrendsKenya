@@ -17,50 +17,61 @@ const FavoritesPage = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setLoading(true);
-    if (user?.id) {
-      // Logged-in user: fetch from database
-      const load = async () => {
-        const { data } = await supabase
-          .from("favorites")
-          .select("*, products(*, product_images(*))")
-          .eq("user_id", user.id);
-        setFavorites(data || []);
+    const loadFavorites = async () => {
+      setLoading(true);
+      try {
+        if (user?.id) {
+          // Logged-in user: fetch from database
+          const { data } = await supabase
+            .from("favorites")
+            .select("*, products(*, product_images(*))")
+            .eq("user_id", user.id);
+          setFavorites(data || []);
+        } else {
+          // Guest user: fetch from localStorage
+          const guestFavIds = JSON.parse(localStorage.getItem("guestFavorites") || "[]");
+          if (guestFavIds.length === 0) {
+            setFavorites([]);
+            setLoading(false);
+            return;
+          }
+          const { data } = await supabase
+            .from("products")
+            .select("*, product_images(*)")
+            .in("id", guestFavIds);
+          const mappedData = data?.map((product, idx) => ({ id: `guest-${product.id}`, products: product })) || [];
+          setFavorites(mappedData);
+        }
+      } catch (error) {
+        console.error("Error loading favorites:", error);
+        setFavorites([]);
+      } finally {
         setLoading(false);
-      };
-      load();
-    } else {
-      // Guest user: fetch from localStorage
-      const guestFavIds = JSON.parse(localStorage.getItem("guestFavorites") || "[]");
-      if (guestFavIds.length === 0) {
-        setLoading(false);
-        return;
       }
-      const loadGuestFavs = async () => {
-        const { data } = await supabase
-          .from("products")
-          .select("*, product_images(*)")
-          .in("id", guestFavIds);
-        setFavorites(data?.map((product, idx) => ({ id: `guest-${idx}`, products: product })) || []);
-        setLoading(false);
-      };
-      loadGuestFavs();
-    }
+    };
+    
+    loadFavorites();
   }, [user?.id]);
 
   const removeFav = async (favId: string, productId?: string) => {
-    if (user?.id) {
-      await supabase.from("favorites").delete().eq("id", favId);
-    } else {
-      // Guest user: update localStorage
-      const guestFavIds = JSON.parse(localStorage.getItem("guestFavorites") || "[]");
-      const updated = guestFavIds.filter((id: string) => id !== productId);
-      localStorage.setItem("guestFavorites", JSON.stringify(updated));
+    try {
+      if (user?.id) {
+        await supabase.from("favorites").delete().eq("id", favId);
+      } else {
+        // Guest user: update localStorage
+        const guestFavIds = JSON.parse(localStorage.getItem("guestFavorites") || "[]");
+        const updated = guestFavIds.filter((id: string) => id !== productId);
+        localStorage.setItem("guestFavorites", JSON.stringify(updated));
+      }
+      setFavorites(f => f.filter(fav => fav.id !== favId));
+    } catch (error) {
+      console.error("Error removing favorite:", error);
     }
-    setFavorites(f => f.filter(fav => fav.id !== favId));
   };
 
-  if (!user && JSON.parse(localStorage.getItem("guestFavorites") || "[]").length === 0) {
+  const hasAnyFavorites = loading === false && favorites.length === 0 && JSON.parse(localStorage.getItem("guestFavorites") || "[]").length === 0 && !user;
+
+  if (hasAnyFavorites) {
     return (
       <div className="min-h-screen flex flex-col">
         <TopBar /><Header />
