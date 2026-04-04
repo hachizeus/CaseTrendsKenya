@@ -45,14 +45,19 @@ const ImageLightbox = ({ images, initialIndex }: ImageLightboxProps) => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
             className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center"
             onClick={() => setIsOpen(false)}
             onKeyDown={handleKeyDown}
             tabIndex={0}
+            autoFocus
           >
             {/* Close button */}
             <button
-              onClick={() => setIsOpen(false)}
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsOpen(false);
+              }}
               className="absolute top-6 right-6 p-2 text-white hover:bg-white/20 rounded-full transition-colors"
               aria-label="Close"
             >

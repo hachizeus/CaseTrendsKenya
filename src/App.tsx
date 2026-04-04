@@ -105,11 +105,7 @@ const AppContent = () => {
         />
         <Route
           path="/favorites"
-          element={
-            <ProtectedRoute>
-              <FavoritesPage />
-            </ProtectedRoute>
-          }
+          element={<FavoritesPage />}
         />
         <Route
           path="/admin"

@@ -78,7 +78,7 @@ const ProductComparisonModal = ({ isOpen, products, onClose }: ProductComparison
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}
-            className="bg-card rounded-xl border border-border w-full h-screen md:h-auto md:max-w-6xl md:max-h-[90vh] flex flex-col overflow-hidden"
+            className="bg-card rounded-xl border border-border w-full max-h-[95vh] sm:max-h-[90vh] md:max-w-6xl flex flex-col overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
@@ -179,7 +179,7 @@ const ProductComparisonModal = ({ isOpen, products, onClose }: ProductComparison
                           <div className="bg-background/50 p-2 md:p-3 rounded-lg border border-border/50">
                             <p className="text-xs font-semibold text-muted-foreground mb-2 md:mb-3">Specs</p>
                             <div className="space-y-2">
-                              {product.product_specifications.slice(0, 5).map((spec, i) => (
+                              {product.product_specifications.map((spec, i) => (
                                 <div key={i} className="flex items-start gap-2 pb-2 border-b border-border/30 last:border-b-0 last:pb-0">
                                   <span className="font-semibold text-xs text-primary min-w-fit">{spec.spec_key}</span>
                                   <span className="text-xs text-foreground break-words">{spec.spec_value}</span>
@@ -194,7 +194,7 @@ const ProductComparisonModal = ({ isOpen, products, onClose }: ProductComparison
                           <div className="bg-background/50 p-2 md:p-3 rounded-lg border border-border/50">
                             <p className="text-xs font-semibold text-muted-foreground mb-2 md:mb-3">Colors</p>
                             <div className="flex flex-wrap gap-2 md:gap-3">
-                              {product.product_colors.slice(0, 6).map((color, i) => (
+                              {product.product_colors.map((color, i) => (
                                 <div key={i} className="flex flex-col items-center gap-1">
                                   <div
                                     className="w-7 h-7 md:w-8 md:h-8 rounded-full border-2 border-border shadow-md"

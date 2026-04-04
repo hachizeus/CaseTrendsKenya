@@ -293,6 +293,12 @@ app.get("/health", (req, res) => {
   res.json({ status: "ok", message: "Email server is running" });
 });
 
+// SPA fallback - serve index.html for all non-API routes
+// This allows React Router to handle client-side routing
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`✅ Email server running on http://localhost:${PORT}`);
