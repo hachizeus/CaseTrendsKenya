@@ -236,7 +236,7 @@ const Header = () => {
 
       {/* Mobile search */}
       {searchOpen && (
-        <form onSubmit={handleSearch} className="md:hidden px-4 pb-3 space-y-2" id="mobile-search">
+        <form onSubmit={handleSearch} className="md:hidden w-full px-4 pb-3 space-y-2 overflow-x-hidden" id="mobile-search">
           <select
             value={selectedCategory}
             onChange={e => setSelectedCategory(e.target.value)}
