@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useRefreshTrigger } from "@/contexts/RefreshContext";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,6 +16,7 @@ import type { CompressedImage } from "@/lib/imageOptimization";
 
 export default function AdminSlidesOverview() {
   const { isAdmin, loading: authLoading } = useAuth();
+  const { refreshTrigger } = useRefreshTrigger();
   const [sections, setSections] = useState<any[]>([]);
   const [slides, setSlides] = useState<{ [sectionId: string]: any[] }>({});
   const [loading, setLoading] = useState(true);
@@ -51,7 +53,7 @@ export default function AdminSlidesOverview() {
 
   useEffect(() => {
     loadSections();
-  }, []);
+  }, [refreshTrigger]);
 
   const loadSections = async () => {
     setLoading(true);

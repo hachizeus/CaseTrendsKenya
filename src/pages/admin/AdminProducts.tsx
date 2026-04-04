@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useRefreshTrigger } from "@/contexts/RefreshContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Pencil, Trash2, Search, Star, TrendingUp } from "lucide-react";
@@ -12,6 +13,7 @@ const AdminProducts = () => {
   const [products, setProducts] = useState<any[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  const { refreshTrigger } = useRefreshTrigger();
 
   useEffect(() => {
     const load = async () => {
@@ -19,7 +21,7 @@ const AdminProducts = () => {
       setLoading(false);
     };
     load();
-  }, []);
+  }, [refreshTrigger]);
 
   const loadProducts = async () => {
     const { data } = await supabase

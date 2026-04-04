@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useRefreshTrigger } from "@/contexts/RefreshContext";
 import { Star, Trash2, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
@@ -8,8 +9,9 @@ const AdminReviews = () => {
   const [reviews, setReviews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const { refreshTrigger } = useRefreshTrigger();
 
-  useEffect(() => { loadReviews(); }, []);
+  useEffect(() => { loadReviews(); }, [refreshTrigger]);
 
   const loadReviews = async () => {
     const { data: reviewData } = await supabase

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useRefreshTrigger } from "@/contexts/RefreshContext";
 import { Link } from "react-router-dom";
 import { Package, Users, Image, Star, FolderTree, TrendingUp, Plus, ArrowRight, ShoppingBag } from "lucide-react";
 
@@ -8,6 +9,7 @@ const AdminDashboard = () => {
   const [recentProducts, setRecentProducts] = useState<any[]>([]);
   const [recentOrders, setRecentOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const { refreshTrigger } = useRefreshTrigger();
 
   useEffect(() => {
     const load = async () => {
@@ -27,7 +29,7 @@ const AdminDashboard = () => {
       setLoading(false);
     };
     load();
-  }, []);
+  }, [refreshTrigger]);
 
   const statCards = [
     { label: "Total Products", value: stats.products, icon: Package, color: "bg-blue-500", link: "/admin/products" },

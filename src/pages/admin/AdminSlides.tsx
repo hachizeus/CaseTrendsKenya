@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useRefreshTrigger } from "@/contexts/RefreshContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,8 +18,9 @@ const AdminSlides = () => {
   const [form, setForm] = useState({ title: "", subtitle: "", cta_text: "", cta_link: "", display_order: "0", is_active: true });
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string>("");
+  const { refreshTrigger } = useRefreshTrigger();
 
-  useEffect(() => { loadSlides(); }, []);
+  useEffect(() => { loadSlides(); }, [refreshTrigger]);
 
   const loadSlides = async () => {
     const { data } = await supabase.from("hero_slides").select("*").order("display_order");

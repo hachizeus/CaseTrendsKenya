@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useRefreshTrigger } from "@/contexts/RefreshContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,10 +19,11 @@ const AdminCategories = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState({ name: "", slug: "", icon: "Smartphone", display_order: "0", is_active: true });
+  const { refreshTrigger } = useRefreshTrigger();
 
   useEffect(() => { 
     loadCategories(); 
-  }, []);
+  }, [refreshTrigger]);
 
   const loadCategories = async () => {
     setLoading(true);

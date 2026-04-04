@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useRefreshTrigger } from "@/contexts/RefreshContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,6 +12,7 @@ import { toast } from "sonner";
 const AdminSlideManager = () => {
   const { sectionId } = useParams<{ sectionId: string }>();
   const navigate = useNavigate();
+  const { refreshTrigger } = useRefreshTrigger();
 
   const [section, setSection] = useState<any>(null);
   const [slides, setSlides] = useState<any[]>([]);
@@ -31,7 +33,7 @@ const AdminSlideManager = () => {
     if (!sectionId) return;
     loadSection();
     loadSlides();
-  }, [sectionId]);
+  }, [sectionId, refreshTrigger]);
 
   const loadSection = async () => {
     const { data } = await supabase
