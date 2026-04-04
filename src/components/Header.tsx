@@ -28,6 +28,16 @@ const Header = () => {
   const navigate = useNavigate();
   const categoryDropdownRef = useRef<HTMLDivElement>(null);
 
+  // Prevent body scroll when mobile search opens to prevent layout shift
+  useEffect(() => {
+    if (searchOpen) {
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = "unset";
+      };
+    }
+  }, [searchOpen]);
+
   useEffect(() => {
     supabase
       .from("categories")
