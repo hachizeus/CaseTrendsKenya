@@ -99,7 +99,7 @@ const HeroBanner = () => {
   return (
     <section className="relative overflow-hidden bg-slate-100">
       <div className="px-4 sm:px-[max(1rem,calc((100vw-1400px)/2))]">
-        <div className="relative overflow-hidden" style={{ height: "clamp(260px, 45vw, 480px)" }}>
+        <div className="relative" style={{ height: "clamp(260px, 45vw, 480px)" }}>
           {loading ? (
             // Skeleton state
             <div className="w-full h-full bg-gradient-to-r from-slate-200 to-slate-100 animate-pulse" />

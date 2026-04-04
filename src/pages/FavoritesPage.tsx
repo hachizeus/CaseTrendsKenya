@@ -18,35 +18,57 @@ const FavoritesPage = () => {
 
   useEffect(() => {
     setLoading(true);
-    if (!user) {
-      setLoading(false);
-      return;
+    if (user?.id) {
+      // Logged-in user: fetch from database
+      const load = async () => {
+        const { data } = await supabase
+          .from("favorites")
+          .select("*, products(*, product_images(*))")
+          .eq("user_id", user.id);
+        setFavorites(data || []);
+        setLoading(false);
+      };
+      load();
+    } else {
+      // Guest user: fetch from localStorage
+      const guestFavIds = JSON.parse(localStorage.getItem("guestFavorites") || "[]");
+      if (guestFavIds.length === 0) {
+        setLoading(false);
+        return;
+      }
+      const loadGuestFavs = async () => {
+        const { data } = await supabase
+          .from("products")
+          .select("*, product_images(*)")
+          .in("id", guestFavIds);
+        setFavorites(data?.map((product, idx) => ({ id: `guest-${idx}`, products: product })) || []);
+        setLoading(false);
+      };
+      loadGuestFavs();
     }
-    const load = async () => {
-      const { data } = await supabase
-        .from("favorites")
-        .select("*, products(*, product_images(*))")
-        .eq("user_id", user.id);
-      setFavorites(data || []);
-      setLoading(false);
-    };
-    load();
-  }, [user]);
+  }, [user?.id]);
 
-  const removeFav = async (id: string) => {
-    await supabase.from("favorites").delete().eq("id", id);
-    setFavorites(f => f.filter(fav => fav.id !== id));
+  const removeFav = async (favId: string, productId?: string) => {
+    if (user?.id) {
+      await supabase.from("favorites").delete().eq("id", favId);
+    } else {
+      // Guest user: update localStorage
+      const guestFavIds = JSON.parse(localStorage.getItem("guestFavorites") || "[]");
+      const updated = guestFavIds.filter((id: string) => id !== productId);
+      localStorage.setItem("guestFavorites", JSON.stringify(updated));
+    }
+    setFavorites(f => f.filter(fav => fav.id !== favId));
   };
 
-  if (!user) {
+  if (!user && JSON.parse(localStorage.getItem("guestFavorites") || "[]").length === 0) {
     return (
       <div className="min-h-screen flex flex-col">
         <TopBar /><Header />
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <Heart className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-            <h2 className="text-xl font-bold mb-2">Sign in to see your wishlist</h2>
-            <Link to="/auth" className="text-primary hover:underline">Sign In</Link>
+            <h2 className="text-xl font-bold mb-2">No wishlist items yet</h2>
+            <Link to="/products" className="text-primary hover:underline">Browse Products</Link>
           </div>
         </div>
         <Footer />
@@ -88,7 +110,7 @@ const FavoritesPage = () => {
                       <Button size="sm" onClick={() => addToCart({ id: p.id, name: p.name, price: p.price, image: img })}>
                         <ShoppingCart className="w-3 h-3 mr-1" /> Add
                       </Button>
-                      <Button size="sm" variant="outline" onClick={() => removeFav(fav.id)}>
+                      <Button size="sm" variant="outline" onClick={() => removeFav(fav.id, p.id)}>
                         <Trash2 className="w-3 h-3" />
                       </Button>
                     </div>

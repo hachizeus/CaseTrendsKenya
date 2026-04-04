@@ -33,24 +33,45 @@ const ProductCard = ({ id, name, images, price, originalPrice, category, brand, 
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!user?.id) { setIsFav(false); return; }
-    const checkFav = async () => {
-      const { data } = await supabase.from("favorites").select("id").eq("user_id", user.id).eq("product_id", id).maybeSingle();
-      setIsFav(!!data);
-    };
-    checkFav();
+    if (user?.id) {
+      // Logged-in user: check database
+      const checkFav = async () => {
+        const { data } = await supabase.from("favorites").select("id").eq("user_id", user.id).eq("product_id", id).maybeSingle();
+        setIsFav(!!data);
+      };
+      checkFav();
+    } else {
+      // Guest user: check localStorage
+      const guestFavs = JSON.parse(localStorage.getItem("guestFavorites") || "[]");
+      setIsFav(guestFavs.includes(id));
+    }
   }, [user?.id, id]);
 
   const toggleFav = async (e: React.MouseEvent) => {
     e.preventDefault(); e.stopPropagation();
-    if (!user) { toast.error("Sign in to add favorites"); return; }
-    if (isFav) {
-      await supabase.from("favorites").delete().eq("user_id", user.id).eq("product_id", id);
-      setIsFav(false);
+    if (user?.id) {
+      // Logged-in user: use database
+      if (isFav) {
+        await supabase.from("favorites").delete().eq("user_id", user.id).eq("product_id", id);
+        setIsFav(false);
+      } else {
+        await supabase.from("favorites").insert({ user_id: user.id, product_id: id });
+        setIsFav(true);
+        toast.success("Added to wishlist!");
+      }
     } else {
-      await supabase.from("favorites").insert({ user_id: user.id, product_id: id });
-      setIsFav(true);
-      toast.success("Added to wishlist!");
+      // Guest user: use localStorage
+      const guestFavs = JSON.parse(localStorage.getItem("guestFavorites") || "[]");
+      if (isFav) {
+        const updated = guestFavs.filter((fav: string) => fav !== id);
+        localStorage.setItem("guestFavorites", JSON.stringify(updated));
+        setIsFav(false);
+      } else {
+        guestFavs.push(id);
+        localStorage.setItem("guestFavorites", JSON.stringify(guestFavs));
+        setIsFav(true);
+        toast.success("Added to wishlist!");
+      }
     }
   };
 

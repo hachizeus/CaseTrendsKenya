@@ -51,7 +51,9 @@ const OrderConfirmationPage = () => {
       }
 
       // Verify user has access to this order
-      if (user && (data as any).user_id !== user.id) {
+      // If user is logged in, check if order belongs to them
+      // If user is not logged in, allow access (guest orders are accessible)
+      if (user && (data as any).user_id && (data as any).user_id !== user.id) {
         toast.error("Unauthorized access");
         navigate("/");
         return;
@@ -101,7 +103,7 @@ const OrderConfirmationPage = () => {
       )
       .join("\n");
 
-    const message = `🛒 *Order Confirmation*\n\n*Order ID:* ${order?.id}\n*Customer:* ${order?.customer_name}\n\n*Products:*\n${productList}\n\n*Total: KSh ${order?.total_amount.toLocaleString()}*\n\n*Delivery Method:* ${
+    const message = `🛒 *Order Confirmation*\n\n*Order ID:* ${order?.id}\n*Customer:* ${order?.customer_name}\n*Phone:* ${order?.customer_phone}\n*Email:* ${order?.customer_email}\n\n*Products:*\n${productList}\n\n*Total: KSh ${order?.total_amount.toLocaleString()}*\n\n*Delivery Method:* ${
       order?.delivery_method === "delivery"
         ? `Delivery to: ${order?.delivery_address}`
         : "Pickup"
