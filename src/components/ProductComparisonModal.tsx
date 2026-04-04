@@ -94,7 +94,7 @@ const ProductComparisonModal = ({ isOpen, products, onClose }: ProductComparison
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 20 }}
-            className="fixed inset-0 z-40 bg-black/50 flex items-end md:items-center justify-center overflow-hidden"
+            className="fixed inset-0 z-50 bg-black/50 flex items-end md:items-center justify-center overflow-hidden"
             onClick={onClose}
           >
             <motion.div

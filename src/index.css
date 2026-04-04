@@ -86,3 +86,27 @@
     display: none;
   }
 }
+
+/* Prevent zoom on input focus on mobile devices */
+@supports (padding: max(0px)) {
+  body {
+    padding-left: max(0px, env(safe-area-inset-left));
+    padding-right: max(0px, env(safe-area-inset-right));
+  }
+}
+
+/* Prevent text selection zoom on mobile */
+input, 
+select, 
+textarea,
+button {
+  -webkit-touch-callout: none;
+}
+
+/* Prevent double-tap zoom on buttons and interactive elements */
+button, 
+a, 
+input[type="button"], 
+input[type="submit"] {
+  touch-action: manipulation;
+}
