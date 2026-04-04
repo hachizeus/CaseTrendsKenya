@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: case-trends-kenya
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm run server
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: 18.17.0
+      - key: EMAIL_USER
+        scope: build,runtime
+      - key: EMAIL_PASSWORD
+        scope: build,runtime
+      - key: VITE_SUPABASE_URL
+        scope: build,runtime
+      - key: VITE_SUPABASE_ANON_KEY
+        scope: build,runtime
+      - key: VITE_SUPABASE_SERVICE_KEY
+        scope: build,runtime
