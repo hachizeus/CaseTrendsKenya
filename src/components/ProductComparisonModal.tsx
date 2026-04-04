@@ -78,15 +78,15 @@ const ProductComparisonModal = ({ isOpen, products, onClose }: ProductComparison
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}
-            className="bg-card rounded-xl border border-border w-full max-w-6xl max-h-[90vh] flex flex-col overflow-hidden"
+            className="bg-card rounded-xl border border-border w-full h-screen md:h-auto md:max-w-6xl md:max-h-[90vh] flex flex-col overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="sticky top-0 bg-card border-b border-border p-4 sm:p-6 flex items-center justify-between z-10">
-              <div>
-                <h2 className="text-xl sm:text-2xl font-bold">Compare Products</h2>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Comparing {products.length} product{products.length !== 1 ? "s" : ""}
+            <div className="sticky top-0 bg-card border-b border-border p-3 md:p-6 flex items-center justify-between z-10 gap-4">
+              <div className="min-w-0">
+                <h2 className="text-lg md:text-2xl font-bold truncate">Compare Products</h2>
+                <p className="text-xs md:text-sm text-muted-foreground mt-1">
+                  {products.length} product{products.length !== 1 ? "s" : ""}
                 </p>
               </div>
               <button
@@ -97,8 +97,8 @@ const ProductComparisonModal = ({ isOpen, products, onClose }: ProductComparison
               </button>
             </div>
 
-            {/* Content - Flexbox with independent scrolling columns */}
-            <div className="flex-1 flex flex-row gap-4 px-4 sm:px-6 py-4 min-h-0 overflow-hidden">
+            {/* Content - Responsive layout: Stack on mobile, row on desktop */}
+            <div className="flex-1 flex flex-col md:flex-row gap-3 md:gap-4 px-3 md:px-6 py-3 md:py-4 min-h-0 overflow-y-auto md:overflow-hidden">
                 {products.map((product, idx) => (
                   <motion.div
                     key={product.id}
@@ -109,9 +109,9 @@ const ProductComparisonModal = ({ isOpen, products, onClose }: ProductComparison
                   >
                     {/* Scrollable content area */}
                     <div className="overflow-y-auto flex-1 min-h-0">
-                      <div className="p-4 space-y-4">
+                      <div className="p-3 md:p-4 space-y-3 md:space-y-4">
                         {/* Image */}
-                        <div className="bg-background rounded-lg p-3 h-48">
+                        <div className="bg-background rounded-lg p-2 md:p-3 h-32 md:h-48 flex items-center justify-center">
                           <img
                             src={getPrimaryImage(product)}
                             alt={product.name}
@@ -121,14 +121,14 @@ const ProductComparisonModal = ({ isOpen, products, onClose }: ProductComparison
 
                         {/* Product Name */}
                         <div>
-                          <h3 className="font-bold text-sm line-clamp-2">{product.name}</h3>
+                          <h3 className="font-bold text-xs md:text-sm line-clamp-2">{product.name}</h3>
                           <p className="text-xs text-muted-foreground mt-1">{product.brand}</p>
                         </div>
 
                         {/* Price */}
                         <div className="space-y-1">
                           <div className="flex items-baseline gap-2">
-                            <span className="text-lg font-bold text-primary">
+                            <span className="text-base md:text-lg font-bold text-primary">
                               KSh {product.price.toLocaleString()}
                             </span>
                             {product.original_price && (
@@ -166,9 +166,9 @@ const ProductComparisonModal = ({ isOpen, products, onClose }: ProductComparison
 
                         {/* Description */}
                         {product.description && (
-                          <div className="bg-background/50 p-3 rounded-lg border border-border/50">
+                          <div className="bg-background/50 p-2 md:p-3 rounded-lg border border-border/50">
                             <p className="text-xs font-semibold text-muted-foreground mb-2">Description</p>
-                            <p className="text-xs leading-relaxed text-foreground">
+                            <p className="text-xs leading-relaxed text-foreground line-clamp-4">
                               {product.description}
                             </p>
                           </div>
@@ -176,10 +176,10 @@ const ProductComparisonModal = ({ isOpen, products, onClose }: ProductComparison
 
                         {/* Specifications */}
                         {product.product_specifications && product.product_specifications.length > 0 && (
-                          <div className="bg-background/50 p-3 rounded-lg border border-border/50">
-                            <p className="text-xs font-semibold text-muted-foreground mb-3">Specifications</p>
+                          <div className="bg-background/50 p-2 md:p-3 rounded-lg border border-border/50">
+                            <p className="text-xs font-semibold text-muted-foreground mb-2 md:mb-3">Specs</p>
                             <div className="space-y-2">
-                              {product.product_specifications.map((spec, i) => (
+                              {product.product_specifications.slice(0, 5).map((spec, i) => (
                                 <div key={i} className="flex items-start gap-2 pb-2 border-b border-border/30 last:border-b-0 last:pb-0">
                                   <span className="font-semibold text-xs text-primary min-w-fit">{spec.spec_key}</span>
                                   <span className="text-xs text-foreground break-words">{spec.spec_value}</span>
@@ -191,19 +191,19 @@ const ProductComparisonModal = ({ isOpen, products, onClose }: ProductComparison
 
                         {/* Colors */}
                         {product.product_colors && product.product_colors.length > 0 && (
-                          <div className="bg-background/50 p-3 rounded-lg border border-border/50">
-                            <p className="text-xs font-semibold text-muted-foreground mb-3">Available Colors</p>
-                            <div className="flex flex-wrap gap-3">
-                              {product.product_colors.map((color, i) => (
-                                <div key={i} className="flex flex-col items-center gap-1.5">
+                          <div className="bg-background/50 p-2 md:p-3 rounded-lg border border-border/50">
+                            <p className="text-xs font-semibold text-muted-foreground mb-2 md:mb-3">Colors</p>
+                            <div className="flex flex-wrap gap-2 md:gap-3">
+                              {product.product_colors.slice(0, 6).map((color, i) => (
+                                <div key={i} className="flex flex-col items-center gap-1">
                                   <div
-                                    className="w-8 h-8 rounded-full border-2 border-border shadow-md"
+                                    className="w-7 h-7 md:w-8 md:h-8 rounded-full border-2 border-border shadow-md"
                                     style={{
                                       backgroundColor: color.color.toLowerCase() === 'multicolor' ? '#e5e7eb' : color.color.toLowerCase(),
                                     }}
                                     title={color.color}
                                   />
-                                  <span className="text-xs text-muted-foreground text-center max-w-[60px] truncate">{color.color}</span>
+                                  <span className="text-xs text-muted-foreground text-center max-w-[50px] truncate">{color.color}</span>
                                 </div>
                               ))}
                             </div>
@@ -218,10 +218,10 @@ const ProductComparisonModal = ({ isOpen, products, onClose }: ProductComparison
             </div>
 
             {/* Footer */}
-            <div className="border-t border-border bg-secondary/50 p-4 sm:p-6">
+            <div className="border-t border-border bg-secondary/50 p-3 md:p-6">
               <button
                 onClick={onClose}
-                className="w-full px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors font-semibold"
+                className="w-full px-4 py-2 md:py-2.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors font-semibold text-sm md:text-base"
               >
                 Done Comparing
               </button>
