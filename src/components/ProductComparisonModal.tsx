@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, ChevronDown } from "lucide-react";
+import { useCart } from "@/contexts/CartContext";
 
 interface ComparisonProduct {
   id: string;
@@ -27,6 +28,14 @@ const ProductComparisonModal = ({ isOpen, products, onClose }: ProductComparison
   const [expandedProducts, setExpandedProducts] = useState<Set<string>>(new Set());
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+  const { isOpen: cartOpen } = useCart();
+
+  // Close compare modal when cart drawer opens on mobile
+  useEffect(() => {
+    if (cartOpen && isMobile && isOpen) {
+      onClose();
+    }
+  }, [cartOpen, isMobile, isOpen, onClose]);
 
   // Prevent body scroll when modal is open
   useEffect(() => {
