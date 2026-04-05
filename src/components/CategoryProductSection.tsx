@@ -31,7 +31,7 @@ const CategoryProductSection = ({ category, bgClass = "bg-white" }: CategoryProd
       <div className="container">
         <div className="flex items-center justify-between mb-5">
           <div>
-            <h2 className="text-base sm:text-lg font-bold tracking-tight">{category}</h2>
+            <h2 className="text-base sm:text-lg lg:text-xl font-bold tracking-tight">{category}</h2>
             <p className="text-xs text-muted-foreground mt-0.5">Top picks in {category}</p>
           </div>
           <Link

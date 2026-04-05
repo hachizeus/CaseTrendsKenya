@@ -94,7 +94,7 @@ const FavoritesPage = () => {
         <Link to="/" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary mb-6">
           <ArrowLeft className="w-4 h-4" /> Back to Shop
         </Link>
-        <h1 className="text-2xl font-bold mb-6">My Wishlist ({loading ? "..." : favorites.length})</h1>
+        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-6">My Wishlist ({loading ? "..." : favorites.length})</h1>
         {loading ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
             {Array(4).fill(null).map((_, i) => (

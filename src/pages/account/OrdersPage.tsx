@@ -113,7 +113,7 @@ const OrdersPage = () => {
             <ArrowLeft className="w-4 h-4" /> Back to Shop
           </Link>
 
-          <h1 className="text-2xl sm:text-3xl font-bold mb-6">My Orders</h1>
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-6">My Orders</h1>
 
           {orders.length === 0 ? (
             <div className="bg-card rounded-lg p-8 text-center">

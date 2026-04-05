@@ -204,7 +204,7 @@ const ProductsPage = () => {
               {/* Top bar */}
               <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
                 <div>
-                  <h1 className="text-xl sm:text-2xl font-bold">
+                  <h1 className="text-lg sm:text-2xl lg:text-3xl font-bold">
                     {selectedCategory || "All Products"}
                   </h1>
                   <p className="text-sm text-muted-foreground">{filtered.length} products found</p>

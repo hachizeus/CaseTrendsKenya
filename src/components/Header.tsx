@@ -87,7 +87,7 @@ const Header = () => {
             {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
           <Link to="/" className="flex-shrink-0">
-            <img src="/logo.png" alt="Case Trends Kenya" width={56} height={56} className="h-14 sm:h-16 w-auto" />
+            <img src="/logo.png" alt="Case Trends Kenya" width={56} height={56} className="h-12 sm:h-14 lg:h-16 w-auto" />
           </Link>
         </div>
 

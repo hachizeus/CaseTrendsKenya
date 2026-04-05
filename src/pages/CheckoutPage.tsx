@@ -129,10 +129,10 @@ const CheckoutPage = () => {
           <Link to="/" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary mb-6">
             <ArrowLeft className="w-4 h-4" /> Back to Shop
           </Link>
-          <h1 className="text-xl sm:text-2xl font-bold mb-6">Checkout</h1>
+          <h1 className="text-lg sm:text-2xl lg:text-3xl font-bold mb-6">Checkout</h1>
 
           <div className="bg-card rounded-xl p-4 sm:p-6 shadow-card mb-6">
-            <h2 className="font-semibold mb-4">Order Summary</h2>
+            <h2 className="font-semibold text-base sm:text-lg mb-4">Order Summary</h2>
             {items.map(item => (
               <div key={item.product_id} className="flex justify-between text-sm py-2 border-b last:border-0 gap-2">
                 <span className="flex-1 min-w-0 truncate">{item.name} x{item.quantity}</span>
@@ -146,7 +146,7 @@ const CheckoutPage = () => {
           </div>
 
           <form onSubmit={handleSubmit} className="bg-card rounded-xl p-4 sm:p-6 shadow-card space-y-4">
-            <h2 className="font-semibold mb-2">Your Details</h2>
+            <h2 className="font-semibold text-base sm:text-lg mb-2">Your Details</h2>
             <div>
               <Label htmlFor="name">Full Name</Label>
               <Input id="name" value={name} onChange={e => setName(e.target.value)} required />
@@ -181,7 +181,7 @@ const CheckoutPage = () => {
               </div>
             )}
 
-            <Button type="submit" className="w-full" size="lg" disabled={isSubmitting}>
+            <Button type="submit" className="w-full text-base sm:text-lg" size="lg" disabled={isSubmitting}>
               {isSubmitting ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />

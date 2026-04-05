@@ -70,7 +70,7 @@ const ProductGrid = () => {
         {/* Header */}
         <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
           <div className="flex items-center gap-1 sm:gap-0">
-            <h2 className="text-base sm:text-lg font-bold tracking-tight mr-4 sm:mr-8">Our Trending Products</h2>
+            <h2 className="text-base sm:text-lg lg:text-xl font-bold tracking-tight mr-4 sm:mr-8">Our Trending Products</h2>
             <div className="flex border-b border-border">
               {TABS.map(t => (
                 <button

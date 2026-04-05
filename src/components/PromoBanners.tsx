@@ -67,7 +67,7 @@ const PromoBanners = () => {
                         {discount}% OFF
                       </span>
                     )}
-                    <h3 className="font-bold text-sm sm:text-base leading-snug text-foreground line-clamp-2 mb-1">
+                    <h3 className="font-bold text-xs sm:text-sm lg:text-base leading-snug text-foreground line-clamp-2 mb-1">
                       {p.name}
                     </h3>
                     <p className="text-xs text-muted-foreground mb-3">
