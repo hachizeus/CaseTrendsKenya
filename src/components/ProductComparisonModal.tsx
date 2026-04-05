@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import { X, ChevronDown } from "lucide-react";
 import { useCart } from "@/contexts/CartContext";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface ComparisonProduct {
   id: string;
@@ -96,203 +97,167 @@ const ProductComparisonModal = ({ isOpen, products, onClose }: ProductComparison
   };
 
   return (
-    <AnimatePresence>
+    <>
       {isOpen && products.length > 0 && (
-        // Mobile: Accordion interface
+        // Mobile: Bottom drawer with accordion
         isMobile ? (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 20 }}
-            className="fixed inset-0 z-50 bg-black/50 flex items-end lg:items-center justify-center overflow-hidden p-2 sm:p-4"
-            onClick={onClose}
-          >
-            <motion.div
-              initial={{ translateY: "100%" }}
-              animate={{ translateY: 0 }}
-              exit={{ translateY: "100%" }}
-              transition={{ type: "spring", damping: 30, stiffness: 300 }}
-              className="bg-card rounded-t-2xl w-full h-[75vh] flex flex-col overflow-hidden sm:rounded-xl sm:max-w-2xl lg:max-w-4xl sm:h-auto sm:max-h-[93vh]"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* Header */}
-              <div className="sticky top-0 bg-card border-b border-border p-2 sm:p-3 flex items-center justify-between z-10 gap-2">
-                <div className="min-w-0 flex-1">
-                  <h2 className="text-sm sm:text-base lg:text-lg font-bold truncate">Compare Products</h2>
-                  <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">{products.length} product{products.length !== 1 ? "s" : ""}</p>
-                </div>
-                <button
-                  onClick={onClose}
-                  className="p-1.5 sm:p-2 hover:bg-secondary rounded-lg transition-colors flex-shrink-0"
-                >
-                  <X className="w-4 sm:w-5 h-4 sm:h-5" />
-                </button>
-              </div>
+          <Sheet open={isOpen} onOpenChange={onClose}>
+            <SheetContent side="bottom" className="w-full h-[75vh] flex flex-col p-0">
+              <SheetHeader className="px-4 sm:px-6 pt-4 sm:pt-6">
+                <SheetTitle className="flex items-center gap-2">
+                  Compare Products ({products.length})
+                </SheetTitle>
+              </SheetHeader>
 
               {/* Accordion Content */}
-              <div className="flex-1 overflow-y-auto space-y-1.5 sm:space-y-2 p-2 sm:p-3">
-                {products.map((product) => (
-                  <div key={product.id} className="border border-border rounded-lg overflow-hidden bg-secondary/30">
-                    {/* Accordion Header (always visible) */}
-                    <button
-                      onClick={() => toggleProductExpanded(product.id)}
-                      className="w-full flex items-start gap-1.5 sm:gap-2 p-2 sm:p-3 hover:bg-secondary/50 transition-colors text-left"
+              <div className="flex-1 overflow-y-auto space-y-1.5 sm:space-y-2 px-4 sm:px-6 py-3 sm:py-4">
+                <AnimatePresence>
+                  {products.map((product) => (
+                    <motion.div
+                      key={product.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      className="border border-border rounded-lg overflow-hidden bg-secondary/30"
                     >
-                      <div className="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 flex-shrink-0 bg-background rounded-lg flex items-center justify-center overflow-hidden">
-                        <img
-                          src={getPrimaryImage(product)}
-                          alt={product.name}
-                          className="w-full h-full object-contain"
-                        />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-bold text-[11px] sm:text-xs lg:text-sm line-clamp-2">{product.name}</h3>
-                        <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">{product.brand}</p>
-                        <div className="flex items-baseline gap-1.5 sm:gap-2 mt-1 sm:mt-1.5">
-                          <span className="text-[10px] sm:text-xs lg:text-sm font-bold text-primary">
-                            KSh {product.price.toLocaleString()}
-                          </span>
-                          {product.original_price && (
-                            <span className="text-[9px] sm:text-xs text-muted-foreground line-through">
-                              KSh {product.original_price.toLocaleString()}
-                            </span>
-                          )}
+                      {/* Accordion Header (always visible) */}
+                      <button
+                        onClick={() => toggleProductExpanded(product.id)}
+                        className="w-full flex items-start gap-1.5 sm:gap-2 p-2 sm:p-3 hover:bg-secondary/50 transition-colors text-left"
+                      >
+                        <div className="w-12 h-12 sm:w-14 sm:h-14 flex-shrink-0 bg-background rounded-lg flex items-center justify-center overflow-hidden">
+                          <img
+                            src={getPrimaryImage(product)}
+                            alt={product.name}
+                            className="w-full h-full object-contain"
+                          />
                         </div>
-                      </div>
-                      <ChevronDown
-                        className={`w-4 sm:w-5 h-4 sm:h-5 flex-shrink-0 transition-transform ${
-                          expandedProducts.has(product.id) ? "rotate-180" : ""
-                        }`}
-                      />
-                    </button>
-
-                    {/* Accordion Content (expands when clicked) */}
-                    <AnimatePresence>
-                      {expandedProducts.has(product.id) && (
-                        <motion.div
-                          initial={{ height: 0, opacity: 0 }}
-                          animate={{ height: "auto", opacity: 1 }}
-                          exit={{ height: 0, opacity: 0 }}
-                          className="border-t border-border overflow-hidden"
-                        >
-                          <div className="p-2 sm:p-3 space-y-1.5 sm:space-y-2 bg-background/50">
-                            {/* Stock Status */}
-                            <div>
-                              <span
-                                className={`inline-block text-xs font-semibold px-2 py-1 rounded ${stockStatusColor(
-                                  product.stock_status
-                                )}`}
-                              >
-                                {product.stock_status === "in_stock"
-                                  ? "In Stock"
-                                  : product.stock_status === "low_stock"
-                                  ? "Low Stock"
-                                  : "Sold Out"}
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-bold text-[11px] sm:text-xs lg:text-sm line-clamp-2">{product.name}</h3>
+                          <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">{product.brand}</p>
+                          <div className="flex items-baseline gap-1.5 sm:gap-2 mt-1 sm:mt-1.5">
+                            <span className="text-[10px] sm:text-xs lg:text-sm font-bold text-primary">
+                              KSh {product.price.toLocaleString()}
+                            </span>
+                            {product.original_price && (
+                              <span className="text-[9px] sm:text-xs text-muted-foreground line-through">
+                                KSh {product.original_price.toLocaleString()}
                               </span>
-                              {product.stock_quantity && product.stock_quantity > 0 && (
-                                <p className="text-xs text-muted-foreground mt-1">{product.stock_quantity} available</p>
-                              )}
-                            </div>
-
-                            {/* Description */}
-                            {product.description && (
-                              <div>
-                                <p className="text-xs font-semibold text-muted-foreground mb-1">Description</p>
-                                <p className="text-xs leading-relaxed text-foreground">{product.description}</p>
-                              </div>
-                            )}
-
-                            {/* Specifications */}
-                            {product.product_specifications && product.product_specifications.length > 0 && (
-                              <div>
-                                <p className="text-xs font-semibold text-muted-foreground mb-2">Specifications</p>
-                                <div className="space-y-2">
-                                  {product.product_specifications.slice(0, 8).map((spec, i) => (
-                                    <div key={i} className="flex items-start gap-2 pb-2 border-b border-border/30 last:border-b-0 last:pb-0">
-                                      <span className="font-semibold text-xs text-primary min-w-fit">{spec.spec_key}</span>
-                                      <span className="text-xs text-foreground">{spec.spec_value}</span>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-
-                            {/* Colors */}
-                            {product.product_colors && product.product_colors.length > 0 && (
-                              <div>
-                                <p className="text-xs font-semibold text-muted-foreground mb-2">Colors</p>
-                                <div className="flex flex-wrap gap-2">
-                                  {product.product_colors.slice(0, 8).map((color, i) => (
-                                    <div key={i} className="flex flex-col items-center gap-1">
-                                      <div
-                                        className="w-6 h-6 rounded-full border-2 border-border shadow-md"
-                                        style={{
-                                          backgroundColor:
-                                            color.color.toLowerCase() === "multicolor" ? "#e5e7eb" : color.color.toLowerCase(),
-                                        }}
-                                        title={color.color}
-                                      />
-                                      <span className="text-xs text-muted-foreground text-center">{color.color}</span>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
                             )}
                           </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
-                ))}
+                        </div>
+                        <ChevronDown
+                          className={`w-4 sm:w-5 h-4 sm:h-5 flex-shrink-0 transition-transform ${
+                            expandedProducts.has(product.id) ? "rotate-180" : ""
+                          }`}
+                        />
+                      </button>
+
+                      {/* Accordion Content (expands when clicked) */}
+                      <AnimatePresence>
+                        {expandedProducts.has(product.id) && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: "auto", opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.2 }}
+                            className="border-t border-border overflow-hidden"
+                          >
+                            <div className="p-2 sm:p-3 space-y-1.5 sm:space-y-2 bg-background/50">
+                              {/* Stock Status */}
+                              <div>
+                                <span
+                                  className={`inline-block text-xs font-semibold px-2 py-1 rounded ${stockStatusColor(
+                                    product.stock_status
+                                  )}`}
+                                >
+                                  {product.stock_status === "in_stock"
+                                    ? "In Stock"
+                                    : product.stock_status === "low_stock"
+                                    ? "Low Stock"
+                                    : "Sold Out"}
+                                </span>
+                                {product.stock_quantity && product.stock_quantity > 0 && (
+                                  <p className="text-xs text-muted-foreground mt-1">{product.stock_quantity} available</p>
+                                )}
+                              </div>
+
+                              {/* Description */}
+                              {product.description && (
+                                <div>
+                                  <p className="text-xs font-semibold text-muted-foreground mb-1">Description</p>
+                                  <p className="text-xs leading-relaxed text-foreground">{product.description}</p>
+                                </div>
+                              )}
+
+                              {/* Specifications */}
+                              {product.product_specifications && product.product_specifications.length > 0 && (
+                                <div>
+                                  <p className="text-xs font-semibold text-muted-foreground mb-2">Specifications</p>
+                                  <div className="space-y-2">
+                                    {product.product_specifications.slice(0, 8).map((spec, i) => (
+                                      <div key={i} className="flex items-start gap-2 pb-2 border-b border-border/30 last:border-b-0 last:pb-0">
+                                        <span className="font-semibold text-xs text-primary min-w-fit">{spec.spec_key}</span>
+                                        <span className="text-xs text-foreground">{spec.spec_value}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Colors */}
+                              {product.product_colors && product.product_colors.length > 0 && (
+                                <div>
+                                  <p className="text-xs font-semibold text-muted-foreground mb-2">Colors</p>
+                                  <div className="flex flex-wrap gap-2">
+                                    {product.product_colors.slice(0, 8).map((color, i) => (
+                                      <div key={i} className="flex flex-col items-center gap-1">
+                                        <div
+                                          className="w-6 h-6 rounded-full border-2 border-border shadow-md"
+                                          style={{
+                                            backgroundColor:
+                                              color.color.toLowerCase() === "multicolor" ? "#e5e7eb" : color.color.toLowerCase(),
+                                          }}
+                                          title={color.color}
+                                        />
+                                        <span className="text-xs text-muted-foreground text-center">{color.color}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
               </div>
 
               {/* Footer */}
-              <div className="border-t border-border bg-secondary/50 p-2 sm:p-3">
+              <div className="sticky bottom-0 border-t border-border bg-secondary/50 px-4 sm:px-6 py-3 sm:py-4">
                 <button
                   onClick={onClose}
-                  className="w-full px-4 py-1.5 sm:py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors font-semibold text-xs sm:text-sm"
+                  className="w-full px-4 py-2 sm:py-2.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors font-semibold text-xs sm:text-sm"
                 >
                   Done Comparing
                 </button>
               </div>
-            </motion.div>
-          </motion.div>
+            </SheetContent>
+          </Sheet>
         ) : (
-          // Desktop: Modal interface
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-2 sm:p-4 overflow-hidden pt-[100px]"
-            onClick={onClose}
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className={`bg-card rounded-xl border border-border w-full flex flex-col overflow-hidden mt-[60px] ${
-                windowWidth < 1536 ? "max-h-[85vh] max-w-5xl" : "max-h-[82vh] max-w-7xl"
-              }`}
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* Header */}
-              <div className="sticky top-0 bg-card border-b border-border p-3 sm:p-4 lg:p-6 flex items-center justify-between z-10 gap-4">
-                <div className="min-w-0 flex-1">
-                  <h2 className="text-lg sm:text-xl lg:text-2xl font-bold truncate">Compare Products</h2>
-                  <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-                    {products.length} product{products.length !== 1 ? "s" : ""}
-                  </p>
-                </div>
-                <button
-                  onClick={onClose}
-                  className="p-2 hover:bg-secondary rounded-lg transition-colors flex-shrink-0"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
+          // Desktop: Full modal view with grid
+          <Sheet open={isOpen} onOpenChange={onClose}>
+            <SheetContent side="bottom" className="w-full max-h-[85vh] flex flex-col p-0">
+              <SheetHeader className="px-6 pt-6">
+                <SheetTitle className="text-2xl">
+                  Compare Products ({products.length})
+                </SheetTitle>
+              </SheetHeader>
 
-              {/* Content */}
-              <div className="flex-1 flex flex-row gap-2 sm:gap-3 lg:gap-4 px-3 sm:px-4 lg:px-6 py-2 sm:py-3 lg:py-4 min-h-0 overflow-y-auto scrollbar-hide">
+              {/* Grid Content */}
+              <div className="flex-1 flex flex-row gap-4 px-6 py-4 min-h-0 overflow-y-auto">
                 {products.map((product, idx) => (
                   <motion.div
                     key={product.id}
@@ -302,10 +267,10 @@ const ProductComparisonModal = ({ isOpen, products, onClose }: ProductComparison
                     className="flex-1 flex flex-col border border-border rounded-lg bg-secondary/30 min-h-0 overflow-hidden"
                   >
                     {/* Scrollable content area */}
-                    <div className="overflow-y-auto flex-1 min-h-0 scrollbar-hide">
-                      <div className="p-2 sm:p-3 lg:p-4 space-y-2 sm:space-y-3 lg:space-y-4">
+                    <div className="overflow-y-auto flex-1 min-h-0">
+                      <div className="p-4 space-y-4">
                         {/* Image */}
-                        <div className="bg-background rounded-lg p-1.5 sm:p-2 lg:p-3 h-32 sm:h-40 lg:h-48 flex items-center justify-center">
+                        <div className="bg-background rounded-lg p-3 h-48 flex items-center justify-center">
                           <img
                             src={getPrimaryImage(product)}
                             alt={product.name}
@@ -315,14 +280,14 @@ const ProductComparisonModal = ({ isOpen, products, onClose }: ProductComparison
 
                         {/* Product Name */}
                         <div>
-                          <h3 className="font-bold text-xs sm:text-sm lg:text-base line-clamp-2">{product.name}</h3>
-                          <p className="text-xs text-muted-foreground mt-0.5 lg:mt-1">{product.brand}</p>
+                          <h3 className="font-bold text-base line-clamp-2">{product.name}</h3>
+                          <p className="text-xs text-muted-foreground mt-1">{product.brand}</p>
                         </div>
 
                         {/* Price */}
                         <div className="space-y-1">
                           <div className="flex items-baseline gap-2">
-                            <span className="text-sm sm:text-base lg:text-lg font-bold text-primary">
+                            <span className="text-lg font-bold text-primary">
                               KSh {product.price.toLocaleString()}
                             </span>
                             {product.original_price && (
@@ -360,7 +325,7 @@ const ProductComparisonModal = ({ isOpen, products, onClose }: ProductComparison
 
                         {/* Description */}
                         {product.description && (
-                          <div className="bg-background/50 p-1.5 sm:p-2 lg:p-3 rounded-lg border border-border/50">
+                          <div className="bg-background/50 p-3 rounded-lg border border-border/50">
                             <p className="text-xs font-semibold text-muted-foreground mb-2">Description</p>
                             <p className="text-xs leading-relaxed text-foreground line-clamp-4">
                               {product.description}
@@ -370,8 +335,8 @@ const ProductComparisonModal = ({ isOpen, products, onClose }: ProductComparison
 
                         {/* Specifications */}
                         {product.product_specifications && product.product_specifications.length > 0 && (
-                          <div className="bg-background/50 p-1.5 sm:p-2 lg:p-3 rounded-lg border border-border/50">
-                            <p className="text-xs font-semibold text-muted-foreground mb-2 lg:mb-3">Specs</p>
+                          <div className="bg-background/50 p-3 rounded-lg border border-border/50">
+                            <p className="text-xs font-semibold text-muted-foreground mb-3">Specs</p>
                             <div className="space-y-2">
                               {product.product_specifications.map((spec, i) => (
                                 <div key={i} className="flex items-start gap-2 pb-2 border-b border-border/30 last:border-b-0 last:pb-0">
@@ -385,13 +350,13 @@ const ProductComparisonModal = ({ isOpen, products, onClose }: ProductComparison
 
                         {/* Colors */}
                         {product.product_colors && product.product_colors.length > 0 && (
-                          <div className="bg-background/50 p-1.5 sm:p-2 lg:p-3 rounded-lg border border-border/50">
-                            <p className="text-xs font-semibold text-muted-foreground mb-2 lg:mb-3">Colors</p>
-                            <div className="flex flex-wrap gap-2 lg:gap-3">
+                          <div className="bg-background/50 p-3 rounded-lg border border-border/50">
+                            <p className="text-xs font-semibold text-muted-foreground mb-3">Colors</p>
+                            <div className="flex flex-wrap gap-3">
                               {product.product_colors.map((color, i) => (
                                 <div key={i} className="flex flex-col items-center gap-1">
                                   <div
-                                    className="w-6 sm:w-7 lg:w-8 h-6 sm:h-7 lg:h-8 rounded-full border-2 border-border shadow-md"
+                                    className="w-8 h-8 rounded-full border-2 border-border shadow-md"
                                     style={{
                                       backgroundColor: color.color.toLowerCase() === "multicolor" ? "#e5e7eb" : color.color.toLowerCase(),
                                     }}
@@ -410,19 +375,19 @@ const ProductComparisonModal = ({ isOpen, products, onClose }: ProductComparison
               </div>
 
               {/* Footer */}
-              <div className="border-t border-border bg-secondary/50 p-3 sm:p-4 lg:p-6">
+              <div className="sticky bottom-0 border-t border-border bg-secondary/50 px-6 py-4">
                 <button
                   onClick={onClose}
-                  className="w-full px-4 py-2 sm:py-2.5 lg:py-3 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors font-semibold text-xs sm:text-sm lg:text-base"
+                  className="w-full px-4 py-3 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors font-semibold text-base"
                 >
                   Done Comparing
                 </button>
               </div>
-            </motion.div>
-          </motion.div>
+            </SheetContent>
+          </Sheet>
         )
       )}
-    </AnimatePresence>
+    </>
   );
 };
 
