@@ -4,7 +4,6 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCart } from "@/contexts/CartContext";
 import { supabase } from "@/integrations/supabase/client";
-import logo from "@/assets/logo.png";
 import SearchDropdown from "./SearchDropdown";
 import {
   DropdownMenu,
@@ -88,7 +87,7 @@ const Header = () => {
             {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
           <Link to="/" className="flex-shrink-0">
-            <img src={logo} alt="Case Trends Kenya" width={44} height={44} className="h-9 sm:h-11 w-auto" />
+            <img src="/logo.png" alt="Case Trends Kenya" width={56} height={56} className="h-14 sm:h-16 w-auto" />
           </Link>
         </div>
 

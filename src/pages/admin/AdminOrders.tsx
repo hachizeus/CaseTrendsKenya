@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useRefreshTrigger } from "@/contexts/RefreshContext";
 import { Search, Eye, X, Mail, Loader } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -24,8 +25,9 @@ const AdminOrders = () => {
   const [statusFilter, setStatusFilter] = useState("all");
   const [selected, setSelected] = useState<any>(null);
   const [sendingEmail, setSendingEmail] = useState(false);
+  const { refreshTrigger } = useRefreshTrigger();
 
-  useEffect(() => { loadOrders(); }, []);
+  useEffect(() => { loadOrders(); }, [refreshTrigger]);
 
   const loadOrders = async () => {
     try {

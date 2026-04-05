@@ -1,8 +1,11 @@
 import { useAuth } from "@/contexts/AuthContext";
+import { RefreshProvider, useRefreshTrigger } from "@/contexts/RefreshContext";
 import { Navigate, Outlet, Link, useLocation } from "react-router-dom";
 import { LayoutDashboard, Package, Image, Users, FolderTree, Store, Star, ChevronRight, ShoppingBag, Menu, X } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { usePullToRefresh } from "@/hooks/use-pull-to-refresh";
+import { PullToRefreshOverlay } from "@/components/PullToRefreshOverlay";
 import logo from "@/assets/logo.png";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
@@ -16,10 +19,20 @@ const adminLinks = [
   { path: "/admin/users", label: "Users", icon: Users },
 ];
 
-const AdminLayout = () => {
+const AdminLayoutContent = () => {
   const { isAdmin, loading } = useAuth();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { triggerRefresh } = useRefreshTrigger();
+
+  const { containerRef, isRefreshing, pullDistance, progress } = usePullToRefresh({
+    onRefresh: async () => {
+      triggerRefresh();
+      // Small delay to ensure UI updates visually
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    },
+    threshold: 100,
+  });
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center bg-[#0f1117]">
@@ -115,13 +128,22 @@ const AdminLayout = () => {
           <p className="text-xs font-semibold text-white/70 ml-auto">Admin</p>
         </header>
 
-        <main className="flex-1 overflow-y-auto">
+        <main className="flex-1 overflow-y-auto" ref={containerRef}>
+          <PullToRefreshOverlay isRefreshing={isRefreshing} pullDistance={pullDistance} progress={progress} />
           <div className="p-3 sm:p-4 md:p-6 lg:p-8 max-w-7xl ml-auto">
             <Outlet />
           </div>
         </main>
       </div>
     </div>
+  );
+};
+
+const AdminLayout = () => {
+  return (
+    <RefreshProvider>
+      <AdminLayoutContent />
+    </RefreshProvider>
   );
 };
 

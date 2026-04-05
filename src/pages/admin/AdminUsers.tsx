@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useRefreshTrigger } from "@/contexts/RefreshContext";
 import { Search, User, Loader } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
@@ -28,10 +29,11 @@ const AdminUsers = () => {
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [updatingRole, setUpdatingRole] = useState<string | null>(null);
+  const { refreshTrigger } = useRefreshTrigger();
 
   useEffect(() => {
     loadUsersWithRoles();
-  }, []);
+  }, [refreshTrigger]);
 
   const loadUsersWithRoles = async () => {
     setLoading(true);

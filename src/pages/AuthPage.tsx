@@ -9,7 +9,6 @@ import { Eye, EyeOff, Mail, Lock, User, ArrowRight, ShoppingBag, Shield, Truck, 
 import TopBar from "@/components/TopBar";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import logo from "@/assets/logo.png";
 
 const perks = [
   { icon: ShoppingBag, text: "Track your orders easily" },
@@ -65,7 +64,7 @@ const AuthPage = () => {
           {/* Left panel — branding */}
           <div className="hidden lg:flex flex-col justify-between bg-[#0f1117] text-white p-10">
             <div>
-              <img src={logo} alt="Case Trends Kenya" className="h-10 w-auto mb-10 brightness-200" />
+              <img src="/logo.png" alt="Case Trends Kenya" className="h-10 w-auto mb-10 brightness-200" />
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -104,7 +103,7 @@ const AuthPage = () => {
           <div className="bg-white p-8 sm:p-10 flex flex-col justify-center">
             {/* Mobile logo */}
             <Link to="/" className="flex justify-center mb-6 lg:hidden">
-              <img src={logo} alt="Case Trends Kenya" className="h-10 w-auto" />
+              <img src="/logo.png" alt="Case Trends Kenya" className="h-10 w-auto" />
             </Link>
 
             {/* Tab switcher */}
