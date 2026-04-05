@@ -49,13 +49,14 @@ const ProductComparisonModal = ({ isOpen, products, onClose }: ProductComparison
   }, []);
 
   const toggleProductExpanded = (productId: string) => {
-    const newExpanded = new Set(expandedProducts);
-    if (newExpanded.has(productId)) {
-      newExpanded.delete(productId);
+    // Only one accordion can be open at a time
+    if (expandedProducts.has(productId)) {
+      // Close the currently open accordion
+      setExpandedProducts(new Set());
     } else {
-      newExpanded.add(productId);
+      // Close any open accordion and open the clicked one
+      setExpandedProducts(new Set([productId]));
     }
-    setExpandedProducts(newExpanded);
   };
 
   const getPrimaryImage = (product: ComparisonProduct) => {
@@ -102,7 +103,7 @@ const ProductComparisonModal = ({ isOpen, products, onClose }: ProductComparison
               animate={{ translateY: 0 }}
               exit={{ translateY: "100%" }}
               transition={{ type: "spring", damping: 30, stiffness: 300 }}
-              className="bg-card rounded-t-2xl w-full max-h-[92vh] flex flex-col overflow-hidden sm:rounded-xl sm:max-w-2xl lg:max-w-4xl sm:max-h-[93vh] mb-[10px]"
+              className="bg-card rounded-t-2xl w-full h-[50vh] flex flex-col overflow-hidden sm:rounded-xl sm:max-w-2xl lg:max-w-4xl sm:h-auto sm:max-h-[93vh]"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}
