@@ -141,7 +141,7 @@ const CartDrawer = () => {
               </div>
             </div>
 
-            <div className="border-t bg-card px-4 sm:px-6 py-4 space-y-3">
+            <div className="sticky bottom-0 border-t bg-card px-4 sm:px-6 py-4 space-y-3 z-10">
               <div className="flex justify-between text-base sm:text-lg font-bold">
                 <span>Total</span>
                 <span className="text-primary">KSh {totalPrice.toLocaleString()}</span>
