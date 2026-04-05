@@ -467,10 +467,10 @@ export default function AdminSlidesOverview() {
                 />
               </label>
               {imageFile && (
-                <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg space-y-2">
+                <div className="mt-3 p-3 bg-gray-100 border border-gray-300 rounded-lg space-y-2">
                   <div className="flex items-start gap-2">
-                    <Info className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
-                    <div className="text-xs text-blue-900 space-y-1 flex-1">
+                    <Info className="w-4 h-4 text-gray-700 mt-0.5 flex-shrink-0" />
+                    <div className="text-xs text-gray-900 space-y-1 flex-1">
                       <p className="font-semibold">✨ Image Optimized</p>
                       {compressionStats && (
                         <>
@@ -479,7 +479,7 @@ export default function AdminSlidesOverview() {
                           <p>🎨 Format: {compressionStats.mimeType === "image/webp" ? "WebP" : "Original"} (modern & efficient)</p>
                         </>
                       )}
-                      <p className="text-[11px] text-blue-700 mt-2">
+                      <p className="text-[11px] text-gray-700 mt-2">
                         Images are automatically compressed for faster loading and better performance. ✅
                       </p>
                     </div>

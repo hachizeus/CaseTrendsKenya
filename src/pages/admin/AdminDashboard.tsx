@@ -32,7 +32,7 @@ const AdminDashboard = () => {
   }, [refreshTrigger]);
 
   const statCards = [
-    { label: "Total Products", value: stats.products, icon: Package, color: "bg-blue-500", link: "/admin/products" },
+    { label: "Total Products", value: stats.products, icon: Package, color: "bg-slate-700", link: "/admin/products" },
     { label: "Categories", value: stats.categories, icon: FolderTree, color: "bg-violet-500", link: "/admin/categories" },
     { label: "Registered Users", value: stats.users, icon: Users, color: "bg-emerald-500", link: "/admin/users" },
     { label: "Orders", value: stats.orders, icon: ShoppingBag, color: "bg-primary", link: "/admin/orders" },
@@ -40,7 +40,7 @@ const AdminDashboard = () => {
   ];
 
   const quickActions = [
-    { label: "Add Product", to: "/admin/products", icon: Plus, color: "bg-blue-50 text-blue-600 border-blue-200" },
+    { label: "Add Product", to: "/admin/products", icon: Plus, color: "bg-slate-100 text-slate-700 border-slate-200" },
     { label: "Add Category", to: "/admin/categories", icon: Plus, color: "bg-violet-50 text-violet-600 border-violet-200" },
     { label: "Add Hero Slide", to: "/admin/slides", icon: Plus, color: "bg-orange-50 text-orange-600 border-orange-200" },
     { label: "View Orders", to: "/admin/orders", icon: ShoppingBag, color: "bg-primary/10 text-primary border-primary/20" },
@@ -54,7 +54,7 @@ const AdminDashboard = () => {
   const orderBadge = (s: string) =>
     s === "delivered" ? "bg-emerald-100 text-emerald-700" :
     s === "cancelled" ? "bg-red-100 text-red-600" :
-    s === "confirmed" ? "bg-blue-100 text-blue-700" :
+    s === "confirmed" ? "bg-gray-200 text-gray-700" :
     "bg-yellow-100 text-yellow-700";
 
   return (

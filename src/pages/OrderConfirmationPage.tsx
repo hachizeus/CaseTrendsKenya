@@ -241,7 +241,7 @@ const OrderConfirmationPage = () => {
             {/* Status */}
             <div className="bg-secondary/50 p-3 rounded">
               <p className="text-xs text-muted-foreground mb-1">Current Status</p>
-              <p className="font-semibold text-sm capitalize bg-blue-100 text-blue-900 w-fit px-3 py-1 rounded">
+              <p className="font-semibold text-sm capitalize bg-gray-200 text-gray-900 w-fit px-3 py-1 rounded">
                 {order.status}
               </p>
             </div>

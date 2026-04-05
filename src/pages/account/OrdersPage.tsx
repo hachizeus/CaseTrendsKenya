@@ -31,7 +31,7 @@ const OrdersPage = () => {
 
   const statusColors: Record<string, { bg: string; text: string }> = {
     pending: { bg: "bg-yellow-100", text: "text-yellow-900" },
-    confirmed: { bg: "bg-blue-100", text: "text-blue-900" },
+    confirmed: { bg: "bg-gray-200", text: "text-gray-900" },
     processing: { bg: "bg-purple-100", text: "text-purple-900" },
     delivered: { bg: "bg-green-100", text: "text-green-900" },
     cancelled: { bg: "bg-red-100", text: "text-red-900" },

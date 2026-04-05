@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const bgColors = [
-  "bg-blue-50", "bg-pink-50", "bg-slate-100",
+  "bg-gray-50", "bg-pink-50", "bg-slate-100",
   "bg-amber-50", "bg-cyan-50", "bg-violet-50",
 ];
 
