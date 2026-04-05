@@ -103,7 +103,7 @@ const ProductComparisonModal = ({ isOpen, products, onClose }: ProductComparison
               animate={{ translateY: 0 }}
               exit={{ translateY: "100%" }}
               transition={{ type: "spring", damping: 30, stiffness: 300 }}
-              className="bg-card rounded-t-2xl w-full h-[50vh] flex flex-col overflow-hidden sm:rounded-xl sm:max-w-2xl lg:max-w-4xl sm:h-auto sm:max-h-[93vh]"
+              className="bg-card rounded-t-2xl w-full h-[75vh] flex flex-col overflow-hidden sm:rounded-xl sm:max-w-2xl lg:max-w-4xl sm:h-auto sm:max-h-[93vh]"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}
