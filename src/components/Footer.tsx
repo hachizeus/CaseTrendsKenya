@@ -12,25 +12,25 @@ const Footer = () => {
   }, []);
 
   return (
-    <footer className="bg-topbar text-topbar-foreground">
+    <footer className="bg-black text-white">
       <div className="container py-12">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
           <div>
             <h3 className="font-display font-bold text-lg mb-4">Case Trends Kenya</h3>
-            <p className="text-sm opacity-70 mb-4">Your trusted electronics store in Kenya. Genuine products, warranty, and free delivery across Nairobi.</p>
+            <p className="text-sm text-gray-400 mb-4">Your trusted electronics store in Kenya. Genuine products, warranty, and free delivery across Nairobi.</p>
             <div className="flex gap-3">
-              <a href="#" className="p-2 rounded-lg bg-muted/10 hover:bg-primary transition-colors"><Facebook className="w-4 h-4" /></a>
-              <a href="#" className="p-2 rounded-lg bg-muted/10 hover:bg-primary transition-colors"><Instagram className="w-4 h-4" /></a>
-              <a href="#" className="p-2 rounded-lg bg-muted/10 hover:bg-primary transition-colors"><Twitter className="w-4 h-4" /></a>
+              <a href="#" className="p-2 rounded-lg bg-gray-900 hover:bg-gray-800 transition-colors"><Facebook className="w-4 h-4" /></a>
+              <a href="#" className="p-2 rounded-lg bg-gray-900 hover:bg-gray-800 transition-colors"><Instagram className="w-4 h-4" /></a>
+              <a href="#" className="p-2 rounded-lg bg-gray-900 hover:bg-gray-800 transition-colors"><Twitter className="w-4 h-4" /></a>
             </div>
           </div>
           <div>
             <h4 className="font-semibold mb-4">Quick Links</h4>
-            <ul className="space-y-2 text-sm opacity-70">
-              <li><Link to="/products" className="hover:opacity-100 transition-opacity">All Products</Link></li>
+            <ul className="space-y-2 text-sm text-gray-400">
+              <li><Link to="/products" className="hover:text-white transition-colors">All Products</Link></li>
               {categories.map(cat => (
                 <li key={cat.slug}>
-                  <Link to={`/products?category=${encodeURIComponent(cat.name)}`} className="hover:opacity-100 transition-opacity">
+                  <Link to={`/products?category=${encodeURIComponent(cat.name)}`} className="hover:text-white transition-colors">
                     {cat.name}
                   </Link>
                 </li>
@@ -39,16 +39,16 @@ const Footer = () => {
           </div>
           <div>
             <h4 className="font-semibold mb-4">Customer Service</h4>
-            <ul className="space-y-2 text-sm opacity-70">
-              <li><Link to="/products" className="hover:opacity-100 transition-opacity">Shop</Link></li>
-              <li><Link to="/favorites" className="hover:opacity-100 transition-opacity">Wishlist</Link></li>
-              <li><Link to="/auth" className="hover:opacity-100 transition-opacity">My Account</Link></li>
-              <li><Link to="/checkout" className="hover:opacity-100 transition-opacity">Checkout</Link></li>
+            <ul className="space-y-2 text-sm text-gray-400">
+              <li><Link to="/products" className="hover:text-white transition-colors">Shop</Link></li>
+              <li><Link to="/favorites" className="hover:text-white transition-colors">Wishlist</Link></li>
+              <li><Link to="/auth" className="hover:text-white transition-colors">My Account</Link></li>
+              <li><Link to="/checkout" className="hover:text-white transition-colors">Checkout</Link></li>
             </ul>
           </div>
           <div>
             <h4 className="font-semibold mb-4">Contact Us</h4>
-            <ul className="space-y-3 text-sm opacity-70">
+            <ul className="space-y-3 text-sm text-gray-400">
               <li className="flex items-center gap-2"><Phone className="w-4 h-4" /> +254 700 123 456</li>
               <li className="flex items-center gap-2"><Mail className="w-4 h-4 flex-shrink-0" /> <span className="break-all">elitjohnsdigital@gmail.com</span></li>
               <li className="flex items-center gap-2"><MapPin className="w-4 h-4" /> Nairobi, Kenya</li>
@@ -56,8 +56,8 @@ const Footer = () => {
           </div>
         </div>
       </div>
-      <div className="border-t border-muted/10">
-        <div className="container py-4 text-center text-xs opacity-50">
+      <div className="border-t border-gray-800">
+        <div className="container py-4 text-center text-xs text-gray-600">
           © 2026 Case Trends Kenya. All rights reserved.
         </div>
       </div>
