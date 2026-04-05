@@ -17,6 +17,7 @@ interface UserWithRole extends Record<string, any> {
   id: string;
   user_id: string;
   display_name: string;
+  email?: string;
   phone?: string;
   address?: string;
   created_at: string;
@@ -142,8 +143,8 @@ const AdminUsers = () => {
           <thead className="bg-secondary border-b border-border">
             <tr>
               <th className="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wide text-muted-foreground">User</th>
-              <th className="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wide text-muted-foreground hidden sm:table-cell">Phone</th>
-              <th className="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wide text-muted-foreground hidden md:table-cell">Address</th>
+              <th className="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wide text-muted-foreground hidden sm:table-cell">Email</th>
+              <th className="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wide text-muted-foreground hidden md:table-cell">Phone</th>
               <th className="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wide text-muted-foreground">Role</th>
               <th className="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wide text-muted-foreground">Joined</th>
             </tr>
@@ -152,8 +153,8 @@ const AdminUsers = () => {
             {loading ? Array.from({ length: 5 }).map((_, i) => (
               <tr key={i}>
                 <td className="px-4 py-3"><div className="flex items-center gap-3"><div className="w-8 h-8 bg-secondary animate-pulse" /><div className="h-3 bg-secondary rounded w-32 animate-pulse" /></div></td>
-                <td className="px-4 py-3 hidden sm:table-cell"><div className="h-3 bg-secondary rounded w-24 animate-pulse" /></td>
-                <td className="px-4 py-3 hidden md:table-cell"><div className="h-3 bg-secondary rounded w-20 animate-pulse" /></td>
+                <td className="px-4 py-3 hidden sm:table-cell"><div className="h-3 bg-secondary rounded w-40 animate-pulse" /></td>
+                <td className="px-4 py-3 hidden md:table-cell"><div className="h-3 bg-secondary rounded w-24 animate-pulse" /></td>
                 <td className="px-4 py-3"><div className="h-3 bg-secondary rounded w-20 animate-pulse" /></td>
                 <td className="px-4 py-3"><div className="h-3 bg-secondary rounded w-16 animate-pulse" /></td>
               </tr>
@@ -167,8 +168,8 @@ const AdminUsers = () => {
                     <span className="font-medium">{u.display_name || "—"}</span>
                   </div>
                 </td>
-                <td className="px-4 py-3 text-muted-foreground hidden sm:table-cell">{u.phone || "—"}</td>
-                <td className="px-4 py-3 text-muted-foreground hidden md:table-cell max-w-[160px] truncate">{u.address || "—"}</td>
+                <td className="px-4 py-3 text-muted-foreground hidden sm:table-cell text-xs break-all">{u.email || "—"}</td>
+                <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">{u.phone || "—"}</td>
                 <td className="px-4 py-3">
                   <Select
                     value={u.roles?.[0] || "none"}

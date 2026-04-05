@@ -60,12 +60,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const signUp = async (email: string, password: string, fullName: string) => {
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: { data: { full_name: fullName }, emailRedirectTo: window.location.origin },
     });
     if (error) throw error;
+
+    // Store email in profiles table if signup was successful
+    if (data.user?.id) {
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .update({ email })
+        .eq("user_id", data.user.id);
+      
+      if (profileError) {
+        console.warn("Could not update email in profile:", profileError);
+      }
+    }
   };
 
   const signIn = async (email: string, password: string) => {
