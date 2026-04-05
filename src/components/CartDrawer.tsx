@@ -61,7 +61,7 @@ const CartDrawer = () => {
 
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
-      <SheetContent className="w-full sm:w-5/6 md:w-2/3 lg:max-w-2xl flex flex-col h-screen p-0">
+      <SheetContent className="w-full sm:w-5/6 md:max-w-md lg:max-w-lg flex flex-col h-screen p-0">
         <SheetHeader className="px-4 sm:px-6 pt-4 sm:pt-6">
           <SheetTitle className="flex items-center gap-2">
             <ShoppingBag className="w-5 h-5" />
