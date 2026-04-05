@@ -8,17 +8,17 @@ const features = [
 ];
 
 const FeatureStrip = () => (
-  <section className="bg-foreground text-background">
+  <section className="bg-black text-white border-t border-b border-gray-800">
     <div className="container">
-      <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-background/10">
+      <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-gray-800">
         {features.map((f, i) => (
-          <div key={f.title} className={`flex items-center gap-3 px-4 sm:px-6 py-5 sm:py-6 ${i > 1 ? "border-t border-background/10 md:border-t-0" : ""}`}>
-            <div className="p-2 border border-background/20 flex-shrink-0">
-              <f.icon className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+          <div key={f.title} className={`flex items-center gap-3 px-4 sm:px-6 py-5 sm:py-6 ${i > 1 ? "border-t border-gray-800 md:border-t-0" : ""}`}>
+            <div className="p-2 border border-gray-700 flex-shrink-0 bg-gray-900">
+              <f.icon className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
             </div>
             <div>
-              <p className="text-xs sm:text-sm font-semibold">{f.title}</p>
-              <p className="text-[10px] sm:text-xs text-background/60 mt-0.5">{f.desc}</p>
+              <p className="text-xs sm:text-sm font-semibold text-white">{f.title}</p>
+              <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5">{f.desc}</p>
             </div>
           </div>
         ))}
