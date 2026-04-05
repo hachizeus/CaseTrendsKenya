@@ -61,8 +61,8 @@ const CartDrawer = () => {
 
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
-      <SheetContent className="w-3/4 sm:max-w-md flex flex-col">
-        <SheetHeader>
+      <SheetContent className="w-full sm:w-5/6 md:w-2/3 lg:max-w-2xl flex flex-col h-screen p-0">
+        <SheetHeader className="px-4 sm:px-6 pt-4 sm:pt-6">
           <SheetTitle className="flex items-center gap-2">
             <ShoppingBag className="w-5 h-5" />
             Cart ({totalItems})
@@ -70,7 +70,7 @@ const CartDrawer = () => {
         </SheetHeader>
 
         {items.length === 0 ? (
-          <div className="flex-1 flex items-center justify-center">
+          <div className="flex-1 flex items-center justify-center px-4 sm:px-6">
             <div className="text-center">
               <ShoppingBag className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
               <p className="text-muted-foreground">Your cart is empty</p>
@@ -80,12 +80,12 @@ const CartDrawer = () => {
         ) : (
           <>
             {selectedForCompare.size > 0 && (
-              <div className="px-4 py-2 bg-primary/10 border-b border-primary text-sm text-primary font-medium rounded-t-lg">
+              <div className="px-4 sm:px-6 py-2 bg-primary/10 border-b border-primary text-sm text-primary font-medium">
                 Select up to 3 items to compare ({selectedForCompare.size}/3)
               </div>
             )}
-            <div className="flex-1 overflow-y-auto space-y-3 py-4">
-              <div className="px-4">
+            <div className="flex-1 overflow-y-auto py-3 sm:py-4 px-4 sm:px-6">
+              <div className="space-y-3">
                 <AnimatePresence>
                 {items.map((item) => (
                   <motion.div
@@ -93,7 +93,7 @@ const CartDrawer = () => {
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -20 }}
-                    className={`flex gap-3 p-3 rounded-lg transition-colors ${
+                    className={`flex gap-3 sm:gap-4 p-3 sm:p-4 rounded-lg transition-colors ${
                       selectedForCompare.has(item.product_id)
                         ? "bg-primary/10 border-2 border-primary"
                         : "bg-secondary"
@@ -104,12 +104,12 @@ const CartDrawer = () => {
                       checked={selectedForCompare.has(item.product_id)}
                       onChange={() => toggleCompareSelection(item.product_id)}
                       disabled={selectedForCompare.size >= 3 && !selectedForCompare.has(item.product_id)}
-                      className="mt-1 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+                      className="mt-2 sm:mt-2.5 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
                     />
-                    <img src={item.image} alt={item.name} className="w-16 h-16 object-contain rounded bg-background" />
+                    <img src={item.image} alt={item.name} className="w-16 h-16 sm:w-20 sm:h-20 object-contain rounded bg-background flex-shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium line-clamp-2">{item.name}</p>
-                      <p className="text-sm font-bold text-primary mt-1">KSh {item.price.toLocaleString()}</p>
+                      <p className="text-sm sm:text-base font-medium line-clamp-1">{item.name}</p>
+                      <p className="text-xs sm:text-sm font-bold text-primary mt-1">KSh {item.price.toLocaleString()}</p>
                       <div className="flex items-center gap-2 mt-2">
                         <button 
                           onClick={() => updateQuantity(item.product_id, item.quantity - 1)} 
@@ -130,7 +130,7 @@ const CartDrawer = () => {
                     </div>
                     <button 
                       onClick={() => removeFromCart(item.product_id)} 
-                      className="text-muted-foreground hover:text-destructive self-start"
+                      className="text-muted-foreground hover:text-destructive self-start mt-1 sm:mt-2"
                       aria-label={`Remove ${item.name} from cart`}
                     >
                       <Trash2 className="w-4 h-4" />
@@ -141,8 +141,8 @@ const CartDrawer = () => {
               </div>
             </div>
 
-            <div className="border-t pt-4 space-y-3 px-4">
-              <div className="flex justify-between text-lg font-bold">
+            <div className="border-t bg-card px-4 sm:px-6 py-4 space-y-3">
+              <div className="flex justify-between text-base sm:text-lg font-bold">
                 <span>Total</span>
                 <span className="text-primary">KSh {totalPrice.toLocaleString()}</span>
               </div>
