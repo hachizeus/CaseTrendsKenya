@@ -1,7 +1,13 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Phone, Mail, MapPin, Instagram, Music } from "lucide-react";
+import { Phone, Mail, MapPin, Instagram } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+
+const TikTokIcon = () => (
+  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+    <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.1 1.86 2.89 2.89 0 0 1 5.1-1.86v-3.33a6.15 6.15 0 0 0-6.04 6.3 6.15 6.15 0 0 0 6.04 6.3 6.04 6.04 0 0 0 6.3-6.3V8.93a7.86 7.86 0 0 0 4.57-1.94v-3.3a4.85 4.85 0 0 1-.92.08z"/>
+  </svg>
+);
 
 const Footer = () => {
   const [categories, setCategories] = useState<any[]>([]);
@@ -20,7 +26,7 @@ const Footer = () => {
             <p className="text-sm text-gray-400 mb-4">Your trusted electronics store in Kenya. Genuine products, warranty, and free delivery across Nairobi.</p>
             <div className="flex gap-3">
               <a href="https://www.instagram.com/casetrends_kenya/?hl=en" target="_blank" rel="noopener noreferrer" className="p-2 rounded-lg bg-gray-900 hover:bg-gray-800 transition-colors"><Instagram className="w-4 h-4" /></a>
-              <a href="https://www.tiktok.com/@casetrendskenya" target="_blank" rel="noopener noreferrer" className="p-2 rounded-lg bg-gray-900 hover:bg-gray-800 transition-colors"><Music className="w-4 h-4" /></a>
+              <a href="https://www.tiktok.com/@casetrendskenya" target="_blank" rel="noopener noreferrer" className="p-2 rounded-lg bg-gray-900 hover:bg-gray-800 transition-colors"><TikTokIcon /></a>
             </div>
           </div>
           <div>
