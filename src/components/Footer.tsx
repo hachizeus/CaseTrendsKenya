@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Phone, Mail, MapPin, Facebook, Instagram, Twitter } from "lucide-react";
+import { Phone, Mail, MapPin, Instagram, Music } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 const Footer = () => {
@@ -19,9 +19,8 @@ const Footer = () => {
             <h3 className="font-display font-bold text-lg mb-4">Case Trends Kenya</h3>
             <p className="text-sm text-gray-400 mb-4">Your trusted electronics store in Kenya. Genuine products, warranty, and free delivery across Nairobi.</p>
             <div className="flex gap-3">
-              <a href="#" className="p-2 rounded-lg bg-gray-900 hover:bg-gray-800 transition-colors"><Facebook className="w-4 h-4" /></a>
-              <a href="#" className="p-2 rounded-lg bg-gray-900 hover:bg-gray-800 transition-colors"><Instagram className="w-4 h-4" /></a>
-              <a href="#" className="p-2 rounded-lg bg-gray-900 hover:bg-gray-800 transition-colors"><Twitter className="w-4 h-4" /></a>
+              <a href="https://www.instagram.com/casetrends_kenya/?hl=en" target="_blank" rel="noopener noreferrer" className="p-2 rounded-lg bg-gray-900 hover:bg-gray-800 transition-colors"><Instagram className="w-4 h-4" /></a>
+              <a href="https://www.tiktok.com/@casetrendskenya" target="_blank" rel="noopener noreferrer" className="p-2 rounded-lg bg-gray-900 hover:bg-gray-800 transition-colors"><Music className="w-4 h-4" /></a>
             </div>
           </div>
           <div>
