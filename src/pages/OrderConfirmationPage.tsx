@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { MessageCircle, ArrowLeft, Loader, Mail, RotateCcw } from "lucide-react";
+import { MessageCircle, ArrowLeft, Loader } from "lucide-react";
 import TopBar from "@/components/TopBar";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -29,7 +29,6 @@ const OrderConfirmationPage = () => {
   const navigate = useNavigate();
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
-  const [sendingEmail, setSendingEmail] = useState(false);
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -67,33 +66,6 @@ const OrderConfirmationPage = () => {
 
     fetchOrder();
   }, [orderId, user, navigate]);
-
-  const sendConfirmationEmail = async () => {
-    if (!order) return;
-    
-    setSendingEmail(true);
-    try {
-      const { error } = await supabase.functions.invoke("send-email", {
-        body: {
-          to: order.customer_email,
-          type: "order_confirmation",
-          data: order,
-        },
-      });
-
-      if (error) {
-        console.error("Email send error:", error);
-        toast.error("Failed to send email. Check browser console for details.");
-      } else {
-        toast.success("Confirmation email sent!");
-      }
-    } catch (err) {
-      console.error("Error invoking send-email:", err);
-      toast.error("Failed to send email. Ensure send-email function is deployed and email service is configured.");
-    } finally {
-      setSendingEmail(false);
-    }
-  };
 
   const handleWhatsAppRedirect = () => {
     const productList = order?.items
@@ -256,28 +228,6 @@ const OrderConfirmationPage = () => {
             >
               <MessageCircle className="w-4 h-4 mr-2" /> Complete Payment via WhatsApp
             </Button>
-
-            {order.customer_email && (
-              <Button
-                onClick={sendConfirmationEmail}
-                disabled={sendingEmail}
-                variant="outline"
-                size="lg"
-                className="w-full"
-              >
-                {sendingEmail ? (
-                  <>
-                    <Loader className="w-4 h-4 mr-2 animate-spin" />
-                    Sending...
-                  </>
-                ) : (
-                  <>
-                    <RotateCcw className="w-4 h-4 mr-2" />
-                    Resend Confirmation Email
-                  </>
-                )}
-              </Button>
-            )}
 
             {user ? (
               <Link to="/account/orders" className="block">
