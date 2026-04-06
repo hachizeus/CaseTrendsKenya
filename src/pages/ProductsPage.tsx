@@ -5,7 +5,7 @@ import Header from "@/components/Header";
 import CategoryNav from "@/components/CategoryNav";
 import Footer from "@/components/Footer";
 import ProductCard from "@/components/ProductCard";
-import { useProductsPaginated, useCategories } from "@/hooks/queries";
+import { useProductsPaginated, useCategories, useProducts } from "@/hooks/queries";
 import { SlidersHorizontal, X, ChevronDown, ChevronUp, ChevronLeft, ChevronRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,8 @@ const ProductsPage = () => {
   // Fetch paginated products and categories
   const { data: paginatedData, isLoading, error } = useProductsPaginated(page, PAGE_SIZE);
   const { data: categories = [], isLoading: categoriesLoading } = useCategories();
+  // Fetch all products to get all available filters (colors, brands)
+  const { data: allProducts = [] } = useProducts();
 
   const products = paginatedData?.data || [];
   const totalProducts = paginatedData?.total || 0;
@@ -51,17 +53,17 @@ const ProductsPage = () => {
 
   const toggleSection = (key: string) => setOpenSections(s => ({ ...s, [key]: !s[key] }));
 
-  // Derive unique brands from current products
+  // Derive unique brands from ALL products (not just current page)
   const brands = useMemo(() => {
-    const set = new Set(products.map(p => p.brand).filter(Boolean));
+    const set = new Set(allProducts.map(p => p.brand).filter(Boolean));
     return Array.from(set).sort();
-  }, [products]);
+  }, [allProducts]);
 
-  // Derive unique colors from current products
+  // Derive unique colors from ALL products (not just current page)
   const availableColors = useMemo(() => {
-    const set = new Set(products.map(p => p.color).filter(Boolean));
+    const set = new Set(allProducts.map(p => p.color).filter(Boolean));
     return Array.from(set).sort();
-  }, [products]);
+  }, [allProducts]);
 
   // Apply client-side filters to paginated results
   const filtered = useMemo(() => {
