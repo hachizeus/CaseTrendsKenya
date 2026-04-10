@@ -89,13 +89,13 @@ function buildSecureHeaders(req, res, next) {
   res.set(
     'Content-Security-Policy',
     "default-src 'self'; " +
-    "script-src 'self' https://js.paystack.co; " +
-    "script-src-elem 'self' https://js.paystack.co; " +
+    "script-src 'self' https://*.paystack.co https://checkout.paystack.com; " +
+    "script-src-elem 'self' https://*.paystack.co https://checkout.paystack.com; " +
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
     "style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
     "img-src 'self' data: https://picsum.photos https://images.unsplash.com https:; " +
     "font-src 'self' https://fonts.gstatic.com; " +
-    "connect-src 'self' http://localhost:3000 https://yrhczwzqvzqalyjpxdmi.supabase.co https://*.supabase.co https://casetrendskenya.onrender.com https://*.onrender.com https://fonts.googleapis.com https://fonts.gstatic.com https://picsum.photos https://images.unsplash.com https://api.paystack.co; " +
+    "connect-src 'self' https:; " +
     "frame-src 'self' https://checkout.paystack.com; " +
     "child-src 'self' https://checkout.paystack.com; " +
     "frame-ancestors 'none'; base-uri 'self';"

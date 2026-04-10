@@ -9,6 +9,7 @@ import Footer from "@/components/Footer";
 import { toast } from "sonner";
 import { API_URL, WHATSAPP_NUMBER, PAYSTACK_PUBLIC_KEY } from "@/lib/constants";
 import { payWithPaystack } from "@/lib/paystack";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Order {
   id: string;
@@ -32,6 +33,7 @@ const OrderConfirmationPage = () => {
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [isPaying, setIsPaying] = useState(false);
+  const isPending = order?.status === "pending";
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -259,37 +261,13 @@ const OrderConfirmationPage = () => {
             </div>
           </div>
 
-          {/* Payment Actions */}
+          {/* Order Actions */}
           <div className="space-y-3">
-            {order.payment_method !== "paystack" && (
-              <Button
-                onClick={handleWhatsAppRedirect}
-                size="lg"
-                variant="outline"
-                className="w-full"
-              >
-                <MessageCircle className="w-4 h-4 mr-2" /> Complete Payment via WhatsApp
-              </Button>
-            )}
-
-            {order.payment_method !== "whatsapp" && (
-              <Button
-                onClick={handlePayWithCard}
-                size="lg"
-                className="w-full"
-                disabled={isPaying || order.status !== "pending"}
-              >
-                {isPaying ? (
-                  <>
-                    <Loader className="w-4 h-4 mr-2 animate-spin" /> Paying with Card...
-                  </>
-                ) : (
-                  <>
-                    <MessageCircle className="w-4 h-4 mr-2" /> Pay with Card
-                  </>
-                )}
-              </Button>
-            )}
+            <div className="rounded-lg border border-border p-4 bg-secondary/80">
+              <p className="text-sm text-muted-foreground">
+                Your order is confirmed. You will receive an email and SMS once it is ready for delivery or pickup.
+              </p>
+            </div>
 
             {user ? (
               <Link to="/account/orders" className="block">
