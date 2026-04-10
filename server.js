@@ -93,9 +93,9 @@ function buildSecureHeaders(req, res, next) {
     "script-src-elem 'self' https://*.paystack.co https://checkout.paystack.com; " +
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
     "style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
-    "img-src 'self' data: https://picsum.photos https://images.unsplash.com https:; " +
+    "img-src 'self' data: blob: https://picsum.photos https://images.unsplash.com https:; " +
     "font-src 'self' https://fonts.gstatic.com; " +
-    "connect-src 'self' https:; " +
+    "connect-src 'self' https: wss:; " +
     "frame-src 'self' https://checkout.paystack.com; " +
     "child-src 'self' https://checkout.paystack.com; " +
     "frame-ancestors 'none'; base-uri 'self';"
