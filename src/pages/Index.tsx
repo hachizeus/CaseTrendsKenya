@@ -1,15 +1,24 @@
+import { lazy, Suspense } from "react";
 import TopBar from "@/components/TopBar";
 import Header from "@/components/Header";
 import CategoryNav from "@/components/CategoryNav";
 import HeroBanner from "@/components/HeroBanner";
-import CategoryCards from "@/components/CategoryCards";
-import BrandFilter from "@/components/BrandFilter";
-import PromoBanners from "@/components/PromoBanners";
-import ProductGrid from "@/components/ProductGrid";
-import MiniHeroBanner from "@/components/MiniHeroBanner";
-import HomeCategorySections from "@/components/HomeCategorySections";
-import FeatureStrip from "@/components/FeatureStrip";
+const CategoryCards = lazy(() => import("@/components/CategoryCards"));
+const BrandFilter = lazy(() => import("@/components/BrandFilter"));
+const PromoBanners = lazy(() => import("@/components/PromoBanners"));
+const ProductGrid = lazy(() => import("@/components/ProductGrid"));
+const MiniHeroBanner = lazy(() => import("@/components/MiniHeroBanner"));
+const HomeCategorySections = lazy(() => import("@/components/HomeCategorySections"));
+const FeatureStrip = lazy(() => import("@/components/FeatureStrip"));
 import Footer from "@/components/Footer";
+
+const SectionFallback = () => (
+  <div className="py-8 sm:py-10">
+    <div className="container">
+      <div className="h-44 rounded-3xl bg-slate-100 animate-pulse" />
+    </div>
+  </div>
+);
 
 const Index = () => (
   <div className="min-h-screen flex flex-col">
@@ -21,31 +30,38 @@ const Index = () => (
       {/* Hero 1 — Main banner (display_order 0–9) */}
       <HeroBanner />
 
-      {/* Category icons strip */}
-      <CategoryCards />
+      <Suspense fallback={<SectionFallback />}>
+        <CategoryCards />
+      </Suspense>
 
-      {/* Brand filter */}
-      <BrandFilter />
+      <Suspense fallback={<SectionFallback />}>
+        <BrandFilter />
+      </Suspense>
 
-      {/* Featured promo banners grid */}
-      <PromoBanners />
+      <Suspense fallback={<SectionFallback />}>
+        <PromoBanners />
+      </Suspense>
 
-      {/* ProductGrid */}
-      <ProductGrid />
+      <Suspense fallback={<SectionFallback />}>
+        <ProductGrid />
+      </Suspense>
 
-      {/* Hero 2 — After trending products (section 2) */}
-      <MiniHeroBanner
-        sectionNumber={2}
-        fallbackTitle="New Arrivals Every Week"
-        fallbackSubtitle="Be the first to own the latest phones, tablets, and accessories in Nairobi."
-        fallbackBg="bg-slate-900"
-      />
+      <Suspense fallback={<SectionFallback />}>
+        <MiniHeroBanner
+          sectionNumber={2}
+          fallbackTitle="New Arrivals Every Week"
+          fallbackSubtitle="Be the first to own the latest phones, tablets, and accessories in Nairobi."
+          fallbackBg="bg-slate-900"
+        />
+      </Suspense>
 
-      {/* Per-category product sections with mini heroes between them */}
-      <HomeCategorySections />
+      <Suspense fallback={<SectionFallback />}>
+        <HomeCategorySections />
+      </Suspense>
 
-      {/* Feature strip */}
-      <FeatureStrip />
+      <Suspense fallback={<SectionFallback />}>
+        <FeatureStrip />
+      </Suspense>
 
     </main>
     <Footer />

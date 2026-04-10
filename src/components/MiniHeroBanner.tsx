@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ShoppingBag } from "lucide-react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { getOptimizedImageUrl } from "@/lib/imageOptimization";
 
 interface MiniHeroBannerProps {
   /** Hero section number (1-5) */
@@ -122,7 +123,18 @@ const MiniHeroBanner = ({ sectionNumber, fallbackTitle, fallbackSubtitle, fallba
                 >
                   {/* Background */}
                   {slide.image_url ? (
-                    <img src={slide.image_url} alt={slide.title} className="absolute inset-0 w-full h-full object-cover object-top" />
+                    <img
+                      src={getOptimizedImageUrl(slide.image_url, {
+                        width: 1200,
+                        height: 420,
+                        quality: 70,
+                        resize: "contain",
+                      })}
+                      alt={slide.title}
+                      className="absolute inset-0 w-full h-full object-cover object-top"
+                      loading="lazy"
+                      decoding="async"
+                    />
                   ) : (
                     <div className={`absolute inset-0 ${fallbackBg}`} />
                   )}

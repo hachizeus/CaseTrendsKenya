@@ -5,7 +5,7 @@ import Header from "@/components/Header";
 import CategoryNav from "@/components/CategoryNav";
 import Footer from "@/components/Footer";
 import ProductCard from "@/components/ProductCard";
-import { useProductsPaginated, useCategories, useProducts } from "@/hooks/queries";
+import { useProductsPaginated, useCategories } from "@/hooks/queries";
 import { SlidersHorizontal, X, ChevronDown, ChevronUp, ChevronLeft, ChevronRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -30,8 +30,6 @@ const ProductsPage = () => {
   // Fetch paginated products and categories
   const { data: paginatedData, isLoading, error } = useProductsPaginated(page, PAGE_SIZE);
   const { data: categories = [], isLoading: categoriesLoading } = useCategories();
-  // Fetch all products to get all available filters (colors, brands)
-  const { data: allProducts = [] } = useProducts();
 
   const products = paginatedData?.data || [];
   const totalProducts = paginatedData?.total || 0;
@@ -53,17 +51,17 @@ const ProductsPage = () => {
 
   const toggleSection = (key: string) => setOpenSections(s => ({ ...s, [key]: !s[key] }));
 
-  // Derive unique brands from ALL products (not just current page)
+  // Derive unique brands from current products
   const brands = useMemo(() => {
-    const set = new Set(allProducts.map(p => p.brand).filter(Boolean));
+    const set = new Set(products.map(p => p.brand).filter(Boolean));
     return Array.from(set).sort();
-  }, [allProducts]);
+  }, [products]);
 
-  // Derive unique colors from ALL products (not just current page)
+  // Derive unique colors from current products
   const availableColors = useMemo(() => {
-    const set = new Set(allProducts.map(p => p.color).filter(Boolean));
+    const set = new Set(products.map(p => p.color).filter(Boolean));
     return Array.from(set).sort();
-  }, [allProducts]);
+  }, [products]);
 
   // Apply client-side filters to paginated results
   const filtered = useMemo(() => {
@@ -272,7 +270,7 @@ const ProductsPage = () => {
                 </div>
               ) : (
                 <>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,220px))] justify-center gap-3">
                     {filtered.map((product, i) => (
                       <ProductCard
                         key={product.id}

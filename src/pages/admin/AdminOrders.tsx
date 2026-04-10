@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useRefreshTrigger } from "@/contexts/RefreshContext";
 import { Search, Eye, X, Mail, Loader } from "lucide-react";
@@ -7,8 +8,10 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { API_URL } from "@/lib/constants";
+import { logAuditAction } from "@/lib/audit";
 
 const STATUS_OPTIONS = ["pending", "confirmed", "processing", "delivered", "cancelled"];
+const PAYMENT_METHOD_OPTIONS = ["all", "whatsapp", "paystack"] as const;
 
 const statusStyle: Record<string, string> = {
   pending:    "bg-yellow-100 text-yellow-700",
@@ -18,11 +21,19 @@ const statusStyle: Record<string, string> = {
   cancelled:  "bg-red-100 text-red-600",
 };
 
+const paymentStyle: Record<string, string> = {
+  whatsapp: "bg-sky-100 text-sky-700",
+  paystack: "bg-emerald-100 text-emerald-700",
+};
+
 const AdminOrders = () => {
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const { role, session } = useAuth();
+  const isModerator = role === "moderator";
   const [statusFilter, setStatusFilter] = useState("all");
+  const [paymentFilter, setPaymentFilter] = useState<string>("all");
   const [selected, setSelected] = useState<any>(null);
   const [sendingEmail, setSendingEmail] = useState(false);
   const { refreshTrigger } = useRefreshTrigger();
@@ -69,11 +80,16 @@ const AdminOrders = () => {
       
       console.log("Sending status update email for order", order.id, "to", order.customer_email);
       
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+      if (session?.access_token) {
+        headers.Authorization = `Bearer ${session.access_token}`;
+      }
+
       const response = await fetch(`${API_URL}/api/send-email`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers,
         body: JSON.stringify(emailBody),
       });
 
@@ -90,6 +106,13 @@ const AdminOrders = () => {
       console.log("Status update email sent successfully to", order.customer_email);
       if (isManual) {
         toast.success(`Status update email sent to ${order.customer_email}`);
+        await logAuditAction({
+          action_type: "status_update_email_sent",
+          entity: "orders",
+          entity_id: order.id,
+          details: { customer_email: order.customer_email, status: order.status },
+          user_id: order.user_id ?? null,
+        });
       }
     } catch (err) {
       console.error("Error sending email:", err);
@@ -117,6 +140,14 @@ const AdminOrders = () => {
         if (selected?.id === id) setSelected((s: any) => ({ ...s, status }));
         
         toast.success(`Order marked as ${status}`);
+
+        await logAuditAction({
+          action_type: "order_status_updated",
+          entity: "orders",
+          entity_id: id,
+          details: { old_status: order.status, new_status: status, customer_name: order.customer_name },
+          user_id: order.user_id ?? null,
+        });
         
         // Send status update email automatically (without toasts)
         const updatedOrder = { ...order, status };
@@ -133,13 +164,17 @@ const AdminOrders = () => {
     }
   };
 
-  const filtered = orders.filter(o => {
-    const matchSearch = !search ||
-      o.customer_name?.toLowerCase().includes(search.toLowerCase()) ||
-      o.customer_phone?.includes(search);
-    const matchStatus = statusFilter === "all" || o.status === statusFilter;
-    return matchSearch && matchStatus;
-  });
+  const filtered = orders
+    .filter(o => {
+      const matchSearch = !search ||
+        o.customer_name?.toLowerCase().includes(search.toLowerCase()) ||
+        o.customer_phone?.includes(search);
+      const matchStatus = statusFilter === "all" || o.status === statusFilter;
+      const paymentMethod = o.payment_method ? o.payment_method : "whatsapp";
+      const matchPayment = paymentFilter === "all" || paymentMethod === paymentFilter;
+      return matchSearch && matchStatus && matchPayment;
+    })
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
   const totalRevenue = orders
     .filter(o => o.status !== "cancelled")
@@ -151,26 +186,44 @@ const AdminOrders = () => {
         <div>
           <h1 className="text-xl font-bold">Orders</h1>
           <p className="text-sm text-muted-foreground">
-            {orders.length} total · KSh {totalRevenue.toLocaleString()} revenue
+            {orders.length} total · {isModerator ? "KSh ****" : `KSh ${totalRevenue.toLocaleString()} revenue`}
           </p>
         </div>
       </div>
 
-      {/* Status summary pills */}
-      <div className="flex gap-2 flex-wrap">
-        {["all", ...STATUS_OPTIONS].map(s => (
-          <button
-            key={s}
-            onClick={() => setStatusFilter(s)}
-            className={`px-3 py-1 text-xs font-semibold border transition-colors capitalize ${
-              statusFilter === s
-                ? "bg-primary text-white border-primary"
-                : "bg-white border-border text-muted-foreground hover:border-primary hover:text-primary"
-            }`}
-          >
-            {s === "all" ? `All (${orders.length})` : `${s} (${orders.filter(o => o.status === s).length})`}
-          </button>
-        ))}
+      <div className="flex flex-wrap gap-2 items-center">
+        <div className="flex gap-2 flex-wrap">
+          {["all", ...STATUS_OPTIONS].map(s => (
+            <button
+              key={s}
+              onClick={() => setStatusFilter(s)}
+              className={`px-3 py-1 text-xs font-semibold border transition-colors capitalize ${
+                statusFilter === s
+                  ? "bg-primary text-white border-primary"
+                  : "bg-white border-border text-muted-foreground hover:border-primary hover:text-primary"
+              }`}
+            >
+              {s === "all" ? `All (${orders.length})` : `${s} (${orders.filter(o => o.status === s).length})`}
+            </button>
+          ))}
+        </div>
+        <div className="flex gap-2 flex-wrap">
+          {PAYMENT_METHOD_OPTIONS.map(method => (
+            <button
+              key={method}
+              onClick={() => setPaymentFilter(method)}
+              className={`px-3 py-1 text-xs font-semibold border transition-colors capitalize ${
+                paymentFilter === method
+                  ? "bg-primary text-white border-primary"
+                  : "bg-white border-border text-muted-foreground hover:border-primary hover:text-primary"
+              }`}
+            >
+              {method === "all"
+                ? `All methods (${orders.length})`
+                : `${method} (${orders.filter(o => (o.payment_method ? o.payment_method : "whatsapp") === method).length})`}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Search */}
@@ -193,9 +246,10 @@ const AdminOrders = () => {
                 <th className="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wide text-muted-foreground">Customer</th>
                 <th className="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wide text-muted-foreground hidden sm:table-cell">Phone</th>
                 <th className="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wide text-muted-foreground">Total</th>
+                <th className="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wide text-muted-foreground hidden sm:table-cell">Payment</th>
                 <th className="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wide text-muted-foreground hidden md:table-cell">Delivery</th>
                 <th className="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wide text-muted-foreground">Status</th>
-                <th className="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wide text-muted-foreground hidden lg:table-cell">Date</th>
+                <th className="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wide text-muted-foreground hidden md:table-cell">Placed</th>
                 <th className="text-right px-4 py-3"></th>
               </tr>
             </thead>
@@ -210,7 +264,12 @@ const AdminOrders = () => {
                 <tr key={o.id} className="hover:bg-secondary/30 transition-colors">
                   <td className="px-4 py-3 font-medium">{o.customer_name}</td>
                   <td className="px-4 py-3 text-muted-foreground hidden sm:table-cell">{o.customer_phone}</td>
-                  <td className="px-4 py-3 font-semibold text-primary">KSh {Number(o.total_amount).toLocaleString()}</td>
+                  <td className="px-4 py-3 text-muted-foreground hidden sm:table-cell capitalize">
+                    <span className={`text-[10px] font-semibold px-2 py-1 rounded ${paymentStyle[o.payment_method ? o.payment_method : "whatsapp"]}`}>
+                      {o.payment_method ? o.payment_method : "whatsapp"}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 font-semibold text-primary">{isModerator ? "KSh ****" : `KSh ${Number(o.total_amount).toLocaleString()}`}</td>
                   <td className="px-4 py-3 text-muted-foreground hidden md:table-cell capitalize">{o.delivery_method}</td>
                   <td className="px-4 py-3">
                     <select
@@ -223,8 +282,8 @@ const AdminOrders = () => {
                       ))}
                     </select>
                   </td>
-                  <td className="px-4 py-3 text-muted-foreground text-xs hidden lg:table-cell">
-                    {new Date(o.created_at).toLocaleDateString()}
+                  <td className="px-4 py-3 text-muted-foreground text-xs hidden md:table-cell">
+                    {new Date(o.created_at).toLocaleString()}
                   </td>
                   <td className="px-4 py-3 text-right">
                     <button
@@ -322,6 +381,20 @@ const AdminOrders = () => {
                   </p>
                 </div>
 
+                <div className="bg-secondary p-4 space-y-2 rounded-lg border border-border">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Payment</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className={`text-[10px] font-semibold px-2 py-1 rounded ${paymentStyle[selected.payment_method ? selected.payment_method : "whatsapp"]}`}>
+                      {selected.payment_method ? selected.payment_method : "whatsapp"}
+                    </span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {selected.payment_method === "paystack"
+                      ? "Card orders are only saved after payment completes."
+                      : "WhatsApp orders are saved when the user clicks through to WhatsApp."}
+                  </p>
+                </div>
+
                 {/* Items */}
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">Items</p>
@@ -335,7 +408,7 @@ const AdminOrders = () => {
                   </div>
                   <div className="flex justify-between font-bold text-base mt-3 pt-3 border-t border-border">
                     <span>Total</span>
-                    <span className="text-primary">KSh {Number(selected.total_amount).toLocaleString()}</span>
+                    <span className="text-primary">{isModerator ? "KSh ****" : `KSh ${Number(selected.total_amount).toLocaleString()}`}</span>
                   </div>
                 </div>
 

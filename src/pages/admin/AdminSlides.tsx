@@ -1,4 +1,7 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { logAuditAction } from "@/lib/audit";
 import { supabase } from "@/integrations/supabase/client";
 import { useRefreshTrigger } from "@/contexts/RefreshContext";
 import { Button } from "@/components/ui/button";
@@ -7,10 +10,10 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Plus, Pencil, Trash2, Upload, Eye, EyeOff, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
-
-import { Link } from "react-router-dom";
+import { getOptimizedImageUrl } from "@/lib/imageOptimization";
 
 const AdminSlides = () => {
+  const { user } = useAuth();
   const [slides, setSlides] = useState<any[]>([]);
   const [editing, setEditing] = useState<any>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -18,13 +21,38 @@ const AdminSlides = () => {
   const [form, setForm] = useState({ title: "", subtitle: "", cta_text: "", cta_link: "", display_order: "0", is_active: true });
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string>("");
+  const [sectionId, setSectionId] = useState<string>("");
   const { refreshTrigger } = useRefreshTrigger();
 
-  useEffect(() => { loadSlides(); }, [refreshTrigger]);
+  useEffect(() => { loadSlides(); loadHeroSectionId(); }, [refreshTrigger]);
 
   const loadSlides = async () => {
     const { data } = await supabase.from("hero_slides").select("*").order("display_order");
     setSlides(data || []);
+  };
+
+  const loadHeroSectionId = async () => {
+    const { data } = await (supabase.from("hero_sections") as any)
+      .select("id")
+      .eq("section_number", 1)
+      .limit(1)
+      .single();
+
+    if (data?.id) setSectionId(data.id);
+  };
+
+  const resolveHeroSectionId = async () => {
+    if (sectionId) return sectionId;
+
+    const { data, error } = await (supabase.from("hero_sections") as any)
+      .select("id")
+      .eq("section_number", 1)
+      .limit(1)
+      .single();
+
+    if (error || !data?.id) return "";
+    setSectionId(data.id);
+    return data.id;
   };
 
   const openNew = () => {
@@ -58,30 +86,85 @@ const AdminSlides = () => {
       imageUrl = data.publicUrl;
     }
     if (!imageUrl) { toast.error("Please upload an image"); setSaving(false); return; }
-    const payload = { title: form.title, subtitle: form.subtitle || null, image_url: imageUrl, cta_text: form.cta_text || null, cta_link: form.cta_link || null, display_order: Number(form.display_order), is_active: form.is_active };
+    const resolvedSectionId = editing?.section_id || (await resolveHeroSectionId());
+    if (!resolvedSectionId) {
+      toast.error("Main hero section not configured. Please create hero section #1 first.");
+      setSaving(false);
+      return;
+    }
+
+    const payload = {
+      title: form.title,
+      subtitle: form.subtitle || null,
+      image_url: imageUrl,
+      cta_text: form.cta_text || null,
+      cta_link: form.cta_link || null,
+      display_order: Number(form.display_order),
+      is_active: form.is_active,
+      section_id: resolvedSectionId,
+    };
+
     if (editing) {
-      const { error } = await supabase.from("hero_slides").update(payload).eq("id", editing.id);
+      const { error } = await (supabase.from("hero_slides") as any).update(payload).eq("id", editing.id);
       if (error) { toast.error(error.message); setSaving(false); return; }
       toast.success("Slide updated!");
+      await logAuditAction({
+        actor_id: user?.id ?? null,
+        actor_email: user?.email ?? null,
+        action_type: "slide_updated",
+        entity: "hero_slides",
+        entity_id: editing.id,
+        details: { title: payload.title, is_active: payload.is_active, section_id: payload.section_id },
+        user_id: null,
+      });
     } else {
-      const { error } = await supabase.from("hero_slides").insert(payload);
+      const { error } = await (supabase.from("hero_slides") as any).insert(payload);
       if (error) { toast.error(error.message); setSaving(false); return; }
       toast.success("Slide created!");
+      await logAuditAction({
+        actor_id: user?.id ?? null,
+        actor_email: user?.email ?? null,
+        action_type: "slide_created",
+        entity: "hero_slides",
+        entity_id: null,
+        details: { title: payload.title, is_active: payload.is_active, section_id: payload.section_id },
+        user_id: null,
+      });
     }
     setSaving(false); setDialogOpen(false); loadSlides();
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Delete this slide?")) return;
-    await supabase.from("hero_slides").delete().eq("id", id);
-    toast.success("Deleted"); loadSlides();
-  };
-
   const toggleActive = async (s: any) => {
-    await supabase.from("hero_slides").update({ is_active: !s.is_active }).eq("id", s.id);
+    const { error } = await (supabase.from("hero_slides") as any).update({ is_active: !s.is_active }).eq("id", s.id);
+    if (error) { toast.error(error.message); return; }
+    await logAuditAction({
+      actor_id: user?.id ?? null,
+      actor_email: user?.email ?? null,
+      action_type: s.is_active ? "slide_deactivated" : "slide_activated",
+      entity: "hero_slides",
+      entity_id: s.id,
+      details: { is_active: !s.is_active },
+      user_id: null,
+    });
     loadSlides();
   };
 
+  const handleDelete = async (id: string) => {
+    if (!confirm("Delete this slide?")) return;
+    const { error } = await (supabase.from("hero_slides") as any).delete().eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Deleted");
+    await logAuditAction({
+      actor_id: user?.id ?? null,
+      actor_email: user?.email ?? null,
+      action_type: "slide_deleted",
+      entity: "hero_slides",
+      entity_id: id,
+      details: null,
+      user_id: null,
+    });
+    loadSlides();
+  };
 
   return (
     <div className="space-y-5">
@@ -114,7 +197,12 @@ const AdminSlides = () => {
                 title="Edit Slide"
               >
                 <div className="relative w-40 sm:w-56 flex-shrink-0">
-                  <img src={s.image_url} alt={s.title} className="w-full h-28 object-cover" />
+                  <img src={getOptimizedImageUrl(s.image_url, {
+                    width: 560,
+                    height: 180,
+                    quality: 70,
+                    resize: "contain",
+                  })} alt={s.title} loading="lazy" decoding="async" className="w-full h-28 object-cover" />
                   <span className="absolute top-2 left-2 bg-black/60 text-white text-[10px] px-1.5 py-0.5 font-mono rounded">Slide {i + 1}</span>
                 </div>
                 <div className="flex-1 p-4 flex items-center justify-between gap-4 min-w-0">
@@ -187,7 +275,12 @@ const AdminSlides = () => {
               <Label>Slide Image *</Label>
               <label className="mt-1 flex flex-col items-center justify-center border-2 border-dashed border-border hover:border-primary transition-colors cursor-pointer overflow-hidden" style={{ minHeight: 120 }}>
                 {preview ? (
-                  <img src={preview} alt="preview" className="w-full h-36 object-cover" />
+                  <img src={getOptimizedImageUrl(preview, {
+                    width: 1200,
+                    height: 500,
+                    quality: 70,
+                    resize: "contain",
+                  })} alt="preview" className="w-full h-36 object-cover" />
                 ) : (
                   <div className="flex flex-col items-center gap-2 py-8 text-muted-foreground">
                     <Upload className="w-6 h-6" />

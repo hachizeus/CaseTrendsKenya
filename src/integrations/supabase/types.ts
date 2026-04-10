@@ -145,6 +145,7 @@ export type Database = {
           id: string
           image_url: string
           is_active: boolean
+          section_id: string | null
           subtitle: string | null
           title: string
           updated_at: string
@@ -157,6 +158,7 @@ export type Database = {
           id?: string
           image_url: string
           is_active?: boolean
+          section_id?: string | null
           subtitle?: string | null
           title: string
           updated_at?: string
@@ -169,8 +171,33 @@ export type Database = {
           id?: string
           image_url?: string
           is_active?: boolean
+          section_id?: string | null
           subtitle?: string | null
           title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      hero_sections: {
+        Row: {
+          created_at: string
+          id: string
+          label: string
+          section_number: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          label: string
+          section_number: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          label?: string
+          section_number?: number
           updated_at?: string
         }
         Relationships: []
@@ -185,10 +212,12 @@ export type Database = {
           customer_phone: string
           delivery_address: string | null
           delivery_method: string
+          guest_access_token: string | null
           id: string
           items: Json
           last_email_sent_status: string | null
           notes: string | null
+          payment_method: string | null
           status: string
           status_update_email_sent: boolean | null
           status_update_email_sent_at: string | null
@@ -205,10 +234,12 @@ export type Database = {
           customer_phone: string
           delivery_address?: string | null
           delivery_method?: string
+          guest_access_token?: string | null
           id?: string
           items?: Json
           last_email_sent_status?: string | null
           notes?: string | null
+          payment_method?: string | null
           status?: string
           status_update_email_sent?: boolean | null
           status_update_email_sent_at?: string | null
@@ -225,10 +256,12 @@ export type Database = {
           customer_phone?: string
           delivery_address?: string | null
           delivery_method?: string
+          guest_access_token?: string | null
           id?: string
           items?: Json
           last_email_sent_status?: string | null
           notes?: string | null
+          payment_method?: string | null
           status?: string
           status_update_email_sent?: boolean | null
           status_update_email_sent_at?: string | null
@@ -245,6 +278,92 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      order_notifications: {
+        Row: {
+          created_at: string
+          customer_name: string
+          customer_phone: string
+          delivery_method: string
+          expires_at: string
+          id: string
+          is_read: boolean
+          message: string
+          order_id: string
+          payment_method: string
+          total_amount: number
+        }
+        Insert: {
+          created_at?: string
+          customer_name: string
+          customer_phone: string
+          delivery_method: string
+          expires_at?: string
+          id?: string
+          is_read?: boolean
+          message: string
+          order_id: string
+          payment_method?: string
+          total_amount?: number
+        }
+        Update: {
+          created_at?: string
+          customer_name?: string
+          customer_phone?: string
+          delivery_method?: string
+          expires_at?: string
+          id?: string
+          is_read?: boolean
+          message?: string
+          order_id?: string
+          payment_method?: string
+          total_amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_notifications_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      audit_logs: {
+        Row: {
+          actor_email: string | null
+          actor_id: string | null
+          action_type: string
+          created_at: string
+          details: Json | null
+          entity: string
+          entity_id: string | null
+          id: string
+          user_id: string | null
+        }
+        Insert: {
+          actor_email?: string | null
+          actor_id?: string | null
+          action_type: string
+          created_at?: string
+          details?: Json | null
+          entity: string
+          entity_id?: string | null
+          id?: string
+          user_id?: string | null
+        }
+        Update: {
+          actor_email?: string | null
+          actor_id?: string | null
+          action_type?: string
+          created_at?: string
+          details?: Json | null
+          entity?: string
+          entity_id?: string | null
+          id?: string
+          user_id?: string | null
+        }
+        Relationships: []
       }
       product_images: {
         Row: {

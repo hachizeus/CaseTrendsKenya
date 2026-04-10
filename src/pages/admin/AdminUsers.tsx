@@ -11,6 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { logAuditAction } from "@/lib/audit";
 import { useToast } from "@/hooks/use-toast";
 
 interface UserWithRole extends Record<string, any> {
@@ -111,6 +112,13 @@ const AdminUsers = () => {
 
       // Refresh the user list
       await loadUsersWithRoles();
+      await logAuditAction({
+        action_type: "user_role_updated",
+        entity: "user_roles",
+        entity_id: userId,
+        details: { old_role: currentRole || "none", new_role: newRole },
+        user_id: userId,
+      });
       toast({ title: "Success", description: `User role updated to ${newRole}` });
     } catch (err: any) {
       console.error("Error updating role:", err);

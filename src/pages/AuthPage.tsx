@@ -153,6 +153,8 @@ const AuthPage = () => {
                   <div className="relative">
                     <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
+                      id="full-name"
+                      name="fullName"
                       placeholder="Full Name"
                       value={fullName}
                       onChange={e => setFullName(e.target.value)}
@@ -165,6 +167,8 @@ const AuthPage = () => {
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
+                    id="email"
+                    name="email"
                     type="email"
                     placeholder="Email address"
                     value={email}
@@ -177,6 +181,8 @@ const AuthPage = () => {
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
+                    id="password"
+                    name="password"
                     type={showPassword ? "text" : "password"}
                     placeholder="Password"
                     value={password}

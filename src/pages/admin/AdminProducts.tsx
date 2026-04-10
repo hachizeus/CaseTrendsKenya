@@ -1,14 +1,18 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { logAuditAction } from "@/lib/audit";
 import { useRefreshTrigger } from "@/contexts/RefreshContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Pencil, Trash2, Search, Star, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
+import { getOptimizedImageUrl } from "@/lib/imageOptimization";
 import { TableSkeleton } from "@/components/SkeletonVariants";
 
 const AdminProducts = () => {
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [products, setProducts] = useState<any[]>([]);
   const [search, setSearch] = useState("");
@@ -33,13 +37,26 @@ const AdminProducts = () => {
 
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this product and all its images?")) return;
-    await supabase.from("products").delete().eq("id", id);
+    const { error } = await (supabase.from("products") as any).delete().eq("id", id);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     toast.success("Deleted");
+    await logAuditAction({
+      actor_id: user?.id ?? null,
+      actor_email: user?.email ?? null,
+      action_type: "product_deleted",
+      entity: "products",
+      entity_id: id,
+      details: null,
+      user_id: null,
+    });
     loadProducts();
   };
 
   const deleteImage = async (imgId: string) => {
-    await supabase.from("product_images").delete().eq("id", imgId);
+    await (supabase.from("product_images") as any).delete().eq("id", imgId);
     loadProducts();
   };
 
@@ -122,7 +139,12 @@ const AdminProducts = () => {
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-3">
                             <img
-                              src={primaryImg}
+                              src={getOptimizedImageUrl(primaryImg, {
+                                width: 120,
+                                height: 120,
+                                quality: 70,
+                                resize: "contain",
+                              })}
                               alt={p.name}
                               className="w-10 h-10 object-contain bg-secondary border border-border flex-shrink-0"
                             />

@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { useParams, useNavigate, Link, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { MessageCircle, ArrowLeft, Loader } from "lucide-react";
@@ -8,7 +7,8 @@ import TopBar from "@/components/TopBar";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { toast } from "sonner";
-import { WHATSAPP_NUMBER } from "@/lib/constants";
+import { API_URL, WHATSAPP_NUMBER, PAYSTACK_PUBLIC_KEY } from "@/lib/constants";
+import { payWithPaystack } from "@/lib/paystack";
 
 interface Order {
   id: string;
@@ -20,15 +20,18 @@ interface Order {
   items: any[];
   total_amount: number;
   status: string;
+  payment_method?: string | null;
   created_at: string;
 }
 
 const OrderConfirmationPage = () => {
   const { orderId } = useParams<{ orderId: string }>();
-  const { user } = useAuth();
+  const [searchParams] = useSearchParams();
+  const { user, session } = useAuth();
   const navigate = useNavigate();
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isPaying, setIsPaying] = useState(false);
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -37,29 +40,29 @@ const OrderConfirmationPage = () => {
         return;
       }
 
-      const { data, error } = await supabase
-        .from("orders")
-        .select("*")
-        .eq("id", orderId)
-        .single();
+      const token = searchParams.get("token");
+      const headers: Record<string, string> = {};
+      if (session?.access_token) {
+        headers.Authorization = `Bearer ${session.access_token}`;
+      }
 
-      if (error || !data) {
-        toast.error("Order not found");
+      const response = await fetch(
+        `${API_URL}/api/order/${orderId}${token ? `?token=${token}` : ""}`,
+        {
+          headers,
+        }
+      );
+
+      if (!response.ok) {
+        const errorBody = await response.json().catch(() => null);
+        console.error("Order fetch failed", response.status, errorBody);
+        toast.error("Order not found or unauthorized");
         navigate("/");
         return;
       }
 
-      // Verify user has access to this order
-      // If user is logged in, check if order belongs to them
-      // If user is not logged in, allow access (guest orders are accessible)
-      if (user && (data as any).user_id && (data as any).user_id !== user.id) {
-        toast.error("Unauthorized access");
-        navigate("/");
-        return;
-      }
-
-      // Cast to Order type
-      const order = data as unknown as Order;
+      const payload = await response.json();
+      const order = payload.order as Order;
       setOrder(order);
       setLoading(false);
     };
@@ -83,6 +86,45 @@ const OrderConfirmationPage = () => {
 
     const whatsappUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, "_blank");
+  };
+
+  const handlePayWithCard = async () => {
+    if (!order) return;
+    if (!PAYSTACK_PUBLIC_KEY) {
+      toast.error("Paystack public key is not configured.");
+      return;
+    }
+
+    setIsPaying(true);
+
+    try {
+      await payWithPaystack(
+        {
+          amount: order.total_amount,
+          email: order.customer_email || user?.email || "",
+          orderId: order.id,
+          userId: user?.id ?? undefined,
+        },
+        PAYSTACK_PUBLIC_KEY
+      );
+
+      toast.success("Payment completed. We are verifying your order.");
+
+      const { data, error } = await supabase
+        .from("orders")
+        .select("*")
+        .eq("id", order.id)
+        .single();
+
+      if (!error && data) {
+        setOrder(data as Order);
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Card payment was not completed.");
+    } finally {
+      setIsPaying(false);
+    }
   };
 
   if (loading) {
@@ -137,9 +179,7 @@ const OrderConfirmationPage = () => {
             <h1 className="text-2xl sm:text-3xl font-bold text-green-900 mb-2">
               ✓ Order Confirmed!
             </h1>
-            <p className="text-green-700">
-              Thank you for your order. Please proceed to WhatsApp to complete payment.
-            </p>
+            <p className="text-green-700">Thank you for your order.</p>
           </div>
 
           {/* Order Details */}
@@ -219,25 +259,47 @@ const OrderConfirmationPage = () => {
             </div>
           </div>
 
-          {/* WhatsApp Action */}
+          {/* Payment Actions */}
           <div className="space-y-3">
-            <Button
-              onClick={handleWhatsAppRedirect}
-              size="lg"
-              className="w-full"
-            >
-              <MessageCircle className="w-4 h-4 mr-2" /> Complete Payment via WhatsApp
-            </Button>
+            {order.payment_method !== "paystack" && (
+              <Button
+                onClick={handleWhatsAppRedirect}
+                size="lg"
+                variant="outline"
+                className="w-full"
+              >
+                <MessageCircle className="w-4 h-4 mr-2" /> Complete Payment via WhatsApp
+              </Button>
+            )}
+
+            {order.payment_method !== "whatsapp" && (
+              <Button
+                onClick={handlePayWithCard}
+                size="lg"
+                className="w-full"
+                disabled={isPaying || order.status !== "pending"}
+              >
+                {isPaying ? (
+                  <>
+                    <Loader className="w-4 h-4 mr-2 animate-spin" /> Paying with Card...
+                  </>
+                ) : (
+                  <>
+                    <MessageCircle className="w-4 h-4 mr-2" /> Pay with Card
+                  </>
+                )}
+              </Button>
+            )}
 
             {user ? (
               <Link to="/account/orders" className="block">
-                <Button variant="outline" size="lg" className="w-full">
+                <Button variant="ghost" size="lg" className="w-full">
                   <ArrowLeft className="w-4 h-4 mr-2" /> View All Orders
                 </Button>
               </Link>
             ) : (
               <Link to="/" className="block">
-                <Button variant="outline" size="lg" className="w-full">
+                <Button variant="ghost" size="lg" className="w-full">
                   Continue Shopping
                 </Button>
               </Link>

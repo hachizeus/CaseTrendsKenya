@@ -8,30 +8,32 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { CartProvider } from "@/contexts/CartContext";
 import { useCart } from "@/contexts/CartContext";
-import { GuestRoute, ProtectedRoute, AdminRoute } from "@/components/RouteGuards";
+import { GuestRoute, ProtectedRoute, AdminRoute, AdminOnlyRoute } from "@/components/RouteGuards";
 import CartDrawer from "@/components/CartDrawer";
 import WhatsAppButton from "@/components/WhatsAppButton";
 import ProductComparisonModal from "@/components/ProductComparisonModal";
 import Index from "./pages/Index.tsx";
-import AuthPage from "./pages/AuthPage.tsx";
-import ProductPage from "./pages/ProductPage.tsx";
-import ProductsPage from "./pages/ProductsPage.tsx";
-import CheckoutPage from "./pages/CheckoutPage.tsx";
-import OrderConfirmationPage from "./pages/OrderConfirmationPage.tsx";
-import OrdersPage from "./pages/account/OrdersPage.tsx";
-import FavoritesPage from "./pages/FavoritesPage.tsx";
-import AdminLayout from "./pages/admin/AdminLayout.tsx";
-import AdminDashboard from "./pages/admin/AdminDashboard.tsx";
-import AdminProducts from "./pages/admin/AdminProducts.tsx";
-import AdminProductsForm from "./pages/admin/AdminProductsForm.tsx";
-import AdminCategories from "./pages/admin/AdminCategories.tsx";
-import AdminSlides from "./pages/admin/AdminSlides.tsx";
-import AdminUsers from "./pages/admin/AdminUsers.tsx";
-import AdminReviews from "./pages/admin/AdminReviews.tsx";
-import AdminOrders from "./pages/admin/AdminOrders.tsx";
-import AdminSlidesOverview from "./pages/admin/AdminSlidesOverview.tsx";
-import AdminSlideManager from "./pages/admin/AdminSlideManager.tsx";
-import NotFound from "./pages/NotFound.tsx";
+const AuthPage = lazy(() => import("./pages/AuthPage.tsx"));
+const ProductsPage = lazy(() => import("./pages/ProductsPage.tsx"));
+const ProductPage = lazy(() => import("./pages/ProductPage.tsx"));
+const CheckoutPage = lazy(() => import("./pages/CheckoutPage.tsx"));
+const OrderConfirmationPage = lazy(() => import("./pages/OrderConfirmationPage.tsx"));
+const OrdersPage = lazy(() => import("./pages/account/OrdersPage.tsx"));
+const FavoritesPage = lazy(() => import("./pages/FavoritesPage.tsx"));
+const AdminLayout = lazy(() => import("./pages/admin/AdminLayout.tsx"));
+const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard.tsx"));
+const AdminProducts = lazy(() => import("./pages/admin/AdminProducts.tsx"));
+const AdminProductsForm = lazy(() => import("./pages/admin/AdminProductsForm.tsx"));
+const AdminCategories = lazy(() => import("./pages/admin/AdminCategories.tsx"));
+const AdminSlides = lazy(() => import("./pages/admin/AdminSlides.tsx"));
+const AdminUsers = lazy(() => import("./pages/admin/AdminUsers.tsx"));
+const AdminReviews = lazy(() => import("./pages/admin/AdminReviews.tsx"));
+const AdminOrders = lazy(() => import("./pages/admin/AdminOrders.tsx"));
+const AdminAuditLogs = lazy(() => import("./pages/admin/AdminAuditLogs.tsx"));
+const AdminFinancials = lazy(() => import("./pages/admin/AdminFinancials.tsx"));
+const AdminSlidesOverview = lazy(() => import("./pages/admin/AdminSlidesOverview.tsx"));
+const AdminSlideManager = lazy(() => import("./pages/admin/AdminSlideManager.tsx"));
+const NotFound = lazy(() => import("./pages/NotFound.tsx"));
 
 // Lazy load heavy admin components
 const LazyAdminSlidesOverview = lazy(() => import("./pages/admin/AdminSlidesOverview.tsx"));
@@ -137,9 +139,11 @@ const AppContent = () => {
               </Suspense>
             }
           />
-          <Route path="users" element={<AdminUsers />} />
           <Route path="reviews" element={<AdminReviews />} />
           <Route path="orders" element={<AdminOrders />} />
+          <Route path="audit-logs" element={<AdminAuditLogs />} />
+          <Route path="financials" element={<AdminOnlyRoute><AdminFinancials /></AdminOnlyRoute>} />
+          <Route path="users" element={<AdminOnlyRoute><AdminUsers /></AdminOnlyRoute>} />
         </Route>
         <Route path="*" element={<NotFound />} />
       </Routes>

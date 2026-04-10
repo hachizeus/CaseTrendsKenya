@@ -6,7 +6,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 interface EmailRequest {
   to: string;
-  type: "order_confirmation" | "status_update";
+  type: "order_confirmation" | "status_update" | "order_notification";
   data: any;
 }
 
@@ -190,6 +190,79 @@ async function sendViaResend(template: EmailTemplate) {
   return result;
 }
 
+function generateOrderNotificationEmail(orderData: any, adminEmail: string): EmailTemplate {
+  const itemsHtml = orderData.items
+    .map((item: any) => `
+      <tr>
+        <td style="padding: 10px; border-bottom: 1px solid #eee;">${item.name}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">KES ${(item.price).toLocaleString()}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: center;">${item.quantity}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">KES ${(item.price * item.quantity).toLocaleString()}</td>
+      </tr>
+    `)
+    .join("");
+
+  const orderDate = new Date(orderData.created_at).toLocaleDateString("en-KE", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+
+  return {
+    to: adminEmail,
+    subject: `New Order Received - ${orderData.id.slice(0, 8)}`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background-color: #0ea5e9; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0; }
+            .content { background-color: #f9fafb; padding: 20px; border-radius: 0 0 5px 5px; }
+            table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+            .total { font-size: 18px; font-weight: bold; text-align: right; margin-top: 20px; }
+            .footer { margin-top: 30px; font-size: 12px; color: #666; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h2>New Order Received</h2>
+              <p>${orderDate}</p>
+            </div>
+            <div class="content">
+              <p><strong>Order ID:</strong> ${orderData.id}</p>
+              <p><strong>Customer:</strong> ${orderData.customer_name}</p>
+              <p><strong>Phone:</strong> ${orderData.customer_phone}</p>
+              <p><strong>Email:</strong> ${orderData.customer_email || "N/A"}</p>
+              <p><strong>Delivery:</strong> ${orderData.delivery_method === "delivery" ? "Delivery" : "Pickup"}</p>
+              ${orderData.delivery_method === "delivery" && orderData.delivery_address ? `<p><strong>Address:</strong> ${orderData.delivery_address}</p>` : ""}
+              <h3>Items</h3>
+              <table>
+                <thead>
+                  <tr style="background-color: #e0f2fe;">
+                    <th style="padding: 10px; text-align: left;">Item</th>
+                    <th style="padding: 10px; text-align: right;">Price</th>
+                    <th style="padding: 10px; text-align: center;">Qty</th>
+                    <th style="padding: 10px; text-align: right;">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${itemsHtml}
+                </tbody>
+              </table>
+              <div class="total">Total: KES ${orderData.total_amount.toLocaleString()}</div>
+              <p style="margin-top: 20px;">Please review this order in the admin panel and take action.</p>
+            </div>
+            <div class="footer">Case Trends Kenya Admin Notification</div>
+          </div>
+        </body>
+      </html>
+    `,
+  };
+}
+
 serve(async (req: Request) => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
@@ -220,6 +293,8 @@ serve(async (req: Request) => {
       emailTemplate = generateOrderConfirmationEmail(payload.data);
     } else if (payload.type === "status_update") {
       emailTemplate = generateStatusUpdateEmail(payload.data);
+    } else if (payload.type === "order_notification") {
+      emailTemplate = generateOrderNotificationEmail(payload.data, payload.to);
     } else {
       return new Response(JSON.stringify({ error: "Invalid email type" }), {
         status: 400,

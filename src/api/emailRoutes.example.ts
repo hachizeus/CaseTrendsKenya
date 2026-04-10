@@ -7,7 +7,7 @@
 // npm install @sendgrid/mail
 
 import express from "express";
-import { generateOrderConfirmationEmail, generateStatusUpdateEmail } from "../src/lib/emailTemplates";
+import { generateOrderConfirmationEmail, generateStatusUpdateEmail, generateOrderNotificationEmail } from "../src/lib/emailTemplates";
 
 const router = express.Router();
 
@@ -21,7 +21,7 @@ const router = express.Router();
 
 interface EmailRequest {
   to: string;
-  type: "order_confirmation" | "status_update";
+  type: "order_confirmation" | "status_update" | "order_notification";
   data: any;
 }
 
@@ -34,6 +34,8 @@ router.post("/api/send-email", async (req, res) => {
       template = generateOrderConfirmationEmail(payload.data);
     } else if (payload.type === "status_update") {
       template = generateStatusUpdateEmail(payload.data);
+    } else if (payload.type === "order_notification") {
+      template = generateOrderNotificationEmail(payload.data, payload.to);
     } else {
       return res.status(400).json({ error: "Invalid email type" });
     }

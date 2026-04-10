@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ShoppingBag } from "lucide-react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { getOptimizedImageUrl } from "@/lib/imageOptimization";
 
 const HeroBanner = () => {
   const [slides, setSlides] = useState<any[]>([]);
@@ -131,7 +132,12 @@ const HeroBanner = () => {
                 >
                   {/* Background Image with loading optimization */}
                   <img
-                    src={slide.image_url}
+                    src={getOptimizedImageUrl(slide.image_url, {
+                      width: 1400,
+                      height: 480,
+                      quality: 75,
+                      resize: "contain",
+                    })}
                     alt={slide.title || "Hero slide"}
                     width={1400}
                     height={480}

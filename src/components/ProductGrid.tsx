@@ -12,7 +12,7 @@ const TABS = [
 ];
 
 const ProductGrid = () => {
-  const { data: allProducts = [], isLoading: loading, error } = useProducts();
+  const { data: allProducts = [] } = useProducts({ suspense: true });
   const [tab, setTab] = useState("newest");
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -82,7 +82,7 @@ const ProductGrid = () => {
                 >
                   {t.label}
                   {tab === t.key && (
-                    <motion.div layoutId="tab-underline" className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+                    <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
                   )}
                 </button>
               ))}
@@ -107,15 +107,14 @@ const ProductGrid = () => {
         </div>
 
         {/* Carousel */}
-        {loading ? <Skeleton /> : (
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={tab}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.25 }}
-            >
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={tab}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25 }}
+          >
               {products.length === 0 ? (
                 <div className="text-center py-16 text-muted-foreground text-sm">
                   No products in this category yet.
@@ -144,7 +143,6 @@ const ProductGrid = () => {
               )}
             </motion.div>
           </AnimatePresence>
-        )}
 
         <div className="mt-6 text-center">
           <Link

@@ -8,6 +8,9 @@ import { Button } from "@/components/ui/button";
 import { ShoppingCart, Heart, ArrowLeft, Star, ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
+import { getOptimizedImageUrl } from "@/lib/imageOptimization";
+import { toast } from "sonner";
+import { motion } from "framer-motion";
 import TopBar from "@/components/TopBar";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -282,6 +285,12 @@ const ProductPage = () => {
   }
 
   const primaryImage = images[activeImg]?.image_url || "/placeholder.svg";
+  const optimizedPrimaryImage = getOptimizedImageUrl(primaryImage, {
+    width: 1200,
+    height: 1200,
+    quality: 80,
+    resize: "contain",
+  });
   const discount = product.original_price ? Math.round(((product.original_price - product.price) / product.original_price) * 100) : 0;
 
   return (
@@ -309,7 +318,7 @@ const ProductPage = () => {
                   onMouseLeave={handleImageMouseLeave}
                 >
                   <img 
-                    src={primaryImage} 
+                    src={optimizedPrimaryImage} 
                     alt={product.name} 
                     width={500} 
                     height={500} 
@@ -350,7 +359,12 @@ const ProductPage = () => {
                         onClick={() => setActiveImg(i)}
                         className={`flex-shrink-0 w-12 h-12 sm:w-14 sm:h-14 rounded-lg border-2 overflow-hidden transition-all hover:border-primary ${i === activeImg ? "border-primary ring-2 ring-primary/30" : "border-border"}`}
                       >
-                        <img src={img.image_url} alt={`Thumbnail ${i + 1}: ${product.name}`} width={56} height={56} loading="lazy" className="w-full h-full object-contain p-1 bg-secondary" />
+                        <img src={getOptimizedImageUrl(img.image_url, {
+                          width: 120,
+                          height: 120,
+                          quality: 60,
+                          resize: "contain",
+                        })} alt={`Thumbnail ${i + 1}: ${product.name}`} width={56} height={56} loading="lazy" decoding="async" className="w-full h-full object-contain p-1 bg-secondary" />
                       </button>
                     ))}
                   </div>
@@ -568,7 +582,12 @@ const ProductPage = () => {
                   const img = p.product_images?.find((i: any) => i.is_primary)?.image_url || p.product_images?.[0]?.image_url || "/placeholder.svg";
                   return (
                     <Link key={p.id} to={`/product/${p.id}`} className="bg-card rounded-lg border border-border p-4 hover:shadow-card-hover transition-shadow">
-                      <img src={img} alt={p.name} width={200} height={200} className="w-full aspect-square object-contain mb-3" />
+                      <img src={getOptimizedImageUrl(img, {
+                        width: 320,
+                        height: 320,
+                        quality: 65,
+                        resize: "contain",
+                      })} alt={p.name} width={200} height={200} loading="lazy" decoding="async" className="w-full aspect-square object-contain mb-3" />
                       <p className="text-sm font-medium line-clamp-2">{p.name}</p>
                       <p className="text-sm font-bold text-primary mt-1">KSh {Number(p.price).toLocaleString()}</p>
                     </Link>

@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useRefreshTrigger } from "@/contexts/RefreshContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { logAuditAction } from "@/lib/audit";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,6 +16,7 @@ const iconMap: Record<string, LucideIcon> = { Smartphone, Tablet, Headphones, Ga
 const iconOptions = Object.keys(iconMap);
 
 const AdminCategories = () => {
+  const { user } = useAuth();
   const [categories, setCategories] = useState<any[]>([]);
   const [editing, setEditing] = useState<any>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -54,23 +57,65 @@ const AdminCategories = () => {
       const { error } = await supabase.from("categories").update(payload).eq("id", editing.id);
       if (error) { toast.error(error.message); return; }
       toast.success("Category updated!");
+      await logAuditAction({
+        actor_id: user?.id ?? null,
+        actor_email: user?.email ?? null,
+        action_type: "category_updated",
+        entity: "categories",
+        entity_id: editing.id,
+        details: { name: payload.name, slug: payload.slug, is_active: payload.is_active, display_order: payload.display_order },
+        user_id: null,
+      });
     } else {
-      const { error } = await supabase.from("categories").insert(payload);
+      const { data, error } = await supabase.from("categories").insert(payload).select();
       if (error) { toast.error(error.message); return; }
       toast.success("Category created!");
+      await logAuditAction({
+        actor_id: user?.id ?? null,
+        actor_email: user?.email ?? null,
+        action_type: "category_created",
+        entity: "categories",
+        entity_id: data?.[0]?.id ?? null,
+        details: { name: payload.name, slug: payload.slug, is_active: payload.is_active, display_order: payload.display_order },
+        user_id: null,
+      });
     }
-    setDialogOpen(false); loadCategories();
+    setDialogOpen(false);
+    loadCategories();
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this category?")) return;
     const { error } = await supabase.from("categories").delete().eq("id", id);
     if (error) { toast.error(error.message); return; }
-    toast.success("Deleted"); loadCategories();
+    toast.success("Deleted");
+    await logAuditAction({
+      actor_id: user?.id ?? null,
+      actor_email: user?.email ?? null,
+      action_type: "category_deleted",
+      entity: "categories",
+      entity_id: id,
+      details: null,
+      user_id: null,
+    });
+    loadCategories();
   };
 
   const toggleActive = async (cat: any) => {
-    await supabase.from("categories").update({ is_active: !cat.is_active }).eq("id", cat.id);
+    const { error } = await supabase.from("categories").update({ is_active: !cat.is_active }).eq("id", cat.id);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    await logAuditAction({
+      actor_id: user?.id ?? null,
+      actor_email: user?.email ?? null,
+      action_type: cat.is_active ? "category_deactivated" : "category_activated",
+      entity: "categories",
+      entity_id: cat.id,
+      details: { is_active: !cat.is_active },
+      user_id: null,
+    });
     loadCategories();
   };
 

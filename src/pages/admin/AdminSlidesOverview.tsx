@@ -9,13 +9,14 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Plus, Pencil, Trash2, Upload, Eye, EyeOff, X, Loader2, Info } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { logAuditAction } from "@/lib/audit";
 import { Navigate } from "react-router-dom";
 import { toast } from "sonner";
-import { compressImage, formatFileSize, getImageDimensions } from "@/lib/imageOptimization";
+import { compressImage, formatFileSize, getImageDimensions, getOptimizedImageUrl } from "@/lib/imageOptimization";
 import type { CompressedImage } from "@/lib/imageOptimization";
 
 export default function AdminSlidesOverview() {
-  const { isAdmin, loading: authLoading } = useAuth();
+  const { user, isAdmin, isModerator, loading: authLoading } = useAuth();
   const { refreshTrigger } = useRefreshTrigger();
   const [sections, setSections] = useState<any[]>([]);
   const [slides, setSlides] = useState<{ [sectionId: string]: any[] }>({});
@@ -47,7 +48,7 @@ export default function AdminSlidesOverview() {
     );
   }
 
-  if (!isAdmin) {
+  if (!isAdmin && !isModerator) {
     return <Navigate to="/" replace />;
   }
 
@@ -126,7 +127,25 @@ export default function AdminSlidesOverview() {
         }
       }
 
-      console.log("Hero sections created successfully");
+      console.gAuditAction({
+        actor_id: user?.id ?? null,
+        actor_email: user?.email ?? null,
+        action_type: "hero_sections_seeded",
+        entity: "hero_sections",
+        entity_id: null,
+        details: { count: heroSectionsData.length },
+        user_id: null,
+      });
+      await lolog("Hero sections created successfully");
+      await logAuditAction({
+        actor_id: user?.id ?? null,
+        actor_email: user?.email ?? null,
+        action_type: "hero_sections_seeded",
+        entity: "hero_sections",
+        entity_id: null,
+        details: { count: heroSectionsData.length },
+        user_id: null,
+      });
       await loadSections();
     } catch (err: any) {
       console.error("Error seeding hero sections:", err);
@@ -255,7 +274,6 @@ export default function AdminSlidesOverview() {
         cta_link: slideForm.cta_link || null,
         is_active: slideForm.is_active,
         section_id: selectedSectionId,
-        display_order: editingSlide?.display_order || (slides[selectedSectionId]?.length || 0),
       };
 
       if (editingSlide) {
@@ -265,13 +283,32 @@ export default function AdminSlidesOverview() {
           .eq("id", editingSlide.id) as any);
         if (error) throw error;
         toast.success("Slide updated!");
+        await logAuditAction({
+          actor_id: user?.id ?? null,
+          actor_email: user?.email ?? null,
+          action_type: "slide_updated",
+          entity: "hero_slides",
+          entity_id: editingSlide.id,
+          details: { title: payload.title, section_id: payload.section_id, is_active: payload.is_active },
+          user_id: null,
+        });
       } else {
         const { error } = await (supabase
           .from("hero_slides" as any)
           .insert([payload]) as any);
         if (error) throw error;
         toast.success("Slide created!");
+        await logAuditAction({
+          actor_id: user?.id ?? null,
+          actor_email: user?.email ?? null,
+          action_type: "slide_created",
+          entity: "hero_slides",
+          entity_id: null,
+          details: { title: payload.title, section_id: payload.section_id, is_active: payload.is_active },
+          user_id: null,
+        });
       }
+
       setSlideDialogOpen(false);
       await loadSections();
     } catch (err: any) {
@@ -285,8 +322,18 @@ export default function AdminSlidesOverview() {
   const deleteSlide = async (slideId: string) => {
     if (!confirm("Delete this slide?")) return;
     try {
-      await (supabase.from("hero_slides" as any).delete().eq("id", slideId) as any);
+      const { error } = await (supabase.from("hero_slides" as any).delete().eq("id", slideId) as any);
+      if (error) throw error;
       toast.success("Slide deleted!");
+      await logAuditAction({
+        actor_id: user?.id ?? null,
+        actor_email: user?.email ?? null,
+        action_type: "slide_deleted",
+        entity: "hero_slides",
+        entity_id: slideId,
+        details: null,
+        user_id: null,
+      });
       await loadSections();
     } catch (err: any) {
       toast.error(err.message);
@@ -295,10 +342,20 @@ export default function AdminSlidesOverview() {
 
   const toggleSlideActive = async (sectionId: string, slide: any) => {
     try {
-      await (supabase
+      const { error } = await (supabase
         .from("hero_slides" as any)
         .update({ is_active: !slide.is_active })
         .eq("id", slide.id) as any);
+      if (error) throw error;
+      await logAuditAction({
+        actor_id: user?.id ?? null,
+        actor_email: user?.email ?? null,
+        action_type: slide.is_active ? "slide_deactivated" : "slide_activated",
+        entity: "hero_slides",
+        entity_id: slide.id,
+        details: { is_active: !slide.is_active },
+        user_id: null,
+      });
       await loadSections();
     } catch (err: any) {
       toast.error(err.message);
@@ -380,7 +437,12 @@ export default function AdminSlidesOverview() {
                         className="bg-white border border-border flex overflow-hidden hover:border-primary transition-colors"
                       >
                         <div className="relative w-32 sm:w-40 flex-shrink-0">
-                          <img src={slide.image_url} alt={slide.title} className="w-full h-24 sm:h-28 object-cover" />
+                          <img src={getOptimizedImageUrl(slide.image_url, {
+                            width: 480,
+                            height: 228,
+                            quality: 70,
+                            resize: "contain",
+                          })} alt={slide.title} loading="lazy" decoding="async" className="w-full h-24 sm:h-28 object-cover" />
                           <span className="absolute top-1 left-1 bg-black/60 text-white text-[9px] px-1 py-0.5 font-mono rounded">
                             Slide {idx + 1}
                           </span>
@@ -452,7 +514,12 @@ export default function AdminSlidesOverview() {
               <Label>Slide Image *</Label>
               <label className="mt-1 flex flex-col items-center justify-center border-2 border-dashed border-border hover:border-primary transition-colors cursor-pointer overflow-hidden" style={{ minHeight: 120 }}>
                 {preview ? (
-                  <img src={preview} alt="preview" className="w-full h-36 object-cover" />
+                  <img src={getOptimizedImageUrl(preview, {
+                    width: 1200,
+                    height: 500,
+                    quality: 70,
+                    resize: "contain",
+                  })} alt="preview" loading="lazy" decoding="async" className="w-full h-36 object-cover" />
                 ) : (
                   <div className="flex flex-col items-center gap-2 py-8 text-muted-foreground">
                     <Upload className="w-6 h-6" />

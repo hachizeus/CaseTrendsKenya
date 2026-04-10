@@ -32,7 +32,9 @@ export const usePullToRefresh = ({ onRefresh, threshold = 100 }: UsePullToRefres
       const distance = currentY - touchStartY.current;
 
       if (distance > 0) {
-        e.preventDefault();
+        if (e.cancelable) {
+          e.preventDefault();
+        }
         setPullDistance(Math.min(distance, threshold * 1.5));
       } else {
         setPullDistance(0);

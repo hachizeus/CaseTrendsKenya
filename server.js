@@ -4,13 +4,98 @@ import cors from "cors";
 import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
+import fileupload from "express-fileupload";
+import { createClient } from "@supabase/supabase-js";
 
+dotenv.config({ path: ".env" });
 dotenv.config({ path: ".env.local" });
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
+
+const SUPABASE_URL = process.env.SUPABASE_URL || "";
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SERVICE_ROLE_KEY || "";
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || "http://localhost:5173,http://localhost:3000").split(",").map((origin) => origin.trim()).filter(Boolean);
+
+const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+  auth: { persistSession: false, autoRefreshToken: false, storage: null },
+});
+
 app.use(express.json());
-app.use(cors());
+app.use(express.urlencoded({ extended: true }));
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || ALLOWED_ORIGINS.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error("CORS origin not allowed"));
+  },
+  methods: ["GET", "POST", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+  credentials: true,
+}));
+app.use(fileupload());
+
+function escapeHtml(value) {
+  if (value === null || value === undefined) return "";
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function getBearerToken(req) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || typeof authHeader !== "string") return null;
+  const [scheme, token] = authHeader.split(" ");
+  if (scheme !== "Bearer" || !token) return null;
+  return token;
+}
+
+async function getSupabaseUser(req) {
+  const token = getBearerToken(req);
+  if (!token) return null;
+  const { data, error } = await supabaseAdmin.auth.getUser(token);
+  if (error || !data?.user) {
+    return null;
+  }
+  return data.user;
+}
+
+async function isAdminUser(userId) {
+  if (!userId) return false;
+  const { data, error } = await supabaseAdmin.rpc("has_role", { _user_id: userId, _role: "admin" });
+  return !!(data && !error);
+}
+
+async function fetchOrderWithGuestToken(orderId, token) {
+  if (!orderId || !token) return null;
+  const { data, error } = await supabaseAdmin
+    .from("orders")
+    .select("*")
+    .eq("id", orderId)
+    .eq("guest_access_token", token)
+    .single();
+  if (error) {
+    return null;
+  }
+  return data;
+}
+
+function buildSecureHeaders(req, res, next) {
+  res.set('X-Content-Type-Options', 'nosniff');
+  res.set('X-Frame-Options', 'DENY');
+  res.set('X-XSS-Protection', '1; mode=block');
+  res.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.set('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
+  res.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+  res.set('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self';");
+  next();
+}
+
+app.use(buildSecureHeaders);
 
 // Cache middleware for static assets
 app.use((req, res, next) => {
@@ -52,18 +137,29 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+  console.warn(
+    "EMAIL_USER and EMAIL_PASS are required to send emails. Email delivery will fail without them."
+  );
+}
+
 // Order Confirmation Email Template
 const generateOrderConfirmationEmail = (orderData) => {
   const siteUrl = process.env.SITE_URL || "https://casetrendskenya.com";
   const trackingLink = `${siteUrl}/account/orders`;
-  
+  const safeCustomerName = escapeHtml(orderData.customer_name);
+  const safeCustomerEmail = escapeHtml(orderData.customer_email);
+  const safeDeliveryAddress = escapeHtml(orderData.delivery_address || "");
+  const safeStatus = escapeHtml(orderData.status);
+  const safeId = escapeHtml(orderData.id);
+
   const itemsHtml = orderData.items
     .map(
       (item) => `
       <tr>
-        <td style="padding: 10px; border-bottom: 1px solid #eee; font-size: 14px;">${item.name}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #eee; font-size: 14px;">${escapeHtml(item.name)}</td>
         <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right; font-size: 14px;">KES ${Number(item.price).toLocaleString()}</td>
-        <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: center; font-size: 14px;">${item.quantity}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: center; font-size: 14px;">${escapeHtml(item.quantity)}</td>
         <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right; font-weight: 600; font-size: 14px;">KES ${Number(item.price * item.quantity).toLocaleString()}</td>
       </tr>
     `
@@ -73,20 +169,20 @@ const generateOrderConfirmationEmail = (orderData) => {
   const deliveryInfo =
     orderData.delivery_method === "pickup"
       ? `Pickup at Case Trends Kenya Store`
-      : `${orderData.delivery_address || "Delivery address will be confirmed with you shortly"}`;
+      : `${safeDeliveryAddress || "Delivery address will be confirmed with you shortly"}`;
 
   const text = `Order Confirmation
 
-Dear ${orderData.customer_name},
+Dear ${safeCustomerName},
 
 Thank you for your order! We're excited to process it for you.
 
 Order Details:
-Order Number: ${orderData.id}
+Order Number: ${safeId}
 Order Date: ${new Date(orderData.created_at).toLocaleDateString()}
 
 Items Ordered:
-${orderData.items.map((item) => `- ${item.name} x${item.quantity} = KES ${Number(item.price * item.quantity).toLocaleString()}`).join("\n")}
+${orderData.items.map((item) => `- ${escapeHtml(item.name)} x${escapeHtml(item.quantity)} = KES ${Number(item.price * item.quantity).toLocaleString()}`).join("\n")}
 
 Order Summary:
 Total Amount: KES ${Number(orderData.total_amount).toLocaleString()}
@@ -151,14 +247,14 @@ Website: ${siteUrl}`;
             </div>
             
             <div class="content">
-              <p>Dear ${orderData.customer_name},</p>
+              <p>Dear ${safeCustomerName},</p>
               
               <p>We've received your order and we're thrilled to process it for you. Here's a summary of your purchase:</p>
               
               <div class="order-info">
                 <div class="status-line">
                   <span>Order Number:</span>
-                  <span>${orderData.id}</span>
+                  <span>${safeId}</span>
                 </div>
                 <div class="status-line">
                   <span>Order Date:</span>
@@ -226,7 +322,7 @@ Website: ${siteUrl}`;
 
   return {
     to: orderData.customer_email,
-    subject: `Order Confirmation ${orderData.id} - Case Trends Kenya`,
+    subject: `Order Confirmation ${safeId} - Case Trends Kenya`,
     text,
     html,
   };
@@ -236,6 +332,10 @@ Website: ${siteUrl}`;
 const generateStatusUpdateEmail = (orderData) => {
   const siteUrl = process.env.SITE_URL || "https://casetrendskenya.com";
   const orderLink = `${siteUrl}/account/orders`;
+  const safeCustomerName = escapeHtml(orderData.customer_name);
+  const safeOrderId = escapeHtml(orderData.id);
+  const safeStatus = escapeHtml(orderData.status);
+  const safeTotal = Number(orderData.total_amount).toLocaleString();
   
   const statusMessages = {
     confirmed: "Your order has been confirmed and will be processed soon.",
@@ -247,13 +347,13 @@ const generateStatusUpdateEmail = (orderData) => {
 
   const text = `Order Status Update
 
-Dear ${orderData.customer_name},
+Dear ${safeCustomerName},
 
-Your order status has been updated to: ${orderData.status.toUpperCase()}
+Your order status has been updated to: ${safeStatus.toUpperCase()}
 
 Order Details:
-Order Number: ${orderData.id}
-Status: ${orderData.status.toUpperCase()}
+Order Number: ${safeOrderId}
+Status: ${safeStatus.toUpperCase()}
 
 ${statusMessages[orderData.status] || "Thank you for your business!"}
 
@@ -305,22 +405,22 @@ visit: https://casetrendskenya.com
             </div>
             
             <div class="content">
-              <p>Hi ${orderData.customer_name},</p>
+              <p>Hi ${safeCustomerName},</p>
               
               <p>Thank you for your order! We wanted to let you know that your order status has been updated.</p>
               
               <div class="order-info">
                 <div class="status-line">
                   <span>Order Number:</span>
-                  <span>${orderData.id}</span>
+                  <span>${safeOrderId}</span>
                 </div>
                 <div class="status-line">
                   <span>Current Status:</span>
-                  <span style="color: #0ea5e9; font-size: 15px;">${orderData.status.toUpperCase()}</span>
+                  <span style="color: #0ea5e9; font-size: 15px;">${safeStatus.toUpperCase()}</span>
                 </div>
                 <div class="status-line">
                   <span>Order Total:</span>
-                  <span>KES ${Number(orderData.total_amount).toLocaleString()}</span>
+                  <span>KES ${safeTotal}</span>
                 </div>
               </div>
               
@@ -356,32 +456,99 @@ visit: https://casetrendskenya.com
 
   return {
     to: orderData.customer_email,
-    subject: `Order Status Update: ${orderData.status.toUpperCase()} - Order #${orderData.id}`,
+    subject: `Order Status Update: ${safeStatus.toUpperCase()} - Order #${safeOrderId}`,
     text,
     html,
   };
 };
+
+app.get("/api/order/:orderId", async (req, res) => {
+  const { orderId } = req.params;
+  const token = typeof req.query.token === "string" ? req.query.token : null;
+  const user = await getSupabaseUser(req);
+
+  let order = null;
+  if (user) {
+    const { data, error } = await supabaseAdmin.from("orders").select("*").eq("id", orderId).single();
+    if (!error && data && (data.user_id === user.id || await isAdminUser(user.id))) {
+      order = data;
+    }
+  } else if (token) {
+    order = await fetchOrderWithGuestToken(orderId, token);
+  }
+
+  if (!order) {
+    return res.status(401).json({ error: "Unauthorized to view this order" });
+  }
+
+  res.json({ order });
+});
+
+app.post("/api/orders", async (req, res) => {
+  try {
+    const orderPayload = req.body;
+    if (!orderPayload || !orderPayload.customer_name || !orderPayload.customer_phone || !orderPayload.items) {
+      return res.status(400).json({ error: "Missing required order fields" });
+    }
+
+    const { data, error } = await supabaseAdmin.from("orders").insert(orderPayload).select("*").single();
+    if (error) {
+      return res.status(400).json({ error: error.message, details: error });
+    }
+
+    res.json({ order: data });
+  } catch (error) {
+    console.error("Order creation error:", error);
+    res.status(500).json({ error: "Failed to create order" });
+  }
+});
 
 // Send Email Endpoint
 app.post("/api/send-email", async (req, res) => {
   try {
     const { to, type, data } = req.body;
 
-    if (!to || !type || !data) {
-      return res.status(400).json({ error: "Missing required fields: to, type, data" });
+    if (!type || !data) {
+      return res.status(400).json({ error: "Missing required fields: type, data" });
     }
 
+    const user = await getSupabaseUser(req);
     let emailTemplate;
+    let orderData = data;
 
     if (type === "order_confirmation") {
-      emailTemplate = generateOrderConfirmationEmail(data);
+      if (data.order_id && typeof data.guest_access_token === "string") {
+        orderData = await fetchOrderWithGuestToken(data.order_id, data.guest_access_token);
+        if (!orderData) {
+          return res.status(401).json({ error: "Invalid guest order token" });
+        }
+      } else if (user) {
+        const { data: order, error } = await supabaseAdmin.from("orders").select("*").eq("id", data.order_id).single();
+        if (error || !order) {
+          return res.status(404).json({ error: "Order not found" });
+        }
+        if (order.user_id !== user.id && !(await isAdminUser(user.id))) {
+          return res.status(403).json({ error: "Forbidden" });
+        }
+        orderData = order;
+      } else {
+        return res.status(401).json({ error: "Authentication required for order confirmation emails" });
+      }
+
+      emailTemplate = generateOrderConfirmationEmail(orderData);
     } else if (type === "status_update") {
-      emailTemplate = generateStatusUpdateEmail(data);
+      if (!user || !(await isAdminUser(user.id))) {
+        return res.status(403).json({ error: "Admin authorization required" });
+      }
+      emailTemplate = generateStatusUpdateEmail(orderData);
+    } else if (type === "order_notification") {
+      // Order notifications are sent by the checkout flow and do not require admin auth.
+      emailTemplate = generateOrderNotificationEmail(orderData, process.env.ADMIN_NOTIFICATION_EMAIL || to);
     } else {
       return res.status(400).json({ error: "Invalid email type" });
     }
 
-    console.log(`Sending ${type} email to ${to}...`);
+    console.log(`Sending ${type} email to ${emailTemplate.to}...`);
 
     const info = await transporter.sendMail({
       from: `Case Trends Kenya <${process.env.EMAIL_USER}>`,
@@ -404,6 +571,125 @@ app.post("/api/send-email", async (req, res) => {
   } catch (error) {
     console.error("Email send error:", error);
     res.status(500).json({ error: error.message || "Failed to send email" });
+  }
+});
+
+function generateOrderNotificationEmail(orderData, adminEmail) {
+  const safeCustomerName = escapeHtml(orderData.customer_name);
+  const safeCustomerEmail = escapeHtml(orderData.customer_email || "");
+  const safeOrderId = escapeHtml(orderData.id);
+  const safeDeliveryAddress = escapeHtml(orderData.delivery_address || "");
+  const itemsHtml = (orderData.items || [])
+    .map((item) => `
+      <div style="display:flex; justify-content:space-between; padding: 10px 0; border-bottom: 1px solid #eee;">
+        <span style="color:#374151;">${escapeHtml(item.name)} × ${escapeHtml(item.quantity)}</span>
+        <span style="color:#1f2937; font-weight:600;">KSh ${(item.price * item.quantity).toLocaleString()}</span>
+      </div>
+    `)
+    .join("");
+
+  const orderDate = new Date(orderData.created_at).toLocaleDateString("en-KE", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <style>
+          body { font-family: Arial, sans-serif; color: #333; margin: 0; padding: 0; background: #f9fafb; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: #0ea5e9; color: white; padding: 20px; border-radius: 8px 8px 0 0; text-align: center; }
+          .content { background: white; padding: 20px; border-radius: 0 0 8px 8px; }
+          .section { margin-bottom: 20px; }
+          .footer { margin-top: 20px; font-size: 12px; color: #666; text-align: center; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>New Order Notification</h1>
+          </div>
+          <div class="content">
+            <div class="section">
+              <p><strong>Order ID:</strong> ${safeOrderId}</p>
+              <p><strong>Customer:</strong> ${safeCustomerName}</p>
+              <p><strong>Phone:</strong> ${escapeHtml(orderData.customer_phone)}</p>
+              <p><strong>Email:</strong> ${safeCustomerEmail || "N/A"}</p>
+              <p><strong>Delivery:</strong> ${orderData.delivery_method === "delivery" ? "Delivery" : "Pickup"}</p>
+              ${orderData.delivery_method === "delivery" && safeDeliveryAddress ? `<p><strong>Address:</strong> ${safeDeliveryAddress}</p>` : ""}
+            </div>
+            <div class="section">
+              <h2 style="margin-bottom: 10px;">Items</h2>
+              ${itemsHtml}
+              <p style="margin-top: 15px; font-weight: 700;">Total: KSh ${Number(orderData.total_amount).toLocaleString()}</p>
+            </div>
+            <div class="section">
+              <p><strong>Status:</strong> ${escapeHtml(orderData.status)}</p>
+              <p>Please review this order in the admin panel and take the next steps.</p>
+            </div>
+          </div>
+          <div class="footer">Case Trends Kenya Admin Notification</div>
+        </div>
+      </body>
+    </html>
+  `;
+
+  return {
+    to: adminEmail,
+    subject: `New Order Received - ${safeOrderId.slice(0, 8)}`,
+    text: `New order received: ${safeCustomerName} - KSh ${Number(orderData.total_amount).toLocaleString()}`,
+    html,
+  };
+}
+
+// Background Removal Endpoint
+app.post("/api/remove-bg", async (req, res) => {
+  try {
+    const user = await getSupabaseUser(req);
+    if (!user || !(await isAdminUser(user.id))) {
+      return res.status(403).json({ error: "Admin authorization required" });
+    }
+
+    if (!req.files || !req.files.image) {
+      return res.status(400).json({ error: "No image file provided" });
+    }
+
+    const imageFile = Array.isArray(req.files.image) ? req.files.image[0] : req.files.image;
+    const apiKey = process.env.REMOVE_BG_API_KEY;
+
+    if (!apiKey) {
+      console.error("REMOVE_BG_API_KEY is not configured");
+      return res.status(500).json({ error: "Background removal key not configured" });
+    }
+
+    const formData = new FormData();
+    formData.append("image_file", new Blob([imageFile.data], { type: imageFile.mimetype }), imageFile.name);
+    formData.append("size", "auto");
+
+    const response = await fetch("https://api.remove.bg/v1.0/removebg", {
+      method: "POST",
+      headers: {
+        "X-Api-Key": apiKey,
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const err = await response.text();
+      console.error("remove.bg error:", response.status, err);
+      return res.status(500).json({ error: "Background removal failed" });
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
+    const base64 = Buffer.from(arrayBuffer).toString('base64');
+
+    res.json({ image: base64 });
+  } catch (error) {
+    console.error("Background removal error:", error);
+    res.status(500).json({ error: error instanceof Error ? error.message : "Unknown error" });
   }
 });
 

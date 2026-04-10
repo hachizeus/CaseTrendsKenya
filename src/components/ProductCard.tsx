@@ -98,11 +98,11 @@ const ProductCard = ({ id, name, images, price, originalPrice, category, brand, 
       transition={{ duration: 0.35, delay: index * 0.04 }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      className="group"
+      className="group h-full"
     >
-      <Link to={`/product/${id}`} className="block bg-white border border-border hover:border-primary transition-colors duration-200 overflow-hidden">
+      <Link to={`/product/${id}`} className="block h-full w-full max-w-[220px] mx-auto bg-white border border-border hover:border-primary transition-colors duration-200 overflow-hidden">
         {/* Image */}
-        <div className="relative aspect-square bg-secondary overflow-hidden">
+        <div className="relative aspect-square bg-white overflow-hidden">
           <motion.div
             animate={{ scale: hovered ? 1.05 : 1 }}
             transition={{ duration: 0.4, ease: "easeInOut" }}
@@ -113,7 +113,6 @@ const ProductCard = ({ id, name, images, price, originalPrice, category, brand, 
               alt={name}
               width={500}
               height={500}
-              priority={index < 4} // First 4 products are above-the-fold
               sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
               className="w-full h-full object-contain p-3 sm:p-4"
             />

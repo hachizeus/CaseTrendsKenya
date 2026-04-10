@@ -175,3 +175,39 @@ export async function getImageDimensions(file: File): Promise<{ width: number; h
     reader.readAsDataURL(file);
   });
 }
+
+export interface ImageOptimizationOptions {
+  width?: number;
+  height?: number;
+  quality?: number;
+  resize?: "contain" | "cover" | "fill";
+  format?: "webp" | "avif" | "png" | "jpeg";
+}
+
+export function getOptimizedImageUrl(
+  src: string,
+  {
+    width,
+    height,
+    quality = 70,
+    resize = "contain",
+    format,
+  }: ImageOptimizationOptions = {}
+): string {
+  try {
+    const url = new URL(src);
+    if (!src.includes("supabase.co")) {
+      return src;
+    }
+
+    if (width) url.searchParams.set("width", String(width));
+    if (height) url.searchParams.set("height", String(height));
+    if (quality) url.searchParams.set("quality", String(quality));
+    if (resize) url.searchParams.set("resize", resize);
+    if (format) url.searchParams.set("format", format);
+
+    return url.toString();
+  } catch {
+    return src;
+  }
+}

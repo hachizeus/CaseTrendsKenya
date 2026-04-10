@@ -1,13 +1,17 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { queryOptionalTable, mutateOptionalTable } from "@/lib/supabaseHelpers";
+import { API_URL } from "@/lib/constants";
+import { logAuditAction } from "@/lib/audit";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Plus, Pencil, Trash2, Upload, Loader2, Search, Star, TrendingUp, X, ArrowLeft, ChevronDown, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
+import { getOptimizedImageUrl } from "@/lib/imageOptimization";
 
 const colorOptions = ["Black", "White", "Blue", "Red", "Green", "Gold", "Silver", "Pink", "Purple", "Gray", "Orange", "Yellow"];
 
@@ -128,6 +132,7 @@ const specTemplates = [
 ];
 
 const AdminProductFormPage = () => {
+  const { user } = useAuth();
   const { id } = useParams();
   const navigate = useNavigate();
   const [editing, setEditing] = useState<any>(null);
@@ -148,6 +153,7 @@ const AdminProductFormPage = () => {
   const [showPasteMode, setShowPasteMode] = useState(false);
   const [pastedText, setPastedText] = useState("");
   const [parsedSpecs, setParsedSpecs] = useState<Array<{ key: string; value: string }>>([]);
+  const [processingImages, setProcessingImages] = useState(false);
   const [loading, setLoading] = useState(!!id);
 
   useEffect(() => {
@@ -228,10 +234,28 @@ const AdminProductFormPage = () => {
       if (editing) {
         const { error } = await supabase.from("products").update(payload).eq("id", editing.id);
         if (error) { toast.error(error.message); return; }
+        await logAuditAction({
+          actor_id: user?.id ?? null,
+          actor_email: user?.email ?? null,
+          action_type: "product_updated",
+          entity: "products",
+          entity_id: editing.id,
+          details: { name: payload.name, category: payload.category, price: payload.price, stock_status: payload.stock_status },
+          user_id: null,
+        });
       } else {
         const { data, error } = await supabase.from("products").insert(payload).select();
         if (error) { toast.error(error.message); return; }
         productId = data?.[0]?.id;
+        await logAuditAction({
+          actor_id: user?.id ?? null,
+          actor_email: user?.email ?? null,
+          action_type: "product_created",
+          entity: "products",
+          entity_id: productId ?? null,
+          details: { name: payload.name, category: payload.category, price: payload.price, stock_status: payload.stock_status },
+          user_id: null,
+        });
       }
 
       // Upload images if any selected
@@ -302,40 +326,98 @@ const AdminProductFormPage = () => {
       return; 
     }
 
+    setProcessingImages(true);
+    let processedCount = 0;
+    let failedCount = 0;
+
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       const ext = file.name.split(".").pop();
       const path = `${productId}/${Date.now()}_${i}.${ext}`;
       let processedFile = file;
+      let backgroundRemoved = false;
 
       try {
+        // Show processing toast for background removal
+        toast.loading(`Processing image ${i + 1}/${files.length}...`, {
+          id: `processing-${i}`,
+          duration: 10000,
+        });
+
         const formData = new FormData();
         formData.append("image", file);
-        const res = await supabase.functions.invoke("remove-bg", { body: formData });
-        if (res.data && !res.error) {
-          const byteString = atob(res.data.image);
+        const res = await fetch(`${API_URL}/api/remove-bg`, {
+          method: "POST",
+          body: formData,
+        });
+        
+        if (res.ok) {
+          const data = await res.json();
+          const byteString = atob(data.image);
           const ab = new ArrayBuffer(byteString.length);
           const ia = new Uint8Array(ab);
           for (let j = 0; j < byteString.length; j++) ia[j] = byteString.charCodeAt(j);
           processedFile = new File([ab], "processed.png", { type: "image/png" });
+          backgroundRemoved = true;
+          
+          // Update toast to success
+          toast.success(`✅ Background removed for image ${i + 1}`, {
+            id: `processing-${i}`,
+            duration: 2000,
+          });
+        } else {
+          // Background removal failed, use original
+          toast.warning(`⚠️ Background removal failed for image ${i + 1}, using original`, {
+            id: `processing-${i}`,
+            duration: 3000,
+          });
+          failedCount++;
         }
-      } catch { /* use original */ }
-
-      const { error: uploadError } = await supabase.storage
-        .from("product-images")
-        .upload(path, processedFile);
-      if (uploadError) { 
-        toast.error(uploadError.message); 
-        continue; 
+      } catch (error) {
+        console.error("Background removal error:", error);
+        // Use original file if background removal fails
+        toast.warning(`⚠️ Background removal failed for image ${i + 1}, using original`, {
+          id: `processing-${i}`,
+          duration: 3000,
+        });
+        failedCount++;
       }
 
-      const { data: urlData } = supabase.storage.from("product-images").getPublicUrl(path);
-      await supabase.from("product_images").insert({
-        product_id: productId,
-        image_url: urlData.publicUrl,
-        display_order: existingImages.length + i,
-        is_primary: existingImages.length === 0 && i === 0,
-      });
+      try {
+        const { error: uploadError } = await supabase.storage
+          .from("product-images")
+          .upload(path, processedFile);
+        if (uploadError) { 
+          toast.error(`Failed to upload image ${i + 1}: ${uploadError.message}`); 
+          continue; 
+        }
+
+        const { data: urlData } = supabase.storage.from("product-images").getPublicUrl(path);
+        await supabase.from("product_images").insert({
+          product_id: productId,
+          image_url: urlData.publicUrl,
+          display_order: existingImages.length + i,
+          is_primary: existingImages.length === 0 && i === 0,
+        });
+        
+        processedCount++;
+      } catch (uploadError) {
+        console.error("Upload error:", uploadError);
+        toast.error(`Failed to save image ${i + 1}`);
+      }
+    }
+
+    setProcessingImages(false);
+    
+    // Final summary toast
+    if (processedCount > 0) {
+      if (failedCount === 0) {
+        toast.success(`🎉 All ${processedCount} images uploaded successfully with background removal!`);
+      } else {
+        toast.success(`✅ ${processedCount} images uploaded. ${failedCount} used original images.`);
+      }
+    } else {
+      toast.error("No images were uploaded successfully");
     }
   };
 
@@ -892,7 +974,12 @@ const AdminProductFormPage = () => {
                   {existingImages.map((img) => (
                     <div key={img.id} className="relative group">
                       <img
-                        src={img.image_url}
+                        src={getOptimizedImageUrl(img.image_url, {
+                          width: 400,
+                          height: 400,
+                          quality: 70,
+                          resize: "contain",
+                        })}
                         alt=""
                         className={`w-full aspect-square object-cover rounded-lg border-2 cursor-pointer transition-all ${
                           img.is_primary ? "border-primary ring-2 ring-primary/30" : "border-border hover:border-primary"
@@ -941,7 +1028,12 @@ const AdminProductFormPage = () => {
                       {filePreviews.map((preview, index) => (
                         <div key={index} className="relative group">
                           <img
-                            src={preview}
+                            src={getOptimizedImageUrl(preview, {
+                              width: 400,
+                              height: 400,
+                              quality: 70,
+                              resize: "contain",
+                            })}
                             alt={`preview ${index}`}
                             className="w-full aspect-square object-cover rounded-lg border border-border"
                           />
@@ -972,11 +1064,11 @@ const AdminProductFormPage = () => {
             </Button>
             <Button
               onClick={handleSave}
-              disabled={saving}
+              disabled={saving || processingImages}
               className="flex-1"
             >
-              {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              {editing ? "Update Product" : "Create Product"}
+              {(saving || processingImages) && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              {processingImages ? "Processing Images..." : saving ? "Saving..." : editing ? "Update Product" : "Create Product"}
             </Button>
           </div>
         </motion.div>

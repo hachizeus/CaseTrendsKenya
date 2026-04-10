@@ -22,10 +22,11 @@ const Header = () => {
   const [categories, setCategories] = useState<any[]>([]);
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
-  const { user, isAdmin, signOut } = useAuth();
+  const { user, role, isAdmin, isModerator, signOut } = useAuth();
   const { totalItems, totalPrice, setIsOpen } = useCart();
   const navigate = useNavigate();
   const categoryDropdownRef = useRef<HTMLDivElement>(null);
+  const canAccessAdminPanel = isAdmin || isModerator;
 
   // Prevent body scroll when mobile search opens to prevent layout shift
   useEffect(() => {
@@ -200,7 +201,7 @@ const Header = () => {
                       <Heart className="w-4 h-4" /> Wishlist
                     </Link>
                   </DropdownMenuItem>
-                  {isAdmin && (
+                  {canAccessAdminPanel && (
                     <>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem asChild>
@@ -290,7 +291,7 @@ const Header = () => {
           )}
           {user ? (
             <>
-              {isAdmin && <Link to="/admin" className="block py-2 text-sm font-medium hover:text-primary" onClick={() => setMobileMenuOpen(false)}>Admin Panel</Link>}
+              {canAccessAdminPanel && <Link to="/admin" className="block py-2 text-sm font-medium hover:text-primary" onClick={() => setMobileMenuOpen(false)}>Admin Panel</Link>}
               <button onClick={() => { signOut(); setMobileMenuOpen(false); }} className="block py-2 text-sm font-medium text-destructive">Sign Out</button>
             </>
           ) : (

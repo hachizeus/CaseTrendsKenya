@@ -106,7 +106,7 @@ const CartDrawer = () => {
                       disabled={selectedForCompare.size >= 3 && !selectedForCompare.has(item.product_id)}
                       className="mt-2 sm:mt-2.5 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
                     />
-                    <img src={item.image} alt={item.name} className="w-16 h-16 sm:w-20 sm:h-20 object-contain rounded bg-background flex-shrink-0" />
+                    <img src={item.image} alt={item.name} loading="lazy" decoding="async" className="w-16 h-16 sm:w-20 sm:h-20 object-contain rounded bg-background flex-shrink-0" />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm sm:text-base font-medium line-clamp-1">{item.name}</p>
                       <p className="text-xs sm:text-sm font-bold text-primary mt-1">KSh {item.price.toLocaleString()}</p>

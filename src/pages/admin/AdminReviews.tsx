@@ -1,11 +1,14 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { logAuditAction } from "@/lib/audit";
 import { useRefreshTrigger } from "@/contexts/RefreshContext";
 import { Star, Trash2, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 
 const AdminReviews = () => {
+  const { user } = useAuth();
   const [reviews, setReviews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -34,8 +37,21 @@ const AdminReviews = () => {
 
   const deleteReview = async (id: string) => {
     if (!confirm("Delete this review?")) return;
-    await supabase.from("reviews").delete().eq("id", id);
+    const { error } = await supabase.from("reviews").delete().eq("id", id);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     toast.success("Review deleted");
+    await logAuditAction({
+      actor_id: user?.id ?? null,
+      actor_email: user?.email ?? null,
+      action_type: "review_deleted",
+      entity: "reviews",
+      entity_id: id,
+      details: null,
+      user_id: null,
+    });
     loadReviews();
   };
 

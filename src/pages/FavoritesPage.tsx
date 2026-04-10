@@ -112,7 +112,7 @@ const FavoritesPage = () => {
               return (
                 <div key={fav.id} className="bg-card rounded-lg border border-border overflow-hidden">
                   <Link to={`/product/${p.id}`}>
-                    <img src={img} alt={p.name} className="w-full aspect-square object-contain p-4 bg-secondary" />
+                    <img src={img} alt={p.name} loading="lazy" decoding="async" className="w-full aspect-square object-contain p-4 bg-white" />
                   </Link>
                   <div className="p-4">
                     <p className="text-sm font-medium line-clamp-2">{p.name}</p>

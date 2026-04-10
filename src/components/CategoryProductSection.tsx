@@ -43,9 +43,9 @@ const CategoryProductSection = ({ category, bgClass = "bg-white" }: CategoryProd
         </div>
 
         {loading ? (
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+          <div className="flex gap-3 sm:gap-4 overflow-x-auto scrollbar-hide pb-2">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="bg-card border border-border animate-pulse">
+              <div key={i} className="flex-shrink-0 w-[160px] sm:w-[200px] lg:w-[220px] bg-card border border-border animate-pulse">
                 <div className="aspect-square bg-secondary" />
                 <div className="p-3 space-y-2">
                   <div className="h-3 bg-secondary rounded w-1/2" />
@@ -56,7 +56,7 @@ const CategoryProductSection = ({ category, bgClass = "bg-white" }: CategoryProd
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+          <div className="flex gap-3 sm:gap-4 overflow-x-auto scrollbar-hide pb-2">
             {products.map((product, i) => (
               <motion.div
                 key={product.id}
@@ -64,6 +64,7 @@ const CategoryProductSection = ({ category, bgClass = "bg-white" }: CategoryProd
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.07, duration: 0.35 }}
+                className="flex-shrink-0 w-[160px] sm:w-[200px] lg:w-[220px]"
               >
                 <ProductCard
                   id={product.id}

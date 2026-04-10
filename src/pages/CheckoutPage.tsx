@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { payWithPaystack } from "@/lib/paystack";
+import { API_URL, ADMIN_NOTIFICATION_EMAIL, PAYSTACK_PUBLIC_KEY, WHATSAPP_NUMBER } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,28 +17,43 @@ import Footer from "@/components/Footer";
 
 const CheckoutPage = () => {
   const { items, totalPrice, clearCart } = useCart();
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   const navigate = useNavigate();
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState(user?.email || "");
   const [delivery, setDelivery] = useState("pickup");
   const [address, setAddress] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<"whatsapp" | "paystack">("whatsapp");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [whatsappOrderPlaced, setWhatsappOrderPlaced] = useState(false);
+
+  const buildWhatsAppLink = (orderId: string) => {
+    const itemLines = items
+      .map((item) => `${item.quantity} x ${item.name} (KSh ${item.price.toLocaleString()})`)
+      .join("\n");
+
+    const message = `Hello! I want to place an order:\n${itemLines}\n\nTotal: KSh ${totalPrice.toLocaleString()}\nName: ${name}\nPhone: ${phone}\nEmail: ${email}\n${delivery === "delivery" ? `Delivery address: ${address}\n` : "Pickup\n"}Order ID: ${orderId}`;
+    return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
+  };
 
   const sendConfirmationEmail = async (orderData: any) => {
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3000";
-      
-      const response = await fetch(`${apiUrl}/api/send-email`, {
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (session?.access_token) {
+        headers.Authorization = `Bearer ${session.access_token}`;
+      }
+
+      const response = await fetch(`${API_URL}/api/send-email`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers,
         body: JSON.stringify({
           to: orderData.customer_email,
           type: "order_confirmation",
-          data: orderData,
+          data: {
+            order_id: orderData.id,
+            guest_access_token: orderData.guest_access_token,
+          },
         }),
       });
 
@@ -52,6 +69,55 @@ const CheckoutPage = () => {
     }
   };
 
+  const sendAdminNotificationEmail = async (orderData: any) => {
+    try {
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (session?.access_token) {
+        headers.Authorization = `Bearer ${session.access_token}`;
+      }
+
+      const response = await fetch(`${API_URL}/api/send-email`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          to: ADMIN_NOTIFICATION_EMAIL,
+          type: "order_notification",
+          data: orderData,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Admin email API error: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log("Admin notification email sent successfully:", result);
+    } catch (error) {
+      console.warn("Admin notification email send error:", error);
+    }
+  };
+
+  const createOrder = async (payload: any) => {
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (session?.access_token) {
+      headers.Authorization = `Bearer ${session.access_token}`;
+    }
+
+    const response = await fetch(`${API_URL}/api/orders`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const body = await response.json().catch(() => null);
+      throw new Error(body?.error || `Order API failed with status ${response.status}`);
+    }
+
+    const result = await response.json();
+    return result.order;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (items.length === 0) {
@@ -61,7 +127,10 @@ const CheckoutPage = () => {
 
     setIsSubmitting(true);
     try {
-      // Save order to Supabase
+      const guestAccessToken = user
+        ? null
+        : crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
       const orderPayload = {
         user_id: user?.id || null,
         customer_name: name,
@@ -77,26 +146,67 @@ const CheckoutPage = () => {
         })),
         total_amount: totalPrice,
         status: "pending",
+        payment_method: paymentMethod,
+        guest_access_token: guestAccessToken,
       };
 
-      const { data, error } = await supabase
-        .from("orders")
-        .insert(orderPayload)
-        .select("*")
-        .single();
+      if (paymentMethod === "whatsapp") {
+        const data = await createOrder(orderPayload);
+        const waLink = buildWhatsAppLink(data.id);
+        if (data.customer_email) {
+          sendConfirmationEmail(data);
+        }
+        sendAdminNotificationEmail(data);
+        clearCart();
+        setWhatsappOrderPlaced(true);
+        toast.success("Thank you for your order!");
+        window.open(waLink, "_blank");
+        return;
+      }
 
-      if (error) throw error;
+      if (paymentMethod === "paystack") {
+        if (!PAYSTACK_PUBLIC_KEY) throw new Error("Missing Paystack public key");
 
-      // Send confirmation email in background (don't wait for it)
+        const order = await createOrder({
+          ...orderPayload,
+          status: "pending",
+          payment_method: "paystack",
+        });
+
+        await payWithPaystack(
+          {
+            amount: order.total_amount,
+            email: order.customer_email || "",
+            orderId: order.id,
+            userId: user?.id,
+            metadata: {
+              guest_access_token: order.guest_access_token,
+            },
+          },
+          PAYSTACK_PUBLIC_KEY,
+        );
+
+        if (order.customer_email) {
+          sendConfirmationEmail(order);
+        }
+        sendAdminNotificationEmail(order);
+
+        clearCart();
+        toast.success("Payment completed and order created! Redirecting to confirmation...");
+        navigate(`/order/${order.id}${order.guest_access_token ? `?token=${order.guest_access_token}` : ""}`);
+        return;
+      }
+
+      const data = await createOrder(orderPayload);
+
       if (data.customer_email) {
         sendConfirmationEmail(data);
       }
+      sendAdminNotificationEmail(data);
 
       clearCart();
       toast.success("Order created! Redirecting to confirmation...");
-      
-      // Redirect to confirmation page with order ID
-      navigate(`/order/${data.id}`);
+      navigate(`/order/${data.id}${data.guest_access_token ? `?token=${data.guest_access_token}` : ""}`);
     } catch (error) {
       console.error("Error creating order:", error);
       toast.error("Failed to create order. Please try again.");
@@ -111,8 +221,22 @@ const CheckoutPage = () => {
         <TopBar /><Header />
         <div className="flex-1 flex items-center justify-center bg-secondary">
           <div className="text-center px-4">
-            <h2 className="text-xl sm:text-2xl font-bold mb-4">Your cart is empty</h2>
-            <Link to="/" className="text-primary hover:underline">Continue Shopping</Link>
+            {whatsappOrderPlaced ? (
+              <>
+                <h2 className="text-xl sm:text-2xl font-bold mb-4">Thank you for your order!</h2>
+                <p className="text-sm text-muted-foreground mb-6">
+                  Your WhatsApp order has been created and the payment page will open in a new tab.
+                </p>
+                <Link to="/" className="inline-flex items-center justify-center rounded-lg bg-primary px-6 py-3 text-sm font-semibold text-white hover:bg-primary/90">
+                  Continue Shopping
+                </Link>
+              </>
+            ) : (
+              <>
+                <h2 className="text-xl sm:text-2xl font-bold mb-4">Your cart is empty</h2>
+                <Link to="/" className="text-primary hover:underline">Continue Shopping</Link>
+              </>
+            )}
           </div>
         </div>
         <Footer />
@@ -170,6 +294,22 @@ const CheckoutPage = () => {
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="delivery" id="delivery" />
                   <Label htmlFor="delivery">Delivery</Label>
+                </div>
+              </RadioGroup>
+            </div>
+
+            <div>
+              <Label>Payment Method</Label>
+              <RadioGroup value={paymentMethod} onValueChange={(value) => setPaymentMethod(value as "whatsapp" | "paystack")} className="mt-2">
+                <div className="flex flex-col gap-2">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <RadioGroupItem value="whatsapp" id="payment-whatsapp" />
+                    <span>WhatsApp Checkout</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <RadioGroupItem value="paystack" id="payment-paystack" />
+                    <span>Card Payment</span>
+                  </label>
                 </div>
               </RadioGroup>
             </div>

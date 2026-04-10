@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { logAuditAction } from "@/lib/audit";
 import { supabase } from "@/integrations/supabase/client";
 import { useRefreshTrigger } from "@/contexts/RefreshContext";
 import { Button } from "@/components/ui/button";
@@ -8,8 +10,10 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Plus, Pencil, Trash2, Upload, Eye, EyeOff, ChevronLeft } from "lucide-react";
 import { toast } from "sonner";
+import { getOptimizedImageUrl } from "@/lib/imageOptimization";
 
 const AdminSlideManager = () => {
+  const { user } = useAuth();
   const { sectionId } = useParams<{ sectionId: string }>();
   const navigate = useNavigate();
   const { refreshTrigger } = useRefreshTrigger();
@@ -136,6 +140,15 @@ const AdminSlideManager = () => {
         return;
       }
       toast.success("Slide updated!");
+      await logAuditAction({
+        actor_id: user?.id ?? null,
+        actor_email: user?.email ?? null,
+        action_type: "slide_updated",
+        entity: "hero_slides",
+        entity_id: editing.id,
+        details: { title: payload.title, is_active: payload.is_active, section_id: payload.section_id },
+        user_id: null,
+      });
     } else {
       const { error } = await supabase.from("hero_slides").insert(payload);
       if (error) {
@@ -144,7 +157,17 @@ const AdminSlideManager = () => {
         return;
       }
       toast.success("Slide created!");
+      await logAuditAction({
+        actor_id: user?.id ?? null,
+        actor_email: user?.email ?? null,
+        action_type: "slide_created",
+        entity: "hero_slides",
+        entity_id: null,
+        details: { title: payload.title, is_active: payload.is_active, section_id: payload.section_id },
+        user_id: null,
+      });
     }
+
     setSaving(false);
     setDialogOpen(false);
     loadSlides();
@@ -152,16 +175,42 @@ const AdminSlideManager = () => {
 
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this slide?")) return;
-    await supabase.from("hero_slides").delete().eq("id", id);
+    const { error } = await supabase.from("hero_slides").delete().eq("id", id);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     toast.success("Deleted");
+    await logAuditAction({
+      actor_id: user?.id ?? null,
+      actor_email: user?.email ?? null,
+      action_type: "slide_deleted",
+      entity: "hero_slides",
+      entity_id: id,
+      details: null,
+      user_id: null,
+    });
     loadSlides();
   };
 
   const toggleActive = async (s: any) => {
-    await supabase
+    const { error } = await supabase
       .from("hero_slides")
       .update({ is_active: !s.is_active })
       .eq("id", s.id);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    await logAuditAction({
+      actor_id: user?.id ?? null,
+      actor_email: user?.email ?? null,
+      action_type: s.is_active ? "slide_deactivated" : "slide_activated",
+      entity: "hero_slides",
+      entity_id: s.id,
+      details: { is_active: !s.is_active },
+      user_id: null,
+    });
     loadSlides();
   };
 
@@ -195,7 +244,12 @@ const AdminSlideManager = () => {
             title="Edit Slide"
           >
             <div className="relative w-40 sm:w-56 flex-shrink-0">
-              <img src={s.image_url} alt={s.title} className="w-full h-28 object-cover" />
+              <img src={getOptimizedImageUrl(s.image_url, {
+                width: 560,
+                height: 180,
+                quality: 70,
+                resize: "contain",
+              })} alt={s.title} loading="lazy" decoding="async" className="w-full h-28 object-cover" />
               <span className="absolute top-2 left-2 bg-black/60 text-white text-[10px] px-1.5 py-0.5 font-mono rounded">
                 Slide {i + 1}
               </span>
@@ -259,7 +313,12 @@ const AdminSlideManager = () => {
               <Label>Slide Image *</Label>
               <label className="mt-1 flex flex-col items-center justify-center border-2 border-dashed border-border hover:border-primary transition-colors cursor-pointer overflow-hidden" style={{ minHeight: 120 }}>
                 {preview ? (
-                  <img src={preview} alt="preview" className="w-full h-36 object-cover" />
+                  <img src={getOptimizedImageUrl(preview, {
+                    width: 1200,
+                    height: 500,
+                    quality: 70,
+                    resize: "contain",
+                  })} alt="preview" loading="lazy" decoding="async" className="w-full h-36 object-cover" />
                 ) : (
                   <div className="flex flex-col items-center gap-2 py-8 text-muted-foreground">
                     <Upload className="w-6 h-6" />

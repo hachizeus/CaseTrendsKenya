@@ -268,6 +268,79 @@ export function generateOrderConfirmationEmail(order: OrderData): EmailTemplate 
   };
 }
 
+export function generateOrderNotificationEmail(order: OrderData, adminEmail: string): EmailTemplate {
+  const itemsHtml = order.items
+    .map(
+      (item) =>
+        `
+        <div class="item">
+          <span class="item-name">${item.name} × ${item.quantity}</span>
+          <span class="item-price">KSh ${(item.price * item.quantity).toLocaleString()}</span>
+        </div>
+      `
+    )
+    .join("");
+
+  const orderDate = new Date(order.created_at).toLocaleDateString("en-KE", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+
+  return {
+    to: adminEmail,
+    subject: `New Order Received - ${order.id.slice(0, 8)} | Case Trends Kenya`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>${baseStyles}</style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>New Order Received</h1>
+            <p style="margin: 10px 0 0 0; opacity: 0.9;">Order #${order.id.slice(0, 8)} placed on ${orderDate}</p>
+          </div>
+
+          <div class="content">
+            <p><strong>Customer:</strong> ${order.customer_name}</p>
+            <p><strong>Phone:</strong> ${order.customer_phone}</p>
+            <p><strong>Email:</strong> ${order.customer_email || "N/A"}</p>
+            <p><strong>Delivery:</strong> ${order.delivery_method === "delivery" ? "Delivery" : "Pickup"}</p>
+            ${order.delivery_method === "delivery" && order.delivery_address ? `
+              <p><strong>Delivery Address:</strong> ${order.delivery_address}</p>
+            ` : ""}
+
+            <div class="section">
+              <h2>Order Items</h2>
+              ${itemsHtml}
+              <div class="total">
+                <span>Total Amount</span>
+                <span class="total-amount">KSh ${order.total_amount.toLocaleString()}</span>
+              </div>
+            </div>
+
+            <div class="section">
+              <h2>Order Status</h2>
+              <p><span class="status-badge status-${order.status}">${order.status}</span></p>
+            </div>
+
+            <p style="margin-top: 25px; color: #6b7280;">View the order in the admin panel to process it.</p>
+          </div>
+
+          <div class="footer">
+            <p>Case Trends Kenya | Admin Notification</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `,
+  };
+}
+
 export function generateStatusUpdateEmail(order: OrderData): EmailTemplate {
   const statusMessages: Record<string, string> = {
     pending: "Your order is awaiting payment confirmation through WhatsApp.",
