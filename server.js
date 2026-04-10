@@ -24,12 +24,7 @@ const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin || ALLOWED_ORIGINS.includes(origin)) {
-      return callback(null, true);
-    }
-    return callback(new Error("CORS origin not allowed"));
-  },
+  origin: true,
   methods: ["GET", "POST", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
   credentials: true,
