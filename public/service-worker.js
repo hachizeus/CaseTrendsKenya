@@ -5,14 +5,23 @@ const CACHE_NAME = 'casetrendskenya-v1';
 const urlsToCache = [
   '/',
   '/index.html',
-  '/manifest.json',
 ];
 
 // Install event - cache essential assets
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => {
-      return cache.addAll(urlsToCache);
+    caches.open(CACHE_NAME).then(async cache => {
+      for (const url of urlsToCache) {
+        try {
+          const response = await fetch(url);
+          if (response.ok) {
+            await cache.put(url, response.clone());
+          }
+        } catch (error) {
+          // Ignore failed cache entries so installation can continue
+          console.warn(`Service worker failed to cache ${url}:`, error);
+        }
+      }
     })
   );
   self.skipWaiting();
