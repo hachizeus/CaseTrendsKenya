@@ -91,7 +91,7 @@ function buildSecureHeaders(req, res, next) {
   res.set('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.set('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
   res.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
-  res.set('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self';");
+  res.set('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data:; font-src 'self' https://fonts.gstatic.com; connect-src 'self'; frame-ancestors 'none'; base-uri 'self';");
   next();
 }
 
@@ -698,14 +698,18 @@ app.get("/health", (req, res) => {
   res.json({ status: "ok", message: "Email server is running" });
 });
 
-// SPA fallback - serve index.html for all non-API routes
-// This allows React Router to handle client-side routing
+// SPA fallback - serve index.html only for client app routes, not missing asset paths
+// This allows React Router to handle client-side routing without returning HTML for missing assets
 app.use((req, res) => {
-  // Only serve index.html for non-API routes
-  if (!req.path.startsWith('/api/') && !req.path.startsWith('/health')) {
+  const extension = path.extname(req.path);
+  const isAssetRequest = extension !== "";
+
+  if (!req.path.startsWith('/api/') && !req.path.startsWith('/health') && !isAssetRequest) {
     res.sendFile(path.join(__dirname, 'dist', 'index.html'));
-  } else {
+  } else if (req.path.startsWith('/api/') || req.path.startsWith('/health')) {
     res.status(404).json({ error: "Not found" });
+  } else {
+    res.status(404).send('Not found');
   }
 });
 
