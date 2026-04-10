@@ -2,9 +2,7 @@
 const envApiUrl = import.meta.env.VITE_API_URL;
 export const API_URL =
   envApiUrl ||
-  (import.meta.env.MODE === "development"
-    ? "http://localhost:3000"
-    : typeof window !== "undefined"
+  (typeof window !== "undefined"
     ? window.location.origin
     : "http://localhost:3000");
 export const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "";

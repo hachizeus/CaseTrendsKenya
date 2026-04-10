@@ -86,7 +86,7 @@ function buildSecureHeaders(req, res, next) {
   res.set('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.set('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
   res.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
-  res.set('Content-Security-Policy', "default-src 'self'; script-src 'self'; script-src-elem 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' http://localhost:3000 https://yrhczwzqvzqalyjpxdmi.supabase.co https://casetrendskenya.onrender.com https://*.onrender.com; frame-ancestors 'none'; base-uri 'self';");
+  res.set('Content-Security-Policy', "default-src 'self'; script-src 'self'; script-src-elem 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' http://localhost:3000 https://yrhczwzqvzqalyjpxdmi.supabase.co https://casetrendskenya.onrender.com https://*.onrender.com https://fonts.googleapis.com https://fonts.gstatic.com; frame-ancestors 'none'; base-uri 'self';");
   next();
 }
 
