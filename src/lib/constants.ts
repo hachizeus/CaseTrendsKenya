@@ -1,10 +1,10 @@
 // API configuration
 const envApiUrl = import.meta.env.VITE_API_URL;
+const isLocalApiUrl = typeof envApiUrl === "string" && /(localhost|127\.0\.0\.1)/.test(envApiUrl);
 export const API_URL =
-  envApiUrl ||
-  (typeof window !== "undefined"
-    ? window.location.origin
-    : "http://localhost:3000");
+  envApiUrl && (!import.meta.env.PROD || !isLocalApiUrl)
+    ? envApiUrl
+    : (typeof window !== "undefined" ? window.location.origin : "");
 export const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "";
 export const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || "";
 export const ADMIN_NOTIFICATION_EMAIL = import.meta.env.VITE_ADMIN_NOTIFICATION_EMAIL || "elitjohnsdigital@gmail.com";
