@@ -91,7 +91,7 @@ function buildSecureHeaders(req, res, next) {
   res.set('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.set('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
   res.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
-  res.set('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data:; font-src 'self' https://fonts.gstatic.com; connect-src 'self'; frame-ancestors 'none'; base-uri 'self';");
+  res.set('Content-Security-Policy', "default-src 'self'; script-src 'self'; script-src-elem 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; style-src-elem 'self' https://fonts.googleapis.com; img-src 'self' data:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://yrhczwzqvzqalyjpxdmi.supabase.co; frame-ancestors 'none'; base-uri 'self';");
   next();
 }
 
@@ -122,7 +122,14 @@ app.use((req, res, next) => {
   next();
 });
 
-// Serve static files with compression
+// Serve static assets directly and avoid SPA fallback for asset paths
+app.use('/assets', express.static(path.join(__dirname, 'dist', 'assets'), {
+  maxAge: '1y',
+  etag: false,
+  fallthrough: false,
+}));
+
+// Serve SPA static files and index.html fallback
 app.use(express.static(path.join(__dirname, 'dist'), {
   maxAge: '1y',
   etag: false,
