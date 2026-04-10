@@ -9,8 +9,6 @@ import { ShoppingCart, Heart, ArrowLeft, Star, ChevronLeft, ChevronRight, Trash2
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { getOptimizedImageUrl } from "@/lib/imageOptimization";
-import { toast } from "sonner";
-import { motion } from "framer-motion";
 import TopBar from "@/components/TopBar";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";

@@ -251,7 +251,7 @@ const ProductsPage = () => {
                   <Button onClick={() => window.location.reload()}>Retry</Button>
                 </div>
               ) : isLoading ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                   {Array.from({ length: PAGE_SIZE }).map((_, i) => (
                     <div key={i} className="bg-card rounded-lg border border-border animate-pulse">
                       <div className="aspect-square bg-secondary" />
@@ -270,7 +270,7 @@ const ProductsPage = () => {
                 </div>
               ) : (
                 <>
-                  <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,220px))] justify-center gap-3">
+                  <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     {filtered.map((product, i) => (
                       <ProductCard
                         key={product.id}

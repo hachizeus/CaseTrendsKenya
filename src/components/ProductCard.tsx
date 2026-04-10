@@ -98,9 +98,9 @@ const ProductCard = ({ id, name, images, price, originalPrice, category, brand, 
       transition={{ duration: 0.35, delay: index * 0.04 }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      className="group h-full"
+      className="group h-full w-full min-w-0"
     >
-      <Link to={`/product/${id}`} className="block h-full w-full max-w-[220px] mx-auto bg-white border border-border hover:border-primary transition-colors duration-200 overflow-hidden">
+      <Link to={`/product/${id}`} className="block h-full min-h-full w-full bg-white border border-border hover:border-primary transition-colors duration-200 overflow-hidden">
         {/* Image */}
         <div className="relative aspect-square bg-white overflow-hidden">
           <motion.div
