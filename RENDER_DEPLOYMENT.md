@@ -28,12 +28,13 @@ In the "Environment" section, add:
 NODE_ENV=production
 EMAIL_USER=your-gmail@gmail.com
 EMAIL_PASSWORD=your-gmail-app-password
+EMAIL_PASS=your-gmail-app-password
 VITE_SUPABASE_URL=https://your-project.supabase.co
 VITE_SUPABASE_ANON_KEY=your-anon-key
 VITE_SUPABASE_SERVICE_KEY=your-service-key
 ```
 
-**Note**: For Gmail, use an [App Password](https://support.google.com/accounts/answer/185833), not your regular password.
+**Note**: For Gmail, use an [App Password](https://support.google.com/accounts/answer/185833), not your regular password. The app accepts either `EMAIL_PASS` or `EMAIL_PASSWORD` for compatibility.
 
 ### 4. Deploy
 - Click "Create Web Service"

@@ -144,17 +144,19 @@ app.use(express.static(path.join(__dirname, 'dist'), {
 }));
 
 // Gmail transporter configuration
+const emailUser = process.env.EMAIL_USER || "";
+const emailPass = process.env.EMAIL_PASS || process.env.EMAIL_PASSWORD || "";
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
+    user: emailUser,
+    pass: emailPass,
   },
 });
 
-if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+if (!emailUser || !emailPass) {
   console.warn(
-    "EMAIL_USER and EMAIL_PASS are required to send emails. Email delivery will fail without them."
+    "EMAIL_USER and EMAIL_PASS / EMAIL_PASSWORD are required to send emails. Email delivery will fail without them."
   );
 }
 

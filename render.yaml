@@ -14,6 +14,8 @@ services:
         scope: build,runtime
       - key: EMAIL_PASSWORD
         scope: build,runtime
+      - key: EMAIL_PASS
+        scope: build,runtime
       - key: VITE_SUPABASE_URL
         scope: build,runtime
       - key: VITE_SUPABASE_ANON_KEY
