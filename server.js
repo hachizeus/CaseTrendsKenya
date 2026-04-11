@@ -154,6 +154,20 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+console.log("Email auth configured:", {
+  emailUser: emailUser ? emailUser : "<missing>",
+  hasEmailPass: Boolean(emailPass),
+  envVarUsed: process.env.EMAIL_PASS ? "EMAIL_PASS" : process.env.EMAIL_PASSWORD ? "EMAIL_PASSWORD" : "none",
+});
+
+transporter.verify((error, success) => {
+  if (error) {
+    console.error("Email transporter verification failed:", error);
+  } else {
+    console.log("Email transporter ready.", success);
+  }
+});
+
 if (!emailUser || !emailPass) {
   console.warn(
     "EMAIL_USER and EMAIL_PASS / EMAIL_PASSWORD are required to send emails. Email delivery will fail without them."
