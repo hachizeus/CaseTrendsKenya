@@ -147,7 +147,9 @@ app.use(express.static(path.join(__dirname, 'dist'), {
 const emailUser = process.env.EMAIL_USER || "";
 const emailPass = process.env.EMAIL_PASS || process.env.EMAIL_PASSWORD || "";
 const transporter = nodemailer.createTransport({
-  service: "gmail",
+  host: "smtp.gmail.com",
+  port: 465,
+  secure: true,
   auth: {
     user: emailUser,
     pass: emailPass,
@@ -600,8 +602,16 @@ app.post("/api/send-email", async (req, res) => {
 
     res.json({ success: true, messageId: info.messageId });
   } catch (error) {
-    console.error("Email send error:", error);
-    res.status(500).json({ error: error.message || "Failed to send email" });
+    console.error("Email send error:", error, {
+      code: error?.code ?? null,
+      response: error?.response ?? null,
+      responseCode: error?.responseCode ?? null,
+    });
+    res.status(500).json({
+      error: error?.message || "Failed to send email",
+      code: error?.code || undefined,
+      responseCode: error?.responseCode || undefined,
+    });
   }
 });
 
