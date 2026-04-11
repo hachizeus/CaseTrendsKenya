@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -6,7 +6,7 @@ import { logAuditAction } from "@/lib/audit";
 import { useRefreshTrigger } from "@/contexts/RefreshContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Pencil, Trash2, Search, Star, TrendingUp } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Star, TrendingUp, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { getOptimizedImageUrl } from "@/lib/imageOptimization";
 import { TableSkeleton } from "@/components/SkeletonVariants";
@@ -17,6 +17,7 @@ const AdminProducts = () => {
   const [products, setProducts] = useState<any[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  const [isDeletingId, setIsDeletingId] = useState<string | null>(null);
   const { refreshTrigger } = useRefreshTrigger();
 
   useEffect(() => {
@@ -37,11 +38,16 @@ const AdminProducts = () => {
 
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this product and all its images?")) return;
+    setIsDeletingId(id);
+
     const { error } = await (supabase.from("products") as any).delete().eq("id", id);
+    setIsDeletingId(null);
+
     if (error) {
       toast.error(error.message);
       return;
     }
+
     toast.success("Deleted");
     await logAuditAction({
       actor_id: user?.id ?? null,
@@ -55,14 +61,15 @@ const AdminProducts = () => {
     loadProducts();
   };
 
-  const deleteImage = async (imgId: string) => {
-    await (supabase.from("product_images") as any).delete().eq("id", imgId);
-    loadProducts();
-  };
-
-  const filtered = products.filter(p =>
-    !search || p.name.toLowerCase().includes(search.toLowerCase()) || p.brand.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredProducts = useMemo(() => {
+    const query = search.toLowerCase();
+    return products.filter((p) =>
+      !query ||
+      p.name?.toLowerCase().includes(query) ||
+      p.brand?.toLowerCase().includes(query) ||
+      p.category?.toLowerCase().includes(query)
+    );
+  }, [products, search]);
 
   const stockBadge = (s: string) => {
     if (s === "in_stock") return "bg-emerald-100 text-emerald-700";
@@ -123,17 +130,29 @@ const AdminProducts = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {products
-                  .filter(p =>
-                    !search ||
-                    p.name.toLowerCase().includes(search.toLowerCase()) ||
-                    p.brand.toLowerCase().includes(search.toLowerCase())
-                  )
-                  .map(p => {
+                {filteredProducts.map((p) => {
                     const primaryImg =
                       p.product_images?.find((i: any) => i.is_primary)?.image_url ||
                       p.product_images?.[0]?.image_url ||
                       "/placeholder.svg";
+                    const stockQuantity = typeof p.stock_quantity === "number" ? p.stock_quantity : null;
+                    const statusLabel =
+                      stockQuantity === 0 || p.stock_status === "out_of_stock"
+                        ? "Out of Stock"
+                        : p.stock_status === "in_stock"
+                        ? "In Stock"
+                        : p.stock_status === "low_stock"
+                        ? "Low Stock"
+                        : "Sold Out";
+                    const statusClass =
+                      stockQuantity === 0 || p.stock_status === "out_of_stock"
+                        ? "bg-red-100 text-red-600"
+                        : p.stock_status === "in_stock"
+                        ? "bg-emerald-100 text-emerald-700"
+                        : p.stock_status === "low_stock"
+                        ? "bg-yellow-100 text-yellow-700"
+                        : "bg-red-100 text-red-600";
+
                     return (
                       <tr key={p.id} className="hover:bg-secondary/30 transition-colors">
                         <td className="px-4 py-3">
@@ -146,6 +165,7 @@ const AdminProducts = () => {
                                 resize: "contain",
                               })}
                               alt={p.name}
+                              title={primaryImg}
                               className="w-10 h-10 object-contain bg-secondary border border-border flex-shrink-0"
                             />
                             <div className="min-w-0">
@@ -162,19 +182,10 @@ const AdminProducts = () => {
                         </td>
                         <td className="px-4 py-3 hidden md:table-cell">
                           <span
-                            className={`text-[10px] font-semibold px-2 py-0.5 rounded ${
-                              p.stock_status === "in_stock"
-                                ? "bg-emerald-100 text-emerald-700"
-                                : p.stock_status === "low_stock"
-                                ? "bg-yellow-100 text-yellow-700"
-                                : "bg-red-100 text-red-600"
-                            }`}
+                            className={`text-[10px] font-semibold px-2 py-0.5 rounded ${statusClass}`}
                           >
-                            {p.stock_status === "in_stock"
-                              ? "In Stock"
-                              : p.stock_status === "low_stock"
-                              ? "Low Stock"
-                              : "Sold Out"}
+                            {statusLabel}
+                            {stockQuantity > 0 ? ` · ${stockQuantity} left` : ""}
                           </span>
                         </td>
                         <td className="px-4 py-3 hidden lg:table-cell">
@@ -198,9 +209,14 @@ const AdminProducts = () => {
                             </button>
                             <button
                               onClick={() => handleDelete(p.id)}
-                              className="p-1.5 hover:bg-red-50 hover:text-red-600 border border-transparent hover:border-red-200 transition-colors"
+                              disabled={isDeletingId === p.id}
+                              className="p-1.5 border border-transparent transition-colors hover:bg-red-50 hover:text-red-600 hover:border-red-200 disabled:cursor-not-allowed disabled:opacity-60"
                             >
-                              <Trash2 className="w-3.5 h-3.5" />
+                              {isDeletingId === p.id ? (
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                              ) : (
+                                <Trash2 className="w-3.5 h-3.5" />
+                              )}
                             </button>
                           </div>
                         </td>
@@ -209,8 +225,10 @@ const AdminProducts = () => {
                   })}
               </tbody>
             </table>
-            {products.length === 0 && (
-              <p className="text-muted-foreground text-center py-12 text-sm">No products yet.</p>
+            {filteredProducts.length === 0 && (
+              <p className="text-muted-foreground text-center py-12 text-sm">
+                {products.length === 0 ? "No products yet." : "No products match your search."}
+              </p>
             )}
           </div>
         </div>

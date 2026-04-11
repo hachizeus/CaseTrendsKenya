@@ -18,6 +18,7 @@ import type { CompressedImage } from "@/lib/imageOptimization";
 export default function AdminSlidesOverview() {
   const { user, isAdmin, isModerator, loading: authLoading } = useAuth();
   const { refreshTrigger } = useRefreshTrigger();
+  const anySupabase = supabase as any;
   const [sections, setSections] = useState<any[]>([]);
   const [slides, setSlides] = useState<{ [sectionId: string]: any[] }>({});
   const [loading, setLoading] = useState(true);
@@ -60,7 +61,7 @@ export default function AdminSlidesOverview() {
     setLoading(true);
     try {
       // Query hero sections with type bypass for newly created table
-      const { data: sectionsData, error } = await (supabase
+      const { data: sectionsData, error } = await (anySupabase
         .from("hero_sections" as any)
         .select("*")
         .order("section_number") as any);
@@ -83,7 +84,7 @@ export default function AdminSlidesOverview() {
         const slidesData: { [key: string]: any[] } = {};
         
         for (const section of sectionsData) {
-          const { data: sectionSlides, error: slidesError } = await (supabase
+          const { data: sectionSlides, error: slidesError } = await (anySupabase
             .from("hero_slides" as any)
             .select("*")
             .eq("section_id", section.id)
@@ -117,7 +118,7 @@ export default function AdminSlidesOverview() {
       ];
 
       for (const section of heroSectionsData) {
-        const { error } = await (supabase
+        const { error } = await (anySupabase
           .from("hero_sections" as any)
           .insert([section])
           .select() as any);
@@ -127,16 +128,6 @@ export default function AdminSlidesOverview() {
         }
       }
 
-      console.gAuditAction({
-        actor_id: user?.id ?? null,
-        actor_email: user?.email ?? null,
-        action_type: "hero_sections_seeded",
-        entity: "hero_sections",
-        entity_id: null,
-        details: { count: heroSectionsData.length },
-        user_id: null,
-      });
-      await lolog("Hero sections created successfully");
       await logAuditAction({
         actor_id: user?.id ?? null,
         actor_email: user?.email ?? null,
@@ -244,9 +235,9 @@ export default function AdminSlidesOverview() {
       if (imageFile) {
         // Upload compressed image
         const path = `slides/${Date.now()}_${imageFile.name}`;
-        const { error } = await supabase.storage.from("product-images").upload(path, imageFile);
+        const { error } = await anySupabase.storage.from("product-images").upload(path, imageFile);
         if (error) throw error;
-        const { data } = supabase.storage.from("product-images").getPublicUrl(path);
+        const { data } = anySupabase.storage.from("product-images").getPublicUrl(path);
         imageUrl = data.publicUrl;
         
         // Log compression stats
@@ -266,7 +257,7 @@ export default function AdminSlidesOverview() {
         return;
       }
 
-      const payload = {
+      const payload: any = {
         title: slideForm.title,
         subtitle: slideForm.subtitle || null,
         image_url: imageUrl,
@@ -274,10 +265,11 @@ export default function AdminSlidesOverview() {
         cta_link: slideForm.cta_link || null,
         is_active: slideForm.is_active,
         section_id: selectedSectionId,
+        display_order: editingSlide?.display_order ?? (slides[selectedSectionId]?.length ?? 0),
       };
 
       if (editingSlide) {
-        const { error } = await (supabase
+        const { error } = await (anySupabase
           .from("hero_slides" as any)
           .update(payload)
           .eq("id", editingSlide.id) as any);
@@ -293,7 +285,7 @@ export default function AdminSlidesOverview() {
           user_id: null,
         });
       } else {
-        const { error } = await (supabase
+        const { error } = await (anySupabase
           .from("hero_slides" as any)
           .insert([payload]) as any);
         if (error) throw error;
@@ -322,7 +314,7 @@ export default function AdminSlidesOverview() {
   const deleteSlide = async (slideId: string) => {
     if (!confirm("Delete this slide?")) return;
     try {
-      const { error } = await (supabase.from("hero_slides" as any).delete().eq("id", slideId) as any);
+      const { error } = await (anySupabase.from("hero_slides" as any).delete().eq("id", slideId) as any);
       if (error) throw error;
       toast.success("Slide deleted!");
       await logAuditAction({
@@ -342,7 +334,7 @@ export default function AdminSlidesOverview() {
 
   const toggleSlideActive = async (sectionId: string, slide: any) => {
     try {
-      const { error } = await (supabase
+      const { error } = await (anySupabase
         .from("hero_slides" as any)
         .update({ is_active: !slide.is_active })
         .eq("id", slide.id) as any);

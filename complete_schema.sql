@@ -50,6 +50,7 @@ CREATE TABLE public.profiles (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID NOT NULL UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
   display_name TEXT,
+  email TEXT,
   phone TEXT,
   avatar_url TEXT,
   address TEXT,

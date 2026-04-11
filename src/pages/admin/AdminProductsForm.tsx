@@ -334,54 +334,12 @@ const AdminProductFormPage = () => {
       const file = files[i];
       const ext = file.name.split(".").pop();
       const path = `${productId}/${Date.now()}_${i}.${ext}`;
-      let processedFile = file;
-      let backgroundRemoved = false;
+      const processedFile = file;
 
-      try {
-        // Show processing toast for background removal
-        toast.loading(`Processing image ${i + 1}/${files.length}...`, {
-          id: `processing-${i}`,
-          duration: 10000,
-        });
-
-        const formData = new FormData();
-        formData.append("image", file);
-        const res = await fetch(`${API_URL}/api/remove-bg`, {
-          method: "POST",
-          body: formData,
-        });
-        
-        if (res.ok) {
-          const data = await res.json();
-          const byteString = atob(data.image);
-          const ab = new ArrayBuffer(byteString.length);
-          const ia = new Uint8Array(ab);
-          for (let j = 0; j < byteString.length; j++) ia[j] = byteString.charCodeAt(j);
-          processedFile = new File([ab], "processed.png", { type: "image/png" });
-          backgroundRemoved = true;
-          
-          // Update toast to success
-          toast.success(`✅ Background removed for image ${i + 1}`, {
-            id: `processing-${i}`,
-            duration: 2000,
-          });
-        } else {
-          // Background removal failed, use original
-          toast.warning(`⚠️ Background removal failed for image ${i + 1}, using original`, {
-            id: `processing-${i}`,
-            duration: 3000,
-          });
-          failedCount++;
-        }
-      } catch (error) {
-        console.error("Background removal error:", error);
-        // Use original file if background removal fails
-        toast.warning(`⚠️ Background removal failed for image ${i + 1}, using original`, {
-          id: `processing-${i}`,
-          duration: 3000,
-        });
-        failedCount++;
-      }
+      toast.loading(`Uploading image ${i + 1}/${files.length}...`, {
+        id: `processing-${i}`,
+        duration: 10000,
+      });
 
       try {
         const { error: uploadError } = await supabase.storage
@@ -412,9 +370,9 @@ const AdminProductFormPage = () => {
     // Final summary toast
     if (processedCount > 0) {
       if (failedCount === 0) {
-        toast.success(`🎉 All ${processedCount} images uploaded successfully with background removal!`);
+        toast.success(`🎉 All ${processedCount} images uploaded successfully!`);
       } else {
-        toast.success(`✅ ${processedCount} images uploaded. ${failedCount} used original images.`);
+        toast.success(`✅ ${processedCount} images uploaded. ${failedCount} failed to upload.`);
       }
     } else {
       toast.error("No images were uploaded successfully");

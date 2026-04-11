@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useRefreshTrigger } from "@/contexts/RefreshContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { Search, User, Loader } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
@@ -10,7 +11,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
 import { logAuditAction } from "@/lib/audit";
 import { useToast } from "@/hooks/use-toast";
 
@@ -27,6 +27,7 @@ interface UserWithRole extends Record<string, any> {
 
 const AdminUsers = () => {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [users, setUsers] = useState<UserWithRole[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
@@ -40,11 +41,13 @@ const AdminUsers = () => {
   const loadUsersWithRoles = async () => {
     setLoading(true);
     try {
-      // First, fetch all profiles
-      const { data: profiles, error: profilesError } = await supabase
-        .from("profiles")
-        .select("*")
-        .order("created_at", { ascending: false });
+      const [profilesResult, rolesResult] = await Promise.all([
+        supabase.from("profiles").select("*").order("created_at", { ascending: false }),
+        supabase.from("user_roles").select("user_id, role"),
+      ]);
+
+      const { data: profiles, error: profilesError } = profilesResult;
+      const { data: allRoles, error: rolesError } = rolesResult;
 
       if (profilesError) {
         console.error("Error loading profiles:", profilesError);
@@ -53,23 +56,20 @@ const AdminUsers = () => {
         return;
       }
 
-      // Then fetch all user roles with type bypass
-      const { data: allRoles, error: rolesError } = await (supabase
-        .from("user_roles" as any)
-        .select("user_id, role")
-        .order("user_id") as any);
-
       if (rolesError) {
         console.error("Error loading roles:", rolesError);
-        // Continue without roles if fetch fails
       }
 
-      // Combine profiles with their roles
-      const usersWithRoles: UserWithRole[] = (profiles || []).map((profile) => ({
+      const rolesByUserId = new Map<string, string[]>();
+      (allRoles || []).forEach((role: any) => {
+        const userRoles = rolesByUserId.get(role.user_id) || [];
+        userRoles.push(role.role);
+        rolesByUserId.set(role.user_id, userRoles);
+      });
+
+      const usersWithRoles: UserWithRole[] = (profiles || []).map((profile: any) => ({
         ...profile,
-        roles: (allRoles || [])
-          .filter((r: any) => r.user_id === profile.user_id)
-          .map((r: any) => r.role),
+        roles: rolesByUserId.get(profile.user_id) || [],
       }));
 
       setUsers(usersWithRoles);
@@ -87,30 +87,24 @@ const AdminUsers = () => {
       const currentUser = users.find((u) => u.user_id === userId);
       const currentRole = (currentUser?.roles || [])[0];
 
-      // If role is different, update it
       if (currentRole !== newRole) {
-        // Delete old role if exists
-        if (currentRole) {
-          const { error: deleteError } = await (supabase
-            .from("user_roles" as any)
-            .delete()
-            .eq("user_id", userId)
-            .eq("role", currentRole) as any);
+        const userRoles: any = supabase.from("user_roles" as any);
 
-          if (deleteError) throw deleteError;
-        }
+        const { error: deleteError } = await userRoles
+          .delete()
+          .eq("user_id", userId);
 
-        // Insert new role
+        if (deleteError) throw deleteError;
+
         if (newRole !== "none") {
-          const { error: insertError } = await (supabase
-            .from("user_roles" as any)
-            .insert([{ user_id: userId, role: newRole }]) as any);
+          const { error: insertError } = await userRoles.insert(
+            { user_id: userId, role: newRole },
+          );
 
           if (insertError) throw insertError;
         }
       }
 
-      // Refresh the user list
       await loadUsersWithRoles();
       await logAuditAction({
         action_type: "user_role_updated",
@@ -118,12 +112,13 @@ const AdminUsers = () => {
         entity_id: userId,
         details: { old_role: currentRole || "none", new_role: newRole },
         user_id: userId,
+        actor_id: user?.id ?? null,
+        actor_email: user?.email ?? null,
       });
       toast({ title: "Success", description: `User role updated to ${newRole}` });
     } catch (err: any) {
       console.error("Error updating role:", err);
       toast({ title: "Error", description: err.message, variant: "destructive" });
-      // Refresh to show actual state
       await loadUsersWithRoles();
     } finally {
       setUpdatingRole(null);
@@ -131,7 +126,10 @@ const AdminUsers = () => {
   };
 
   const filtered = users.filter(u =>
-    !search || (u.display_name || "").toLowerCase().includes(search.toLowerCase()) || (u.phone || "").includes(search)
+    !search ||
+    (u.display_name || "").toLowerCase().includes(search.toLowerCase()) ||
+    (u.email || "").toLowerCase().includes(search.toLowerCase()) ||
+    (u.phone || "").includes(search)
   );
 
   return (

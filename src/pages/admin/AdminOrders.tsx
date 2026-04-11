@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useRefreshTrigger } from "@/contexts/RefreshContext";
-import { Search, Eye, X, Mail, Loader } from "lucide-react";
+import { Search, Eye, X, Mail, Loader, MessageCircle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -30,7 +30,8 @@ const AdminOrders = () => {
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const { role, session } = useAuth();
+  const [searchQuery, setSearchQuery] = useState("");
+  const { user, role, session } = useAuth();
   const isModerator = role === "moderator";
   const [statusFilter, setStatusFilter] = useState("all");
   const [paymentFilter, setPaymentFilter] = useState<string>("all");
@@ -40,12 +41,17 @@ const AdminOrders = () => {
 
   useEffect(() => { loadOrders(); }, [refreshTrigger]);
 
+  useEffect(() => {
+    const timeout = setTimeout(() => setSearch(searchQuery), 200);
+    return () => clearTimeout(timeout);
+  }, [searchQuery]);
+
   const loadOrders = async () => {
     try {
-      const { data, error } = await (supabase
-        .from("orders" as any)
+      const { data, error } = await (supabase as any)
+        .from("orders")
         .select("*")
-        .order("created_at", { ascending: false }) as any);
+        .order("created_at", { ascending: false });
       if (error) {
         console.warn("Orders table not yet available:", error.message);
         toast.error("Orders table not available. Please check admin panel.");
@@ -107,6 +113,8 @@ const AdminOrders = () => {
       if (isManual) {
         toast.success(`Status update email sent to ${order.customer_email}`);
         await logAuditAction({
+          actor_id: user?.id ?? null,
+          actor_email: user?.email ?? null,
           action_type: "status_update_email_sent",
           entity: "orders",
           entity_id: order.id,
@@ -118,6 +126,8 @@ const AdminOrders = () => {
       console.error("Error sending email:", err);
       if (isManual) {
         toast.error(`Failed to send email: ${err instanceof Error ? err.message : "Unknown error"}`);
+      } else {
+        throw err;
       }
     } finally {
       if (isManual) {
@@ -128,34 +138,50 @@ const AdminOrders = () => {
 
   const updateStatus = async (id: string, status: string) => {
     try {
-      const { error } = await (supabase
-        .from("orders" as any)
+      const { error } = await (supabase as any)
+        .from("orders")
         .update({ status })
-        .eq("id", id) as any);
+        .eq("id", id);
       if (error) { toast.error(error.message); return; }
       
       const order = orders.find(o => o.id === id);
       if (order) {
         setOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o));
         if (selected?.id === id) setSelected((s: any) => ({ ...s, status }));
-        
-        toast.success(`Order marked as ${status}`);
+
+        const updatedOrder = { ...order, status };
+        if (order.customer_email) {
+          try {
+            await sendStatusUpdateEmail(updatedOrder, false);
+            toast.success(`Order ${status} and customer notified.`);
+          } catch (emailErr) {
+            console.warn("Email send failed but order status was updated:", emailErr);
+            toast.warning(`Order ${status}, but notification email failed to send.`);
+          }
+        } else {
+          toast.success(`Order ${status} (no email on file).`);
+        }
 
         await logAuditAction({
-          action_type: "order_status_updated",
+          actor_id: user?.id ?? null,
+          actor_email: user?.email ?? null,
+          action_type: `order_status_${status}`,
           entity: "orders",
           entity_id: id,
           details: { old_status: order.status, new_status: status, customer_name: order.customer_name },
           user_id: order.user_id ?? null,
         });
-        
-        // Send status update email automatically (without toasts)
-        const updatedOrder = { ...order, status };
-        try {
-          await sendStatusUpdateEmail(updatedOrder, false);
-        } catch (emailErr) {
-          console.error("Email send failed but order status was updated:", emailErr);
-          // Don't fail order update if email fails - just log it
+
+        if ((order.payment_method || "whatsapp") === "whatsapp" && status === "confirmed") {
+          await logAuditAction({
+            actor_id: user?.id ?? null,
+            actor_email: user?.email ?? null,
+            action_type: "whatsapp_order_confirmed",
+            entity: "orders",
+            entity_id: id,
+            details: { customer_name: order.customer_name, customer_phone: order.customer_phone },
+            user_id: order.user_id ?? null,
+          });
         }
       }
     } catch (err) {
@@ -164,21 +190,44 @@ const AdminOrders = () => {
     }
   };
 
-  const filtered = orders
-    .filter(o => {
-      const matchSearch = !search ||
-        o.customer_name?.toLowerCase().includes(search.toLowerCase()) ||
-        o.customer_phone?.includes(search);
-      const matchStatus = statusFilter === "all" || o.status === statusFilter;
-      const paymentMethod = o.payment_method ? o.payment_method : "whatsapp";
-      const matchPayment = paymentFilter === "all" || paymentMethod === paymentFilter;
-      return matchSearch && matchStatus && matchPayment;
-    })
-    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  const filtered = useMemo(() => {
+    return orders
+      .filter(o => {
+        const normalizedSearch = search.toLowerCase();
+        const matchSearch = !search ||
+          o.customer_name?.toLowerCase().includes(normalizedSearch) ||
+          o.customer_phone?.includes(normalizedSearch);
+        const matchStatus = statusFilter === "all" || o.status === statusFilter;
+        const paymentMethod = o.payment_method ? o.payment_method : "whatsapp";
+        const matchPayment = paymentFilter === "all" || paymentMethod === paymentFilter;
+        return matchSearch && matchStatus && matchPayment;
+      })
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  }, [orders, search, statusFilter, paymentFilter]);
 
-  const totalRevenue = orders
-    .filter(o => o.status !== "cancelled")
-    .reduce((s, o) => s + Number(o.total_amount), 0);
+  const totalRevenue = useMemo(() => {
+    if (isModerator) return 0;
+    return orders
+      .filter(o => o.status !== "cancelled")
+      .reduce((s, o) => s + Number(o.total_amount), 0);
+  }, [orders, isModerator]);
+
+  const revenueByMethod = useMemo(() => {
+    if (isModerator) {
+      return { whatsapp: 0, paystack: 0 };
+    }
+
+    return orders.reduce(
+      (totals, o) => {
+        const method = o.payment_method ? o.payment_method : "whatsapp";
+        if (o.status !== "cancelled") {
+          totals[method === "paystack" ? "paystack" : "whatsapp"] += Number(o.total_amount);
+        }
+        return totals;
+      },
+      { whatsapp: 0, paystack: 0 }
+    );
+  }, [orders, isModerator]);
 
   return (
     <div className="space-y-5">
@@ -188,6 +237,11 @@ const AdminOrders = () => {
           <p className="text-sm text-muted-foreground">
             {orders.length} total · {isModerator ? "KSh ****" : `KSh ${totalRevenue.toLocaleString()} revenue`}
           </p>
+          {!isModerator && (
+            <p className="text-xs text-muted-foreground mt-1">
+              Paystack KSh {revenueByMethod.paystack.toLocaleString()} · WhatsApp KSh {revenueByMethod.whatsapp.toLocaleString()}
+            </p>
+          )}
         </div>
       </div>
 
@@ -231,8 +285,8 @@ const AdminOrders = () => {
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <Input
           placeholder="Search by name or phone..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
+          value={searchQuery}
+          onChange={e => setSearchQuery(e.target.value)}
           className="pl-9"
         />
       </div>
@@ -367,19 +421,35 @@ const AdminOrders = () => {
                     )}
                   </Button>
                 )}
+                {selected.customer_phone && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => window.open(`https://wa.me/${selected.customer_phone.replace(/\D/g, "")}`, "_blank")}
+                  >
+                    <MessageCircle className="w-4 h-4 mr-2" />
+                    Contact via WhatsApp
+                  </Button>
+                )}
 
-                {/* Customer */}
-                <div className="bg-secondary p-4 space-y-2">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Customer</p>
-                  <p className="text-sm font-medium">{selected.customer_name}</p>
-                  <p className="text-sm text-muted-foreground">{selected.customer_phone}</p>
-                  {selected.customer_email && <p className="text-sm text-muted-foreground">{selected.customer_email}</p>}
-                  <p className="text-sm text-muted-foreground capitalize">
-                    {selected.delivery_method === "delivery"
-                      ? `Delivery → ${selected.delivery_address}`
-                      : "Pickup"}
-                  </p>
-                </div>
+                {selected.delivery_method === "delivery" ? (
+                  <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground">Delivery → {selected.delivery_address || "Address not available"}</p>
+                    {selected.delivery_latitude && selected.delivery_longitude ? (
+                      <a
+                        href={`https://www.google.com/maps/search/?api=1&query=${selected.delivery_latitude},${selected.delivery_longitude}`}
+                        target="_blank"
+                        rel="noreferrer noopener"
+                        className="text-sm text-primary underline"
+                      >
+                        Open delivery map
+                      </a>
+                    ) : null}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Pickup</p>
+                )}
 
                 <div className="bg-secondary p-4 space-y-2 rounded-lg border border-border">
                   <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Payment</p>

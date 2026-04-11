@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,12 +8,20 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { ArrowLeft, MessageCircle } from "lucide-react";
+import { ArrowLeft, MessageCircle, Truck, Search, MapPin } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import "leaflet/dist/leaflet.css";
+import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
+import markerIcon from "leaflet/dist/images/marker-icon.png";
+import markerShadow from "leaflet/dist/images/marker-shadow.png";
 import TopBar from "@/components/TopBar";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+
+const SHOP_LOCATION = { lat: -1.2833, lng: 36.8233 };
+const DELIVERY_FEE_PER_KM = 50;
+const BASE_DELIVERY_FEE = 100;
 
 const CheckoutPage = () => {
   const { items, totalPrice, clearCart } = useCart();
@@ -24,16 +32,33 @@ const CheckoutPage = () => {
   const [email, setEmail] = useState(user?.email || "");
   const [delivery, setDelivery] = useState("pickup");
   const [address, setAddress] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [coordinates, setCoordinates] = useState<{ lat: number; lng: number } | null>(null);
+  const [deliveryFee, setDeliveryFee] = useState(0);
+  const [mapError, setMapError] = useState("");
+  const [mapLoading, setMapLoading] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<"whatsapp" | "paystack">("whatsapp");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [whatsappOrderPlaced, setWhatsappOrderPlaced] = useState(false);
+  const mapContainerRef = useRef<HTMLDivElement | null>(null);
+  const mapRef = useRef<any>(null);
+  const markerRef = useRef<any>(null);
+
+  const finalTotal = useMemo(() => {
+    return delivery === "delivery" ? totalPrice + deliveryFee : totalPrice;
+  }, [totalPrice, deliveryFee, delivery]);
 
   const buildWhatsAppLink = (orderId: string) => {
     const itemLines = items
       .map((item) => `${item.quantity} x ${item.name} (KSh ${item.price.toLocaleString()})`)
       .join("\n");
 
-    const message = `Hello! I want to place an order:\n${itemLines}\n\nTotal: KSh ${totalPrice.toLocaleString()}\nName: ${name}\nPhone: ${phone}\nEmail: ${email}\n${delivery === "delivery" ? `Delivery address: ${address}\n` : "Pickup\n"}Order ID: ${orderId}`;
+    const googleMapsLink = coordinates
+      ? `https://www.google.com/maps?q=${coordinates.lat},${coordinates.lng}`
+      : "No precise location pinned";
+
+    const message = `*New Order: ${orderId}*\n--------------------------\n${itemLines}\n\n*Subtotal:* KSh ${totalPrice.toLocaleString()}\n*Delivery Fee:* KSh ${deliveryFee.toLocaleString()}\n*Total Amount:* KSh ${finalTotal.toLocaleString()}\n\n*Customer Details:*\nName: ${name}\nPhone: ${phone}\nMethod: ${delivery.toUpperCase()}\n\n*Location:*\nAddress: ${address || "Not provided"}\n📍 Precise Pin: ${googleMapsLink}\n\n_Please confirm receipt of this order._`;
+
     return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
   };
 
@@ -118,10 +143,127 @@ const CheckoutPage = () => {
     return result.order;
   };
 
+  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * (Math.PI / 180);
+    const dLon = (lon2 - lon1) * (Math.PI / 180);
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  };
+
+  const initMap = async () => {
+    if (!mapContainerRef.current || mapRef.current) return;
+
+    setMapLoading(true);
+    try {
+      const leafletModule = await import("leaflet");
+      const L = leafletModule.default ?? leafletModule;
+
+      delete (L.Icon.Default.prototype as any)._getIconUrl;
+      L.Icon.Default.mergeOptions({
+        iconUrl: markerIcon,
+        iconRetinaUrl: markerIcon2x,
+        shadowUrl: markerShadow,
+      });
+
+      const initialPos: [number, number] = [-1.2921, 36.8219];
+      mapRef.current = L.map(mapContainerRef.current).setView(initialPos, 13);
+
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      }).addTo(mapRef.current);
+
+      markerRef.current = L.marker(initialPos, { draggable: true }).addTo(mapRef.current);
+      markerRef.current.on("dragend", (event: any) => {
+        const { lat, lng } = event.target.getLatLng();
+        handleLocationUpdate(lat, lng);
+      });
+
+      mapRef.current.on("click", (event: any) => {
+        const { lat, lng } = event.latlng;
+        handleLocationUpdate(lat, lng);
+      });
+
+      setTimeout(() => mapRef.current?.invalidateSize(), 200);
+    } catch (error) {
+      console.error("Map initialization failed", error);
+      setMapError("Unable to initialize the map. Please try again.");
+    } finally {
+      setMapLoading(false);
+    }
+  };
+
+  const handleLocationUpdate = async (lat: number, lng: number, label?: string) => {
+    setCoordinates({ lat, lng });
+
+    const distance = calculateDistance(SHOP_LOCATION.lat, SHOP_LOCATION.lng, lat, lng);
+    const fee = Math.max(BASE_DELIVERY_FEE, Math.round(distance * DELIVERY_FEE_PER_KM));
+    setDeliveryFee(fee);
+
+    if (markerRef.current) markerRef.current.setLatLng([lat, lng]);
+    if (mapRef.current) mapRef.current.flyTo([lat, lng], 15);
+
+    if (label) {
+      setAddress(label);
+      return;
+    }
+
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`);
+      const data = await res.json();
+      setAddress(data.display_name || `Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`);
+    } catch (err) {
+      setAddress(`Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`);
+    }
+  };
+
+  const handleSearch = async () => {
+    if (!searchQuery.trim()) return;
+
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=1`,
+      );
+      const data = await res.json();
+      if (data.length > 0) {
+        const { lat, lon, display_name } = data[0];
+        handleLocationUpdate(parseFloat(lat), parseFloat(lon), display_name);
+      } else {
+        toast.error("Location not found");
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("Search failed");
+    }
+  };
+
+  useEffect(() => {
+    if (delivery === "delivery") {
+      initMap();
+    }
+  }, [delivery]);
+
+  useEffect(() => {
+    return () => {
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+      }
+    };
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (items.length === 0) {
       toast.error("Cart is empty");
+      return;
+    }
+
+    if (delivery === "delivery" && !coordinates) {
+      toast.error("Please choose a delivery location on the map.");
       return;
     }
 
@@ -138,13 +280,15 @@ const CheckoutPage = () => {
         customer_email: email || null,
         delivery_method: delivery,
         delivery_address: delivery === "delivery" ? address : null,
+        delivery_latitude: delivery === "delivery" ? coordinates?.lat ?? null : null,
+        delivery_longitude: delivery === "delivery" ? coordinates?.lng ?? null : null,
         items: items.map((i) => ({
           product_id: i.product_id,
           name: i.name,
           price: i.price,
           quantity: i.quantity,
         })),
-        total_amount: totalPrice,
+        total_amount: finalTotal,
         status: "pending",
         payment_method: paymentMethod,
         guest_access_token: guestAccessToken,
@@ -263,9 +407,15 @@ const CheckoutPage = () => {
                 <span className="font-medium flex-shrink-0">KSh {(item.price * item.quantity).toLocaleString()}</span>
               </div>
             ))}
+            {delivery === "delivery" && (
+              <div className="flex justify-between text-blue-600 text-sm mt-2">
+                <span className="flex items-center gap-1"><Truck size={16} /> Delivery Fee</span>
+                <span>KSh {deliveryFee.toLocaleString()}</span>
+              </div>
+            )}
             <div className="flex justify-between font-bold text-base sm:text-lg mt-4 pt-2 border-t">
               <span>Total</span>
-              <span className="text-primary">KSh {totalPrice.toLocaleString()}</span>
+              <span className="text-primary">KSh {finalTotal.toLocaleString()}</span>
             </div>
           </div>
 
@@ -315,9 +465,36 @@ const CheckoutPage = () => {
             </div>
 
             {delivery === "delivery" && (
-              <div>
-                <Label htmlFor="address">Delivery Address</Label>
-                <Input id="address" value={address} onChange={e => setAddress(e.target.value)} required placeholder="Enter your delivery address" />
+              <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
+                <Label>Search Address</Label>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Street, Landmark, or Area"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                  />
+                  <Button type="button" onClick={handleSearch} variant="secondary">
+                    <Search size={18} />
+                  </Button>
+                </div>
+
+                <div ref={mapContainerRef} className="h-64 w-full rounded-lg border bg-slate-50 z-0" />
+
+                <div className="space-y-2">
+                  <Label>Selected Address</Label>
+                  <Input
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    placeholder="Tap a location on the map and add landmark notes here"
+                    className="bg-muted"
+                  />
+                  <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+                    <MapPin size={10} /> Coordinates: {coordinates ? `${coordinates.lat.toFixed(4)}, ${coordinates.lng.toFixed(4)}` : "Not selected"}
+                  </p>
+                  {mapError ? <p className="text-sm text-red-600">{mapError}</p> : null}
+                  {mapLoading ? <p className="text-sm text-muted-foreground">Loading map...</p> : null}
+                </div>
               </div>
             )}
 

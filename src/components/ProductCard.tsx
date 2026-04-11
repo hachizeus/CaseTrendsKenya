@@ -102,7 +102,7 @@ const ProductCard = ({ id, name, images, price, originalPrice, category, brand, 
     >
       <Link to={`/product/${id}`} className="block h-full min-h-full w-full bg-white border border-border hover:border-primary transition-colors duration-200 overflow-hidden">
         {/* Image */}
-        <div className="relative aspect-square bg-white overflow-hidden">
+        <div className="relative aspect-[4/5] bg-white overflow-hidden">
           <motion.div
             animate={{ scale: hovered ? 1.05 : 1 }}
             transition={{ duration: 0.4, ease: "easeInOut" }}
@@ -112,9 +112,9 @@ const ProductCard = ({ id, name, images, price, originalPrice, category, brand, 
               src={hovered && secondaryImg ? secondaryImg : primaryImg}
               alt={name}
               width={500}
-              height={500}
+              height={625}
               sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
-              className="w-full h-full object-contain p-3 sm:p-4"
+              className="w-full h-full object-contain object-center bg-white"
             />
           </motion.div>
 

@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Plus, Pencil, Trash2, Upload, Eye, EyeOff, ChevronLeft } from "lucide-react";
+import { Plus, Pencil, Trash2, Upload, Eye, EyeOff, ChevronLeft, ArrowUp, ArrowDown } from "lucide-react";
 import { toast } from "sonner";
 import { getOptimizedImageUrl } from "@/lib/imageOptimization";
 
@@ -17,6 +17,7 @@ const AdminSlideManager = () => {
   const { sectionId } = useParams<{ sectionId: string }>();
   const navigate = useNavigate();
   const { refreshTrigger } = useRefreshTrigger();
+  const anySupabase = supabase as any;
 
   const [section, setSection] = useState<any>(null);
   const [slides, setSlides] = useState<any[]>([]);
@@ -40,7 +41,7 @@ const AdminSlideManager = () => {
   }, [sectionId, refreshTrigger]);
 
   const loadSection = async () => {
-    const { data } = await supabase
+    const { data } = await anySupabase
       .from("hero_sections")
       .select("*")
       .eq("id", sectionId)
@@ -49,7 +50,7 @@ const AdminSlideManager = () => {
   };
 
   const loadSlides = async () => {
-    const { data } = await supabase
+    const { data } = await anySupabase
       .from("hero_slides")
       .select("*")
       .eq("section_id", sectionId)
@@ -94,6 +95,14 @@ const AdminSlideManager = () => {
     if (file) setPreview(URL.createObjectURL(file));
   };
 
+  const normalizeLink = (link: string) => {
+    const trimmed = link.trim();
+    if (!trimmed) return null;
+    if (/^\//.test(trimmed) || /^#/.test(trimmed)) return trimmed;
+    if (/^[a-zA-Z][a-zA-Z\d+\-.]*:\/\//.test(trimmed)) return trimmed;
+    return `https://${trimmed}`;
+  };
+
   const handleSave = async () => {
     if (!form.title.trim()) {
       toast.error("Title is required");
@@ -101,17 +110,38 @@ const AdminSlideManager = () => {
     }
     setSaving(true);
     let imageUrl = editing?.image_url || "";
-    if (imageFile) {
-      const path = `slides/${Date.now()}_${imageFile.name}`;
-      const { error } = await supabase.storage.from("product-images").upload(path, imageFile);
+
+    const uploadNewImage = async () => {
+      if (!imageFile) return imageUrl;
+      const path = `slides/section_${sectionId}/${Date.now()}_${imageFile.name}`;
+      const { error } = await anySupabase.storage.from("product-images").upload(path, imageFile);
       if (error) {
         toast.error(error.message);
+        return null;
+      }
+      const { data } = anySupabase.storage.from("product-images").getPublicUrl(path);
+      if (!data?.publicUrl) {
+        toast.error("Unable to get uploaded image URL");
+        return null;
+      }
+      if (editing?.image_url) {
+        const oldPathMatch = editing.image_url.match(/product-images\/(.+)$/);
+        if (oldPathMatch?.[1]) {
+          await anySupabase.storage.from("product-images").remove([oldPathMatch[1]]);
+        }
+      }
+      return data.publicUrl;
+    };
+
+    if (imageFile) {
+      const uploadedUrl = await uploadNewImage();
+      if (!uploadedUrl) {
         setSaving(false);
         return;
       }
-      const { data } = supabase.storage.from("product-images").getPublicUrl(path);
-      imageUrl = data.publicUrl;
+      imageUrl = uploadedUrl;
     }
+
     if (!imageUrl) {
       toast.error("Please upload an image");
       setSaving(false);
@@ -123,14 +153,14 @@ const AdminSlideManager = () => {
       subtitle: form.subtitle || null,
       image_url: imageUrl,
       cta_text: form.cta_text || null,
-      cta_link: form.cta_link || null,
+      cta_link: normalizeLink(form.cta_link || ""),
       is_active: form.is_active,
       section_id: sectionId,
-      display_order: editing?.display_order || slides.length,
+      display_order: editing?.display_order ?? slides.length,
     };
 
     if (editing) {
-      const { error } = await supabase
+      const { error } = await anySupabase
         .from("hero_slides")
         .update(payload)
         .eq("id", editing.id);
@@ -150,7 +180,7 @@ const AdminSlideManager = () => {
         user_id: null,
       });
     } else {
-      const { error } = await supabase.from("hero_slides").insert(payload);
+      const { data, error } = await anySupabase.from("hero_slides").insert(payload).select();
       if (error) {
         toast.error(error.message);
         setSaving(false);
@@ -162,7 +192,7 @@ const AdminSlideManager = () => {
         actor_email: user?.email ?? null,
         action_type: "slide_created",
         entity: "hero_slides",
-        entity_id: null,
+        entity_id: (data as any)?.[0]?.id ?? null,
         details: { title: payload.title, is_active: payload.is_active, section_id: payload.section_id },
         user_id: null,
       });
@@ -175,7 +205,7 @@ const AdminSlideManager = () => {
 
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this slide?")) return;
-    const { error } = await supabase.from("hero_slides").delete().eq("id", id);
+    const { error } = await anySupabase.from("hero_slides").delete().eq("id", id);
     if (error) {
       toast.error(error.message);
       return;
@@ -193,8 +223,38 @@ const AdminSlideManager = () => {
     loadSlides();
   };
 
+  const swapSlideOrder = async (index: number, direction: "up" | "down") => {
+    const targetIndex = direction === "up" ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= slides.length) return;
+
+    const current = slides[index];
+    const target = slides[targetIndex];
+    if (!current || !target) return;
+
+    const { error: currentError } = await anySupabase
+      .from("hero_slides")
+      .update({ display_order: target.display_order })
+      .eq("id", current.id);
+
+    const { error: targetError } = await anySupabase
+      .from("hero_slides")
+      .update({ display_order: current.display_order })
+      .eq("id", target.id);
+
+    if (currentError || targetError) {
+      toast.error(currentError?.message || targetError?.message || "Unable to reorder slides");
+      return;
+    }
+
+    setSlides(prev => {
+      const next = [...prev];
+      [next[index], next[targetIndex]] = [next[targetIndex], next[index]];
+      return next;
+    });
+  };
+
   const toggleActive = async (s: any) => {
-    const { error } = await supabase
+    const { error } = await anySupabase
       .from("hero_slides")
       .update({ is_active: !s.is_active })
       .eq("id", s.id);
@@ -275,6 +335,22 @@ const AdminSlideManager = () => {
               </div>
               <div className="flex gap-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                 <button
+                  onClick={() => swapSlideOrder(i, "up")}
+                  disabled={i === 0}
+                  className={`p-1.5 border border-transparent transition-colors ${i === 0 ? "opacity-40 cursor-not-allowed" : "hover:bg-secondary hover:border-border"}`}
+                  title="Move up"
+                >
+                  <ArrowUp className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => swapSlideOrder(i, "down")}
+                  disabled={i === slides.length - 1}
+                  className={`p-1.5 border border-transparent transition-colors ${i === slides.length - 1 ? "opacity-40 cursor-not-allowed" : "hover:bg-secondary hover:border-border"}`}
+                  title="Move down"
+                >
+                  <ArrowDown className="w-4 h-4" />
+                </button>
+                <button
                   onClick={() => toggleActive(s)}
                   className="p-1.5 hover:bg-secondary border border-transparent hover:border-border transition-colors"
                   title={s.is_active ? "Deactivate" : "Activate"}
@@ -332,6 +408,7 @@ const AdminSlideManager = () => {
                   onChange={(e) => handleFileChange(e.target.files?.[0] || null)}
                 />
               </label>
+              <p className="text-xs text-muted-foreground mt-1">16:9 recommended for best slide display.</p>
               {imageFile && <p className="text-xs text-muted-foreground mt-1">{imageFile.name}</p>}
             </div>
             <div>

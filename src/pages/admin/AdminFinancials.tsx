@@ -21,17 +21,24 @@ type RevenueAnalyticsRow = {
   order_count?: number;
 };
 
-type OrderRow = {
-  created_at: string;
-  total_amount: number;
-  payment_method?: string | null;
-};
-
 const formatDateLabel = (isoDate: string) => {
   if (!isoDate) return "—";
-  const date = new Date(isoDate);
-  return new Intl.DateTimeFormat("en-KE", { month: "short", day: "numeric" }).format(date);
+  const [year, month, day] = isoDate.split("-");
+  const date = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
+  return new Intl.DateTimeFormat("en-KE", {
+    month: "short",
+    day: "numeric",
+    timeZone: "Africa/Nairobi",
+  }).format(date);
 };
+
+const formatDateInNairobi = (date: Date) =>
+  new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Africa/Nairobi",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
 
 const getRangeBounds = (range: DateRangeKey) => {
   const end = new Date();
@@ -45,8 +52,10 @@ const getRangeBounds = (range: DateRangeKey) => {
     start.setMonth(0, 1);
   }
 
-  const format = (date: Date) => date.toISOString().slice(0, 10);
-  return { startDate: format(start), endDate: format(end) };
+  return {
+    startDate: formatDateInNairobi(start),
+    endDate: formatDateInNairobi(end),
+  };
 };
 
 const buildChartData = (analytics: RevenueAnalyticsRow[]) => {
@@ -54,48 +63,12 @@ const buildChartData = (analytics: RevenueAnalyticsRow[]) => {
   const revenue = analytics.map((row) => Number(row.total_amount));
   const orderVolume = analytics.map((row) => Number(row.order_count ?? 0));
 
-  const methods = analytics.reduce<Record<string, number>>((acc, row) => {
-    const method = row.payment_method?.toLowerCase() || "unknown";
-    acc[method] = (acc[method] || 0) + Number(row.total_amount);
-    return acc;
-  }, {});
-
   return {
     labels,
     revenue,
     orderVolume,
-    paystackRevenue: methods.paystack || 0,
+    paystackRevenue: revenue.reduce((sum, value) => sum + value, 0),
   };
-};
-
-const buildAnalyticsFromOrders = (orders: OrderRow[], startDate: string, endDate: string) => {
-  const start = new Date(startDate);
-  const end = new Date(endDate);
-  const dayMap: Record<string, { total_amount: number; order_count: number }> = {};
-
-  const createDayKey = (date: Date) => date.toISOString().slice(0, 10);
-
-  for (let cursor = new Date(start); cursor <= end; cursor.setDate(cursor.getDate() + 1)) {
-    dayMap[createDayKey(cursor)] = { total_amount: 0, order_count: 0 };
-  }
-
-  orders.forEach((order) => {
-    const day = order.created_at.slice(0, 10);
-    if (!dayMap[day]) {
-      dayMap[day] = { total_amount: 0, order_count: 0 };
-    }
-    dayMap[day].total_amount += Number(order.total_amount);
-    dayMap[day].order_count += 1;
-  });
-
-  return Object.entries(dayMap)
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([day, data]) => ({
-      day,
-      total_amount: data.total_amount,
-      order_count: data.order_count,
-      payment_method: "paystack",
-    }));
 };
 
 const createCurrencyTooltip = {
@@ -123,24 +96,20 @@ const FinancialsPage = () => {
       setError(null);
 
       const { startDate, endDate } = getRangeBounds(dateRange);
-      const result = await supabase
-        .from("orders" as any)
-        .select("created_at, total_amount, payment_method")
-        .eq("payment_method", "paystack")
-        .neq("status", "cancelled")
-        .gte("created_at", startDate)
-        .lte("created_at", endDate)
-        .order("created_at", { ascending: true });
+      const result = await supabase.rpc("daily_paystack_revenue_by_day", {
+        _start_date: startDate,
+        _end_date: endDate,
+      });
 
-      const orders = result.data as unknown as OrderRow[] | null;
       const fetchError = result.error;
+      const rows = result.data as unknown as RevenueAnalyticsRow[] | null;
 
       if (fetchError) {
         console.error("Revenue analytics fetch failed:", fetchError);
         setError("Unable to load revenue analytics at this time.");
         setAnalytics([]);
       } else {
-        setAnalytics(buildAnalyticsFromOrders(orders ?? [], startDate, endDate));
+        setAnalytics(rows ?? []);
       }
 
       setLoading(false);

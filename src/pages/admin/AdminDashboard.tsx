@@ -8,6 +8,13 @@ import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement
 import { Package, Users, Image, Star, FolderTree, TrendingUp, Plus, ArrowRight, ShoppingBag } from "lucide-react";
 import { getOptimizedImageUrl } from "@/lib/imageOptimization";
 
+const formatIsoDate = (date: Date) => date.toISOString().slice(0, 10);
+const startOfToday = () => {
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  return now;
+};
+
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend, Title, Filler);
 
 const AdminDashboard = () => {
@@ -19,62 +26,75 @@ const AdminDashboard = () => {
   const [revenueTrend, setRevenueTrend] = useState<{ day: string; amount: number }[]>([]);
   const [paystackRevenue, setPaystackRevenue] = useState(0);
   const [averagePaystackOrderValue, setAveragePaystackOrderValue] = useState(0);
+  const [lowStockCount, setLowStockCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const { refreshTrigger } = useRefreshTrigger();
 
   useEffect(() => {
     const load = async () => {
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 29);
-      const revenueSince = thirtyDaysAgo.toISOString();
+      setLoading(true);
+      try {
+        const today = startOfToday();
+        const thirtyDaysAgo = new Date(today);
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 29);
+        const revenueSince = thirtyDaysAgo.toISOString();
 
-      const [p, u, s, r, c, rp, ord, ro, revenueResult] = await Promise.all([
-        supabase.from("products").select("id", { count: "exact", head: true }),
-        supabase.from("profiles").select("id", { count: "exact", head: true }),
-        supabase.from("hero_slides").select("id", { count: "exact", head: true }),
-        supabase.from("reviews").select("id", { count: "exact", head: true }),
-        supabase.from("categories").select("id", { count: "exact", head: true }),
-        supabase.from("products").select("id, name, price, stock_status, product_images(image_url, is_primary)").order("created_at", { ascending: false }).limit(5),
-        supabase.from("orders").select("id", { count: "exact", head: true }),
-        supabase.from("orders").select("id, customer_name, customer_phone, total_amount, status, created_at").order("created_at", { ascending: false }).limit(5),
-        (supabase.from("orders") as any)
-          .select("created_at, total_amount")
-          .eq("payment_method", "paystack")
-          .neq("status", "cancelled")
-          .gte("created_at", revenueSince)
-          .order("created_at", { ascending: true }),
-      ]);
+        const [p, u, s, r, c, ls, rp, ord, ro, revenueResult] = await Promise.all([
+          supabase.from("products").select("id", { count: "exact", head: true }),
+          supabase.from("profiles").select("id", { count: "exact", head: true }),
+          supabase.from("hero_slides").select("id", { count: "exact", head: true }),
+          supabase.from("reviews").select("id", { count: "exact", head: true }),
+          supabase.from("categories").select("id", { count: "exact", head: true }),
+          // @ts-ignore
+          (supabase.from("products") as any).select("id", { count: "exact", head: true }).eq("stock_status", "low_stock"),
+          supabase.from("products").select("id, name, price, stock_status, product_images(image_url, is_primary)").order("created_at", { ascending: false }).limit(5),
+          supabase.from("orders").select("id", { count: "exact", head: true }),
+          supabase.from("orders").select("id, customer_name, customer_phone, total_amount, status, created_at").order("created_at", { ascending: false }).limit(5),
+          (supabase.from("orders") as any)
+            .select("created_at, total_amount")
+            .eq("payment_method", "paystack")
+            .neq("status", "cancelled")
+            .gte("created_at", revenueSince)
+            .order("created_at", { ascending: true }),
+        ]);
 
-      const revenueRows = revenueResult.data || [];
-      const trendMap: Record<string, number> = {};
-      for (let offset = 0; offset < 30; offset += 1) {
-        const date = new Date(thirtyDaysAgo);
-        date.setDate(thirtyDaysAgo.getDate() + offset);
-        trendMap[date.toISOString().slice(0, 10)] = 0;
+        const revenueRows = revenueResult.data || [];
+        const trendMap: Record<string, number> = {};
+        for (let offset = 0; offset < 30; offset += 1) {
+          const date = new Date(thirtyDaysAgo);
+          date.setDate(thirtyDaysAgo.getDate() + offset);
+          trendMap[formatIsoDate(date)] = 0;
+        }
+        revenueRows.forEach((row: any) => {
+          const day = row.created_at?.slice(0, 10);
+          if (!day) return;
+          trendMap[day] = (trendMap[day] || 0) + Number(row.total_amount || 0);
+        });
+
+        const trend = Object.entries(trendMap).map(([day, amount]) => ({ day, amount }));
+        const totalRevenue = revenueRows.reduce((sum: number, row: any) => sum + Number(row.total_amount || 0), 0);
+        const averageOrderValue = revenueRows.length ? totalRevenue / revenueRows.length : 0;
+
+        setStats({ products: p.count || 0, users: u.count || 0, slides: s.count || 0, reviews: r.count || 0, categories: c.count || 0, orders: ord.count || 0 });
+        setLowStockCount(ls.count || 0);
+        setRecentProducts(rp.data || []);
+        setRecentOrders(ro.data || []);
+        setRevenueTrend(trend);
+        setPaystackRevenue(totalRevenue);
+        setAveragePaystackOrderValue(averageOrderValue);
+      } catch (error) {
+        console.error("Dashboard load failed", error);
+        setStats((prev) => prev);
+      } finally {
+        setLoading(false);
       }
-      revenueRows.forEach((row: any) => {
-        const day = row.created_at?.slice(0, 10);
-        if (!day) return;
-        trendMap[day] = (trendMap[day] || 0) + Number(row.total_amount || 0);
-      });
-
-      const trend = Object.entries(trendMap).map(([day, amount]) => ({ day, amount }));
-      const totalRevenue = revenueRows.reduce((sum: number, row: any) => sum + Number(row.total_amount || 0), 0);
-      const averageOrderValue = revenueRows.length ? totalRevenue / revenueRows.length : 0;
-
-      setStats({ products: p.count || 0, users: u.count || 0, slides: s.count || 0, reviews: r.count || 0, categories: c.count || 0, orders: ord.count || 0 });
-      setRecentProducts(rp.data || []);
-      setRecentOrders(ro.data || []);
-      setRevenueTrend(trend);
-      setPaystackRevenue(totalRevenue);
-      setAveragePaystackOrderValue(averageOrderValue);
-      setLoading(false);
     };
     load();
   }, [refreshTrigger]);
 
   const statCards = [
     { label: "Total Products", value: stats.products, icon: Package, color: "bg-slate-700", link: "/admin/products" },
+    { label: "Low Stock Items", value: lowStockCount, icon: FolderTree, color: "bg-yellow-500", link: "/admin/products" },
     { label: "Categories", value: stats.categories, icon: FolderTree, color: "bg-violet-500", link: "/admin/categories" },
     { label: "Registered Users", value: stats.users, icon: Users, color: "bg-emerald-500", link: "/admin/users", adminOnly: true },
     { label: "Orders", value: stats.orders, icon: ShoppingBag, color: "bg-primary", link: "/admin/orders" },
@@ -89,6 +109,17 @@ const AdminDashboard = () => {
     { label: "Add Hero Slide", to: "/admin/slides", icon: Plus, color: "bg-orange-50 text-orange-600 border-orange-200" },
     { label: "View Orders", to: "/admin/orders", icon: ShoppingBag, color: "bg-primary/10 text-primary border-primary/20" },
   ];
+
+  const processedRevenue = useMemo(() => {
+    if (!revenueTrend.length) {
+      return { total: 0, avg: 0 };
+    }
+
+    const total = revenueTrend.reduce((sum, item) => sum + item.amount, 0);
+    const avg = total / (revenueTrend.filter((item) => item.amount > 0).length || 1);
+
+    return { total, avg };
+  }, [revenueTrend]);
 
   const revenueChartData = useMemo(
     () => ({
@@ -195,11 +226,11 @@ const AdminDashboard = () => {
           <div className="grid gap-4">
             <div className="rounded-3xl border border-border bg-white p-5 shadow-sm">
               <p className="text-sm text-muted-foreground">Total Paystack Revenue</p>
-              <p className="mt-3 text-3xl font-semibold text-slate-900">KSh {paystackRevenue.toLocaleString()}</p>
+              <p className="mt-3 text-3xl font-semibold text-slate-900">KSh {processedRevenue.total.toLocaleString()}</p>
             </div>
             <div className="rounded-3xl border border-border bg-white p-5 shadow-sm">
               <p className="text-sm text-muted-foreground">Average Paystack Order</p>
-              <p className="mt-3 text-3xl font-semibold text-slate-900">KSh {averagePaystackOrderValue.toFixed(0).toLocaleString()}</p>
+              <p className="mt-3 text-3xl font-semibold text-slate-900">KSh {processedRevenue.avg.toFixed(0).toLocaleString()}</p>
             </div>
           </div>
         </div>

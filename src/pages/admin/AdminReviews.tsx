@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { logAuditAction } from "@/lib/audit";
 import { useRefreshTrigger } from "@/contexts/RefreshContext";
@@ -7,37 +8,69 @@ import { Star, Trash2, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 
+type ReviewRow = Database["public"]["Tables"]["reviews"]["Row"];
+type ProductRow = Database["public"]["Tables"]["products"]["Row"];
+type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
+
+interface ReviewWithMetadata {
+  id: string;
+  rating: number;
+  comment: string | null;
+  created_at: string;
+  product_name: string;
+  reviewer: string;
+  product_id: string;
+  user_id: string;
+}
+
 const AdminReviews = () => {
   const { user } = useAuth();
-  const [reviews, setReviews] = useState<any[]>([]);
+  const [reviews, setReviews] = useState<ReviewWithMetadata[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState<string>("");
   const { refreshTrigger } = useRefreshTrigger();
 
   useEffect(() => { loadReviews(); }, [refreshTrigger]);
 
   const loadReviews = async () => {
-    const { data: reviewData } = await supabase
-      .from("reviews")
+    const reviewResponse = await (supabase.from("reviews") as any)
       .select("*")
       .order("created_at", { ascending: false });
-    if (!reviewData?.length) { setReviews([]); setLoading(false); return; }
 
-    const productIds = [...new Set(reviewData.map(r => r.product_id))];
-    const userIds = [...new Set(reviewData.map(r => r.user_id))];
-    const [{ data: products }, { data: profiles }] = await Promise.all([
-      supabase.from("products").select("id, name").in("id", productIds),
-      supabase.from("profiles").select("user_id, display_name").in("user_id", userIds),
-    ]);
-    const productMap = Object.fromEntries((products || []).map(p => [p.id, p.name]));
-    const profileMap = Object.fromEntries((profiles || []).map(p => [p.user_id, p.display_name]));
-    setReviews(reviewData.map(r => ({ ...r, product_name: productMap[r.product_id] || "Unknown", reviewer: profileMap[r.user_id] || "Anonymous" })));
+    const reviewData = reviewResponse.data as unknown as ReviewRow[] | null;
+    const reviewError = reviewResponse.error;
+
+    if (reviewError || !reviewData?.length) { setReviews([]); setLoading(false); return; }
+
+    const productIds = [...new Set(reviewData.map((r) => r.product_id))];
+    const userIds = [...new Set(reviewData.map((r) => r.user_id))];
+
+    const productsResponse = await ((supabase.from("products") as any)
+      .select("id, name")
+      .in("id", productIds) as any);
+    const profilesResponse = await ((supabase.from("profiles") as any)
+      .select("user_id, display_name")
+      .in("user_id", userIds) as any);
+
+    const products = productsResponse.data as ProductRow[] | null;
+    const profiles = profilesResponse.data as ProfileRow[] | null;
+
+    const productMap = Object.fromEntries((products ?? []).map((p) => [p.id, p.name]));
+    const profileMap = Object.fromEntries((profiles ?? []).map((p) => [p.user_id, p.display_name]));
+
+    setReviews(
+      reviewData.map((r) => ({
+        ...r,
+        product_name: productMap[r.product_id] || "Unknown",
+        reviewer: profileMap[r.user_id] || "Anonymous",
+      })),
+    );
     setLoading(false);
   };
 
   const deleteReview = async (id: string) => {
     if (!confirm("Delete this review?")) return;
-    const { error } = await supabase.from("reviews").delete().eq("id", id);
+    const { error } = await (supabase.from("reviews") as any).delete().eq("id", id);
     if (error) {
       toast.error(error.message);
       return;
@@ -55,11 +88,17 @@ const AdminReviews = () => {
     loadReviews();
   };
 
-  const filtered = reviews.filter(r =>
-    !search || r.product_name.toLowerCase().includes(search.toLowerCase()) || r.reviewer.toLowerCase().includes(search.toLowerCase())
+  const filtered = useMemo(
+    () => reviews.filter((r) =>
+      !search || r.product_name.toLowerCase().includes(search.toLowerCase()) || r.reviewer.toLowerCase().includes(search.toLowerCase()),
+    ),
+    [reviews, search],
   );
 
-  const avgRating = reviews.length ? (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1) : "—";
+  const avgRating = useMemo(
+    () => (reviews.length ? (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1) : "—"),
+    [reviews],
+  );
 
   return (
     <div className="space-y-5">
@@ -99,7 +138,12 @@ const AdminReviews = () => {
                     {[1,2,3,4,5].map(s => <Star key={s} className={`w-3 h-3 ${s <= r.rating ? "text-yellow-400 fill-yellow-400" : "text-border"}`} />)}
                   </div>
                 </td>
-                <td className="px-4 py-3 text-muted-foreground hidden md:table-cell max-w-[200px] truncate">{r.comment || "—"}</td>
+                <td
+                  title={r.comment ?? undefined}
+                  className="px-4 py-3 text-muted-foreground hidden md:table-cell max-w-[200px] truncate"
+                >
+                  {r.comment || "—"}
+                </td>
                 <td className="px-4 py-3 text-muted-foreground text-xs">{new Date(r.created_at).toLocaleDateString()}</td>
                 <td className="px-4 py-3 text-right">
                   <button onClick={() => deleteReview(r.id)} className="p-1.5 hover:bg-red-50 hover:text-red-600 border border-transparent hover:border-red-200 transition-colors">

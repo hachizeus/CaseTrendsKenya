@@ -83,6 +83,14 @@
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
+  .leaflet-map-wrapper {
+    position: relative;
+    min-height: 18rem;
+  }
+  .leaflet-map-wrapper .leaflet-container {
+    height: 100%;
+    width: 100%;
+  }
 }
 
 /* Prevent zoom on input focus on mobile devices */
