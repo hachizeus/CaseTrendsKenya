@@ -42,7 +42,7 @@ router.post("/api/send-email", async (req, res) => {
 
     // Option 1: Using Resend
     // const response = await resend.emails.send({
-    //   from: "Case Trends <noreply@casetrendskеnya.com>",
+    //   from: "Case Trends <info@casetrendskenya.co.ke>",
     //   to: template.to,
     //   subject: template.subject,
     //   html: template.html,
@@ -51,7 +51,7 @@ router.post("/api/send-email", async (req, res) => {
     // Option 2: Using SendGrid
     // const message = {
     //   to: template.to,
-    //   from: "noreply@casetrendskеnya.com",
+    //   from: "info@casetrendskenya.co.ke",
     //   subject: template.subject,
     //   html: template.html,
     // };

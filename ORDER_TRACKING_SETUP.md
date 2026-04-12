@@ -127,13 +127,13 @@ supabase functions new send-email
 For **Resend**:
 ```bash
 supabase secrets set RESEND_API_KEY="re_your_api_key_here"
-supabase secrets set FROM_EMAIL="noreply@casetrendskеnya.com"
+supabase secrets set FROM_EMAIL="info@casetrendskenya.co.ke"
 ```
 
 For **SendGrid**:
 ```bash
 supabase secrets set SENDGRID_API_KEY="SG.your_key_here"
-supabase secrets set FROM_EMAIL="noreply@casetrendskеnya.com"
+supabase secrets set FROM_EMAIL="info@casetrendskenya.co.ke"
 ```
 
 6. **Deploy function:**
@@ -183,7 +183,7 @@ npm install @sendgrid/mail
 RESEND_API_KEY=your_key_here
 # OR
 SENDGRID_API_KEY=your_key_here
-FROM_EMAIL=noreply@casetrendskеnya.com
+FROM_EMAIL=info@casetrendskenya.co.ke
 ```
 
 4. **Mount route** in your Express app:

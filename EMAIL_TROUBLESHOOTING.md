@@ -25,7 +25,7 @@ On the Order Confirmation page, customers now see:
 #### Option A: Resend (Recommended ⭐)
 ```bash
 supabase secrets set RESEND_API_KEY="re_your_key_here"
-supabase secrets set FROM_EMAIL="noreply@casetrendskеnya.com"
+supabase secrets set FROM_EMAIL="info@casetrendskenya.co.ke"
 supabase functions deploy send-email
 ```
 1. Get API key from https://resend.com → Settings → API Keys
@@ -36,7 +36,7 @@ supabase functions deploy send-email
 #### Option B: SendGrid
 ```bash
 supabase secrets set SENDGRID_API_KEY="SG.your_key_here"
-supabase secrets set FROM_EMAIL="noreply@casetrendskеnya.com"
+supabase secrets set FROM_EMAIL="info@casetrendskenya.co.ke"
 supabase functions deploy send-email
 ```
 1. Get API key from https://sendgrid.com → Settings → API Keys
@@ -71,7 +71,7 @@ The FROM_EMAIL has a special Cyrillic character (е) that might cause issues.
 
 **Recommended:** Use standard ASCII domain
 ```bash
-supabase secrets set FROM_EMAIL="noreply@casetrendskenya.com"
+supabase secrets set FROM_EMAIL="info@casetrendskenya.co.ke"
 ```
 
 ---

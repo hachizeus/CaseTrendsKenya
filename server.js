@@ -16,6 +16,9 @@ const app = express();
 const SUPABASE_URL = process.env.SUPABASE_URL || "";
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SERVICE_ROLE_KEY || "";
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || "http://localhost:5173,http://localhost:3000,https://casetrendskenya.onrender.com").split(",").map((origin) => origin.trim()).filter(Boolean);
+const EMAIL_FROM = process.env.EMAIL_FROM || process.env.EMAIL_USER || "info@casetrendskenya.co.ke";
+const EMAIL_REPLY_TO = process.env.EMAIL_REPLY_TO || EMAIL_FROM;
+const ADMIN_NOTIFICATION_EMAIL = process.env.ADMIN_NOTIFICATION_EMAIL || EMAIL_FROM;
 
 const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
   auth: { persistSession: false, autoRefreshToken: false, storage: null },
@@ -143,37 +146,33 @@ app.use(express.static(path.join(__dirname, 'dist'), {
   etag: false,
 }));
 
-// Gmail transporter configuration
-const emailUser = process.env.EMAIL_USER || "";
-const emailPass = process.env.EMAIL_PASS || process.env.EMAIL_PASSWORD || "";
-const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 587,
-  secure: false,
-  requireTLS: true,
-  auth: {
-    user: emailUser,
-    pass: emailPass,
-  },
-});
+const SMTP_HOST = process.env.SMTP_HOST || "";
+const SMTP_PORT = process.env.SMTP_PORT ? Number(process.env.SMTP_PORT) : undefined;
+const SMTP_SECURE = process.env.SMTP_SECURE ? process.env.SMTP_SECURE === "true" : undefined;
 
-console.log("Email auth configured:", {
-  emailUser: emailUser ? emailUser : "<missing>",
-  hasEmailPass: Boolean(emailPass),
-  envVarUsed: process.env.EMAIL_PASS ? "EMAIL_PASS" : process.env.EMAIL_PASSWORD ? "EMAIL_PASSWORD" : "none",
-});
+const transporterConfig = SMTP_HOST
+  ? {
+      host: SMTP_HOST,
+      port: SMTP_PORT ?? (SMTP_SECURE === false ? 587 : 465),
+      secure: SMTP_SECURE ?? true,
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+    }
+  : {
+      service: "gmail",
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+    };
 
-transporter.verify((error, success) => {
-  if (error) {
-    console.error("Email transporter verification failed:", error);
-  } else {
-    console.log("Email transporter ready.", success);
-  }
-});
+const transporter = nodemailer.createTransport(transporterConfig);
 
-if (!emailUser || !emailPass) {
+if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
   console.warn(
-    "EMAIL_USER and EMAIL_PASS / EMAIL_PASSWORD are required to send emails. Email delivery will fail without them."
+    "EMAIL_USER and EMAIL_PASS are required to send emails. Email delivery will fail without them."
   );
 }
 
@@ -577,7 +576,8 @@ app.post("/api/send-email", async (req, res) => {
       emailTemplate = generateStatusUpdateEmail(orderData);
     } else if (type === "order_notification") {
       // Order notifications are sent by the checkout flow and do not require admin auth.
-      emailTemplate = generateOrderNotificationEmail(orderData, process.env.ADMIN_NOTIFICATION_EMAIL || to);
+      const orderNotificationRecipient = to || ADMIN_NOTIFICATION_EMAIL;
+      emailTemplate = generateOrderNotificationEmail(orderData, orderNotificationRecipient);
     } else {
       return res.status(400).json({ error: "Invalid email type" });
     }
@@ -585,9 +585,9 @@ app.post("/api/send-email", async (req, res) => {
     console.log(`Sending ${type} email to ${emailTemplate.to}...`);
 
     const info = await transporter.sendMail({
-      from: `Case Trends Kenya <${process.env.EMAIL_USER}>`,
+      from: `Case Trends Kenya <${EMAIL_FROM}>`,
       to: emailTemplate.to,
-      replyTo: process.env.EMAIL_USER,
+      replyTo: EMAIL_REPLY_TO,
       subject: emailTemplate.subject,
       text: emailTemplate.text,
       html: emailTemplate.html,
@@ -595,7 +595,7 @@ app.post("/api/send-email", async (req, res) => {
         "X-Mailer": "CaseTrendsKenya/1.0",
         "X-Priority": "3",
         "Importance": "normal",
-        "List-Unsubscribe": `<mailto:support@casetrendskenya.com?subject=Unsubscribe>, <https://casetrendskenya.com/unsubscribe>`,
+        "List-Unsubscribe": `<mailto:${EMAIL_FROM}?subject=Unsubscribe>, <https://casetrendskenya.com/unsubscribe>`,
       },
     });
 
@@ -603,16 +603,8 @@ app.post("/api/send-email", async (req, res) => {
 
     res.json({ success: true, messageId: info.messageId });
   } catch (error) {
-    console.error("Email send error:", error, {
-      code: error?.code ?? null,
-      response: error?.response ?? null,
-      responseCode: error?.responseCode ?? null,
-    });
-    res.status(500).json({
-      error: error?.message || "Failed to send email",
-      code: error?.code || undefined,
-      responseCode: error?.responseCode || undefined,
-    });
+    console.error("Email send error:", error);
+    res.status(500).json({ error: error.message || "Failed to send email" });
   }
 });
 
@@ -621,6 +613,9 @@ function generateOrderNotificationEmail(orderData, adminEmail) {
   const safeCustomerEmail = escapeHtml(orderData.customer_email || "");
   const safeOrderId = escapeHtml(orderData.id);
   const safeDeliveryAddress = escapeHtml(orderData.delivery_address || "");
+  const deliveryMapUrl = orderData.delivery_method === "delivery" && orderData.delivery_address
+    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(orderData.delivery_address)}`
+    : null;
   const itemsHtml = (orderData.items || [])
     .map((item) => `
       <div style="display:flex; justify-content:space-between; padding: 10px 0; border-bottom: 1px solid #eee;">
@@ -662,6 +657,7 @@ function generateOrderNotificationEmail(orderData, adminEmail) {
               <p><strong>Email:</strong> ${safeCustomerEmail || "N/A"}</p>
               <p><strong>Delivery:</strong> ${orderData.delivery_method === "delivery" ? "Delivery" : "Pickup"}</p>
               ${orderData.delivery_method === "delivery" && safeDeliveryAddress ? `<p><strong>Address:</strong> ${safeDeliveryAddress}</p>` : ""}
+              ${deliveryMapUrl ? `<p><strong>Map:</strong> <a href="${deliveryMapUrl}" target="_blank" rel="noopener noreferrer">View delivery location</a></p>` : ""}
             </div>
             <div class="section">
               <h2 style="margin-bottom: 10px;">Items</h2>
@@ -679,10 +675,12 @@ function generateOrderNotificationEmail(orderData, adminEmail) {
     </html>
   `;
 
+  const mapLinkText = deliveryMapUrl ? `\nDelivery map: ${deliveryMapUrl}` : "";
+
   return {
     to: adminEmail,
     subject: `New Order Received - ${safeOrderId.slice(0, 8)}`,
-    text: `New order received: ${safeCustomerName} - KSh ${Number(orderData.total_amount).toLocaleString()}`,
+    text: `New order received: ${safeCustomerName} - KSh ${Number(orderData.total_amount).toLocaleString()}${mapLinkText}`,
     html,
   };
 }

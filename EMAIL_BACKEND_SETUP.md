@@ -14,8 +14,9 @@ We've set up a local Node.js Express backend to handle email sending via Gmail S
 ### 2. **.env.local** (ALREADY CREATED)
 ```env
 VITE_API_URL=http://localhost:3000
-EMAIL_USER=elitjohnsdigital@gmail.com
-EMAIL_PASS=aqnycfhkebbzrldj
+EMAIL_USER=info@casetrendskenya.co.ke
+EMAIL_FROM=info@casetrendskenya.co.ke
+EMAIL_PASS=<your-email-app-password>
 ```
 
 ### 3. **package.json** (UPDATED)
@@ -43,7 +44,7 @@ npm run server
 You should see:
 ```
 ✅ Email server running on http://localhost:3000
-📧 Email configured: elitjohnsdigital@gmail.com
+📧 Email configured: info@casetrendskenya.co.ke
 ```
 
 ### Step 3: Start the Frontend (in a new terminal)
@@ -180,8 +181,8 @@ Health check endpoint.
 
 | Variable | Description | Current Value |
 |----------|-------------|----------------|
-| `EMAIL_USER` | Gmail account email | `elitjohnsdigital@gmail.com` |
-| `EMAIL_PASS` | Gmail app password | `aqnycfhkebbzrldj` |
+| `EMAIL_USER` | Business email account | `info@casetrendskenya.co.ke` |
+| `EMAIL_PASS` | Email app password | `<your-email-app-password>` |
 | `VITE_API_URL` | Backend API URL for frontend | `http://localhost:3000` |
 | `PORT` | Backend server port | `3000` |
 

@@ -18,7 +18,7 @@ Pick one option below:
 ### Step 3: Set Supabase Secret
 ```bash
 supabase secrets set RESEND_API_KEY="re_your_full_key_here"
-supabase secrets set FROM_EMAIL="noreply@casetrendskеnya.com"
+supabase secrets set FROM_EMAIL="info@casetrendskenya.co.ke"
 ```
 
 ### Step 4: Deploy Function
@@ -47,13 +47,13 @@ Test by placing an order and clicking "Send Email Now"
 ### Step 3: Verify Sender Email
 1. Go to Settings → Sender Authentication
 2. Click "Verify a Single Sender"
-3. Enter `noreply@casetrendskеnya.com`
+3. Enter `info@casetrendskenya.co.ke`
 4. Verify email (check junk folder)
 
 ### Step 4: Set Supabase Secret
 ```bash
 supabase secrets set SENDGRID_API_KEY="SG.your_full_key_here"
-supabase secrets set FROM_EMAIL="noreply@casetrendskеnya.com"
+supabase secrets set FROM_EMAIL="info@casetrendskenya.co.ke"
 ```
 
 ### Step 5: Deploy Function

@@ -16,9 +16,10 @@ interface EmailTemplate {
   html: string;
 }
 
-// Hardcoded Resend API key and email
-const RESEND_API_KEY = "re_bknKyu6R_MHE12HSE3iXG3m6LZM1s6KnM";
-const FROM_EMAIL = "elitjohnsdigital@gmail.com";
+// Resend API key and sender email should be configured in environment variables
+const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") || "";
+const FROM_EMAIL = Deno.env.get("FROM_EMAIL") || "info@casetrendskenya.co.ke";
+const ADMIN_NOTIFICATION_EMAIL = Deno.env.get("ADMIN_NOTIFICATION_EMAIL") || FROM_EMAIL;
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -165,6 +166,10 @@ function generateStatusUpdateEmail(orderData: any): EmailTemplate {
 async function sendViaResend(template: EmailTemplate) {
   console.log(`Sending email to ${template.to} via Resend...`);
 
+  if (!RESEND_API_KEY) {
+    throw new Error("Missing RESEND_API_KEY environment variable");
+  }
+
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
@@ -294,7 +299,8 @@ serve(async (req: Request) => {
     } else if (payload.type === "status_update") {
       emailTemplate = generateStatusUpdateEmail(payload.data);
     } else if (payload.type === "order_notification") {
-      emailTemplate = generateOrderNotificationEmail(payload.data, payload.to);
+      const adminRecipient = payload.to || ADMIN_NOTIFICATION_EMAIL;
+      emailTemplate = generateOrderNotificationEmail(payload.data, adminRecipient);
     } else {
       return new Response(JSON.stringify({ error: "Invalid email type" }), {
         status: 400,

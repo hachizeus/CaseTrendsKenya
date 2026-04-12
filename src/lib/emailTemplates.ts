@@ -287,6 +287,11 @@ export function generateOrderNotificationEmail(order: OrderData, adminEmail: str
     day: "numeric",
   });
 
+  const deliveryMapUrl =
+    order.delivery_method === "delivery" && order.delivery_address
+      ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.delivery_address)}`
+      : null;
+
   return {
     to: adminEmail,
     subject: `New Order Received - ${order.id.slice(0, 8)} | Case Trends Kenya`,
@@ -312,6 +317,9 @@ export function generateOrderNotificationEmail(order: OrderData, adminEmail: str
             <p><strong>Delivery:</strong> ${order.delivery_method === "delivery" ? "Delivery" : "Pickup"}</p>
             ${order.delivery_method === "delivery" && order.delivery_address ? `
               <p><strong>Delivery Address:</strong> ${order.delivery_address}</p>
+            ` : ""}
+            ${deliveryMapUrl ? `
+              <p><strong>Delivery Map:</strong> <a href="${deliveryMapUrl}" target="_blank" rel="noopener noreferrer">Open delivery location</a></p>
             ` : ""}
 
             <div class="section">

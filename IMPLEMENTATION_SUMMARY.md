@@ -210,7 +210,7 @@ supabase functions deploy send-email
 ### 4. **Set API Key**
 ```bash
 supabase secrets set RESEND_API_KEY="your_key_here"
-supabase secrets set FROM_EMAIL="noreply@casetrendskеnya.com"
+supabase secrets set FROM_EMAIL="info@casetrendskenya.co.ke"
 ```
 
 ### 5. **Test**

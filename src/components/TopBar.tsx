@@ -8,7 +8,7 @@ const TopBar = () => (
           <Phone className="w-3 h-3" /> +254 700 123 456
         </span>
         <span className="flex items-center gap-1.5">
-          <Mail className="w-3 h-3" /> elitjohnsdigital@gmail.com
+          <Mail className="w-3 h-3" /> support@casetrendskenya.co.ke
         </span>
       </div>
       <div className="flex items-center gap-1.5">

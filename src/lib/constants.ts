@@ -7,7 +7,7 @@ export const API_URL =
     : (typeof window !== "undefined" ? window.location.origin : "");
 export const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "";
 export const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || "";
-export const ADMIN_NOTIFICATION_EMAIL = import.meta.env.VITE_ADMIN_NOTIFICATION_EMAIL || "elitjohnsdigital@gmail.com";
+export const ADMIN_NOTIFICATION_EMAIL = import.meta.env.VITE_ADMIN_NOTIFICATION_EMAIL || "info@casetrendskenya.co.ke";
 export const PAYSTACK_PUBLIC_KEY = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY || "";
 
 // WhatsApp configuration

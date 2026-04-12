@@ -55,7 +55,7 @@ const Footer = () => {
             <h4 className="font-semibold mb-4">Contact Us</h4>
             <ul className="space-y-3 text-sm text-gray-400">
               <li className="flex items-center gap-2"><Phone className="w-4 h-4" /> +254 700 123 456</li>
-              <li className="flex items-center gap-2"><Mail className="w-4 h-4 flex-shrink-0" /> <span className="break-all">elitjohnsdigital@gmail.com</span></li>
+              <li className="flex items-center gap-2"><Mail className="w-4 h-4 flex-shrink-0" /> <span className="break-all">support@casetrendskenya.co.ke</span></li>
               <li className="flex items-center gap-2"><MapPin className="w-4 h-4" /> Nairobi, Kenya</li>
             </ul>
           </div>

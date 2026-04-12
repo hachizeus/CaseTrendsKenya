@@ -204,7 +204,7 @@ const AuthPage = () => {
                   <div className="text-right">
                     <span className="text-xs text-muted-foreground">
                       Forgot password?{" "}
-                      <a href="mailto:elitjohnsdigital@gmail.com" className="text-primary hover:underline">
+                      <a href="mailto:support@casetrendskenya.co.ke" className="text-primary hover:underline">
                         Contact support
                       </a>
                     </span>
