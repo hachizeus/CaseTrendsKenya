@@ -1,4 +1,4 @@
-import nodemailer from "nodemailer";
+import { ServerClient } from "postmark";
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
@@ -146,33 +146,13 @@ app.use(express.static(path.join(__dirname, 'dist'), {
   etag: false,
 }));
 
-const SMTP_HOST = process.env.SMTP_HOST || "";
-const SMTP_PORT = process.env.SMTP_PORT ? Number(process.env.SMTP_PORT) : undefined;
-const SMTP_SECURE = process.env.SMTP_SECURE ? process.env.SMTP_SECURE === "true" : undefined;
+const POSTMARK_API_TOKEN = process.env.POSTMARK_API_TOKEN || "";
 
-const transporterConfig = SMTP_HOST
-  ? {
-      host: SMTP_HOST,
-      port: SMTP_PORT ?? (SMTP_SECURE === false ? 587 : 465),
-      secure: SMTP_SECURE ?? true,
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
-    }
-  : {
-      service: "gmail",
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
-    };
+const postmarkClient = new ServerClient(POSTMARK_API_TOKEN);
 
-const transporter = nodemailer.createTransport(transporterConfig);
-
-if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+if (!process.env.EMAIL_USER || !POSTMARK_API_TOKEN) {
   console.warn(
-    "EMAIL_USER and EMAIL_PASS are required to send emails. Email delivery will fail without them."
+    "EMAIL_USER and POSTMARK_API_TOKEN are required to send emails. Email delivery will fail without them."
   );
 }
 
@@ -584,24 +564,24 @@ app.post("/api/send-email", async (req, res) => {
 
     console.log(`Sending ${type} email to ${emailTemplate.to}...`);
 
-    const info = await transporter.sendMail({
-      from: `Case Trends Kenya <${EMAIL_FROM}>`,
-      to: emailTemplate.to,
-      replyTo: EMAIL_REPLY_TO,
-      subject: emailTemplate.subject,
-      text: emailTemplate.text,
-      html: emailTemplate.html,
-      headers: {
-        "X-Mailer": "CaseTrendsKenya/1.0",
-        "X-Priority": "3",
-        "Importance": "normal",
-        "List-Unsubscribe": `<mailto:${EMAIL_FROM}?subject=Unsubscribe>, <https://casetrendskenya.com/unsubscribe>`,
-      },
+    const info = await postmarkClient.sendEmail({
+      From: process.env.EMAIL_USER,
+      To: emailTemplate.to,
+      ReplyTo: EMAIL_REPLY_TO,
+      Subject: emailTemplate.subject,
+      TextBody: emailTemplate.text,
+      HtmlBody: emailTemplate.html,
+      Headers: [
+        { Name: "X-Mailer", Value: "CaseTrendsKenya/1.0" },
+        { Name: "X-Priority", Value: "3" },
+        { Name: "Importance", Value: "normal" },
+        { Name: "List-Unsubscribe", Value: `<mailto:${process.env.EMAIL_USER}?subject=Unsubscribe>, <https://casetrendskenya.com/unsubscribe>` },
+      ],
     });
 
-    console.log("Email sent successfully:", info.messageId);
+    console.log("Email sent successfully:", info.MessageID);
 
-    res.json({ success: true, messageId: info.messageId });
+    res.json({ success: true, messageId: info.MessageID });
   } catch (error) {
     console.error("Email send error:", error);
     res.status(500).json({ error: error.message || "Failed to send email" });
