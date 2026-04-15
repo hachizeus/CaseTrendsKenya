@@ -8,12 +8,42 @@ import { logAuditAction } from "@/lib/audit";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Pencil, Trash2, Upload, Loader2, Search, Star, TrendingUp, X, ArrowLeft, ChevronDown, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { getOptimizedImageUrl } from "@/lib/imageOptimization";
 
 const colorOptions = ["Black", "White", "Blue", "Red", "Green", "Gold", "Silver", "Pink", "Purple", "Gray", "Orange", "Yellow"];
+
+const smartphoneBrands = [
+  "iPhone",
+  "Samsung",
+  "Tecno",
+  "Infinix",
+  "itel",
+  "Xiaomi",
+  "Oppo",
+  "Vivo",
+  "Realme",
+  "Huawei",
+  "Nokia",
+  "Motorola",
+  "OnePlus",
+  "Sony",
+  "Asus",
+  "Lava",
+];
+const accessoryBrandOptions = ["Universal", "Any Phone", "iPhone", "Samsung", "Infinix", "Tecno", "Xiaomi", "Oppo", "Realme", "Huawei", "Nokia", "Motorola"];
+const mainCategories = ["Phone Brands", "Accessories", "Other"];
+const phoneSubcategories = ["Phone Case", "Screen Protector", "Phone Cover", "Phone Stand"];
+const accessoryTypes = ["Charger", "Earbuds", "Cable", "Power Bank", "Smart Watch", "Wireless Charger", "Phone Stand"];
+const chargerTypes = ["Type-C", "Lightning", "Micro USB", "Wireless Charger"];
+const compatibilityOptions = [
+  { value: "universal", label: "Universal compatibility" },
+  { value: "brand", label: "Device-specific by brand" },
+  { value: "model", label: "Model-specific" },
+];
 
 // Parser function to extract specifications from plain text
 const parseSpecificationsFromText = (text: string): Array<{ key: string; value: string }> => {
@@ -139,10 +169,12 @@ const AdminProductFormPage = () => {
   const [categories, setCategories] = useState<any[]>([]);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ 
-    name: "", description: "", price: "", original_price: "", category: "", brand: "", 
+    name: "", description: "", price: "", original_price: "", main_category: "", category: "", brand: "", model: "", compatibility_type: "brand",
+    phone_brand: "", phone_subcategory: "", phone_model: "", accessory_type: "", charger_type: "",
     stock_status: "in_stock", stock_quantity: 0, is_featured: false, is_trending: false 
   });
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
+  const [customColor, setCustomColor] = useState("");
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [filePreviews, setFilePreviews] = useState<string[]>([]);
   const [existingImages, setExistingImages] = useState<any[]>([]);
@@ -155,6 +187,27 @@ const AdminProductFormPage = () => {
   const [parsedSpecs, setParsedSpecs] = useState<Array<{ key: string; value: string }>>([]);
   const [processingImages, setProcessingImages] = useState(false);
   const [loading, setLoading] = useState(!!id);
+
+  const showPhoneBrand = form.main_category === "Phone Brands";
+  const showPhoneSubcategory = form.main_category === "Phone Brands" && !!form.phone_brand;
+  const showPhoneModel = form.main_category === "Phone Brands" && !!form.phone_subcategory;
+  const showAccessoryType = form.main_category === "Accessories";
+  const showChargerType = form.main_category === "Accessories" && form.accessory_type === "Charger";
+  const showOtherCategoryField = form.main_category === "Other";
+  const showOtherCompatibilityType = form.main_category === "Other";
+  const showOtherBrandField = form.main_category === "Other" && form.compatibility_type !== "universal";
+  const showOtherModelField = form.main_category === "Other" && form.compatibility_type === "model";
+  const brandOptions = form.main_category === "Phone Brands" ? smartphoneBrands : accessoryBrandOptions;
+  const isCustomBrand = showOtherBrandField && form.brand && !brandOptions.includes(form.brand) && form.brand !== "Universal";
+
+  const addCustomColor = () => {
+    const color = customColor.trim();
+    if (!color) return;
+    if (!selectedColors.includes(color)) {
+      setSelectedColors(prev => [...prev, color]);
+    }
+    setCustomColor("");
+  };
 
   useEffect(() => {
     const load = async () => {
@@ -181,6 +234,14 @@ const AdminProductFormPage = () => {
             original_price: product.original_price ? String(product.original_price) : "",
             category: product.category,
             brand: product.brand,
+            model: product.model || "",
+            compatibility_type: product.compatibility_type || (product.brand === "Universal" ? "universal" : product.model ? "model" : "brand"),
+            main_category: product.category === "Phone Brands" || product.category === "Accessories" ? product.category : "Other",
+            phone_brand: product.category === "Phone Brands" ? (smartphoneBrands.includes(product.brand) ? product.brand : "other") : "",
+            phone_subcategory: product.category === "Phone Brands" ? product.compatibility_type || "" : "",
+            phone_model: product.category === "Phone Brands" ? (product.model || "").split(/,\s*/).join("\n") : "",
+            accessory_type: product.category === "Accessories" ? product.brand : "",
+            charger_type: product.category === "Accessories" ? product.model || "" : "",
             stock_status: product.stock_status,
             stock_quantity: product.stock_quantity || 0,
             is_featured: product.is_featured,
@@ -209,24 +270,61 @@ const AdminProductFormPage = () => {
   }, [id]);
 
   const handleSave = async () => {
-    if (!form.name || !form.price || !form.category || !form.brand) { 
-      toast.error("Fill in required fields"); 
-      return; 
+    const missingPhoneData = form.main_category === "Phone Brands" && (
+      (form.phone_brand !== "other" ? !form.phone_brand.trim() : !form.brand.trim()) ||
+      !form.phone_subcategory.trim() ||
+      !form.phone_model.trim()
+    );
+    const missingAccessoryData = form.main_category === "Accessories" && !form.accessory_type.trim();
+    const missingChargerType = form.main_category === "Accessories" && form.accessory_type === "Charger" && !form.charger_type.trim();
+    const missingOtherCategory = form.main_category === "Other" && !form.category.trim();
+    const missingOtherBrand = form.main_category === "Other" && form.compatibility_type !== "universal" && !form.brand.trim();
+    const missingOtherModel = form.main_category === "Other" && form.compatibility_type === "model" && !form.model.trim();
+
+    if (!form.name || !form.price || missingPhoneData || missingAccessoryData || missingChargerType || missingOtherCategory || missingOtherBrand || missingOtherModel) {
+      toast.error("Fill in required fields");
+      return;
     }
 
     setSaving(true);
     try {
-      const payload = { 
-        name: form.name, 
-        description: form.description || null, 
-        price: Number(form.price), 
-        original_price: form.original_price ? Number(form.original_price) : null, 
-        category: form.category, 
-        brand: form.brand, 
+      const payload = {
+        name: form.name,
+        description: form.description || null,
+        price: Number(form.price),
+        original_price: form.original_price ? Number(form.original_price) : null,
+        category: form.main_category === "Other" ? form.category : form.main_category,
+        brand: form.main_category === "Phone Brands"
+          ? (form.phone_brand === "other" ? form.brand : form.phone_brand)
+          : form.main_category === "Accessories"
+            ? form.accessory_type
+            : form.compatibility_type === "universal"
+              ? "Universal"
+              : form.brand,
+        model: form.main_category === "Phone Brands"
+          ? form.phone_model
+              .split(/[\r\n,]+/)
+              .map(model => model.trim())
+              .filter(Boolean)
+              .join(", ")
+          : form.main_category === "Accessories"
+            ? form.accessory_type === "Charger"
+              ? form.charger_type
+              : form.model || null
+            : form.compatibility_type === "model"
+              ? form.model
+              : null,
+        compatibility_type: form.main_category === "Phone Brands"
+          ? form.phone_subcategory
+          : form.main_category === "Accessories"
+            ? form.accessory_type === "Charger"
+              ? form.charger_type
+              : form.accessory_type
+            : form.compatibility_type,
         stock_status: form.stock_status,
-        stock_quantity: Number(form.stock_quantity) || 0, 
-        is_featured: form.is_featured, 
-        is_trending: form.is_trending 
+        stock_quantity: Number(form.stock_quantity) || 0,
+        is_featured: form.is_featured,
+        is_trending: form.is_trending,
       };
 
       let productId = editing?.id;
@@ -336,8 +434,9 @@ const AdminProductFormPage = () => {
       const path = `${productId}/${Date.now()}_${i}.${ext}`;
       const processedFile = file;
 
+      const toastId = `processing-${i}`;
       toast.loading(`Uploading image ${i + 1}/${files.length}...`, {
-        id: `processing-${i}`,
+        id: toastId,
         duration: 10000,
       });
 
@@ -345,9 +444,9 @@ const AdminProductFormPage = () => {
         const { error: uploadError } = await supabase.storage
           .from("product-images")
           .upload(path, processedFile);
-        if (uploadError) { 
-          toast.error(`Failed to upload image ${i + 1}: ${uploadError.message}`); 
-          continue; 
+        if (uploadError) {
+          toast.error(`Failed to upload image ${i + 1}: ${uploadError.message}`, { id: toastId });
+          continue;
         }
 
         const { data: urlData } = supabase.storage.from("product-images").getPublicUrl(path);
@@ -357,11 +456,12 @@ const AdminProductFormPage = () => {
           display_order: existingImages.length + i,
           is_primary: existingImages.length === 0 && i === 0,
         });
-        
+
         processedCount++;
+        toast.success(`Uploaded image ${i + 1}/${files.length}`, { id: toastId });
       } catch (uploadError) {
         console.error("Upload error:", uploadError);
-        toast.error(`Failed to save image ${i + 1}`);
+        toast.error(`Failed to save image ${i + 1}`, { id: toastId });
       }
     }
 
@@ -616,15 +716,16 @@ const AdminProductFormPage = () => {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>Stock Status</Label>
-                <select
-                  value={form.stock_status}
-                  onChange={e => setForm(f => ({ ...f, stock_status: e.target.value }))}
-                  className="w-full mt-2 p-2 border border-input bg-background text-sm outline-none focus:ring-1 focus:ring-ring rounded-lg"
-                >
-                  <option value="in_stock">In Stock</option>
-                  <option value="low_stock">Low Stock</option>
-                  <option value="out_of_stock">Out of Stock</option>
-                </select>
+                <Select value={form.stock_status} onValueChange={value => setForm(f => ({ ...f, stock_status: value }))}>
+                  <SelectTrigger className="w-full mt-2">
+                    <SelectValue placeholder="Choose stock status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="in_stock">In Stock</SelectItem>
+                    <SelectItem value="low_stock">Low Stock</SelectItem>
+                    <SelectItem value="out_of_stock">Out of Stock</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div>
                 <Label>Stock Quantity</Label>
@@ -644,31 +745,234 @@ const AdminProductFormPage = () => {
           <div className="bg-card border border-border rounded-xl p-6 space-y-4">
             <h2 className="text-lg font-semibold">Category & Brand</h2>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-6">
               <div>
-                <Label>Category *</Label>
-                <select
-                  value={form.category}
-                  onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
-                  className="w-full mt-2 p-2 border border-input bg-background text-sm outline-none focus:ring-1 focus:ring-ring rounded-lg"
-                >
-                  <option value="">Select category</option>
-                  {categories.map(c => (
-                    <option key={c.name} value={c.name}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
+                <span className="text-[11px] uppercase tracking-[0.25em] text-muted-foreground">Step 1</span>
+                <Label>Main Category *</Label>
+                <Select value={form.main_category} onValueChange={main_category => {
+                  setForm(f => ({
+                    ...f,
+                    main_category,
+                    category: main_category === "Other" ? "" : main_category,
+                    brand: "",
+                    model: "",
+                    phone_brand: "",
+                    phone_subcategory: "",
+                    phone_model: "",
+                    accessory_type: "",
+                    charger_type: "",
+                    compatibility_type: "brand",
+                  }));
+                }}>
+                  <SelectTrigger className="w-full mt-2">
+                    <SelectValue placeholder="Select main category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {mainCategories.map(categoryName => (
+                      <SelectItem key={categoryName} value={categoryName}>
+                        {categoryName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
+
+              {showOtherCategoryField && (
+                <div>
+                  <span className="text-[11px] uppercase tracking-[0.25em] text-muted-foreground">Step 2</span>
+                  <Label>Custom Category *</Label>
+                  <Input
+                    value={form.category}
+                    onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
+                    placeholder="e.g. Phone Accessories, Wearables, Power Banks"
+                    className="mt-2"
+                  />
+                </div>
+              )}
+
+              {showOtherCompatibilityType && (
+                <div>
+                  <span className="text-[11px] uppercase tracking-[0.25em] text-muted-foreground">Step 3</span>
+                  <Label>Compatibility Type *</Label>
+                  <Select value={form.compatibility_type} onValueChange={compatibility_type => setForm(f => ({ ...f, compatibility_type }))}>
+                    <SelectTrigger className="w-full mt-2">
+                      <SelectValue placeholder="Select compatibility" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {compatibilityOptions.map(option => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {form.main_category === "Phone Brands" && (
+                <div>
+                  <span className="text-[11px] uppercase tracking-[0.25em] text-muted-foreground">Step 2</span>
+                  <Label>Phone Brand *</Label>
+                  <Select
+                    value={smartphoneBrands.includes(form.phone_brand) ? form.phone_brand : (form.phone_brand ? "other" : "")}
+                    onValueChange={phone_brand => {
+                      if (phone_brand === "other") {
+                        setForm(f => ({ ...f, phone_brand: "other", brand: "" }));
+                      } else {
+                        setForm(f => ({ ...f, phone_brand, brand: phone_brand }));
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="w-full mt-2">
+                      <SelectValue placeholder="Select phone brand" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {smartphoneBrands.map(brand => (
+                        <SelectItem key={brand} value={brand}>
+                          {brand}
+                        </SelectItem>
+                      ))}
+                      <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {form.phone_brand === "other" && (
+                    <Input
+                      value={form.brand}
+                      onChange={e => setForm(f => ({ ...f, brand: e.target.value }))}
+                      placeholder="Enter custom phone brand"
+                      className="mt-2"
+                    />
+                  )}
+                </div>
+              )}
+              {form.main_category === "Accessories" && (
+                <div>
+                  <span className="text-[11px] uppercase tracking-[0.25em] text-muted-foreground">Step 2</span>
+                  <Label>Accessory Type *</Label>
+                  <Select value={form.accessory_type} onValueChange={accessory_type => setForm(f => ({ ...f, accessory_type, brand: accessory_type, model: "", charger_type: "" }))}>
+                    <SelectTrigger className="w-full mt-2">
+                      <SelectValue placeholder="Select accessory type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {accessoryTypes.map(type => (
+                        <SelectItem key={type} value={type}>
+                          {type}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+            {showPhoneSubcategory && (
               <div>
-                <Label>Brand *</Label>
-                <Input
-                  value={form.brand}
-                  onChange={e => setForm(f => ({ ...f, brand: e.target.value }))}
-                  placeholder="Enter brand"
-                  className="mt-2"
+                <span className="text-[11px] uppercase tracking-[0.25em] text-muted-foreground">Step 3</span>
+                <Label>Subcategory *</Label>
+                <Select value={form.phone_subcategory} onValueChange={phone_subcategory => setForm(f => ({ ...f, phone_subcategory, compatibility_type: phone_subcategory }))}>
+                  <SelectTrigger className="w-full mt-2">
+                    <SelectValue placeholder="Select phone subcategory" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {phoneSubcategories.map(subcategory => (
+                      <SelectItem key={subcategory} value={subcategory}>
+                        {subcategory}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            {showPhoneModel && (
+              <div>
+                <span className="text-[11px] uppercase tracking-[0.25em] text-muted-foreground">Step 4</span>
+                <Label>Phone Models *</Label>
+                <textarea
+                  value={form.phone_model}
+                  onChange={e => setForm(f => ({ ...f, phone_model: e.target.value }))}
+                  placeholder={"Enter one model per line, e.g.\nSamsung Galaxy A15\nSamsung Galaxy A16\nSamsung Galaxy A17"}
+                  className="mt-2 w-full min-h-[120px] rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                 />
+                <p className="text-xs text-muted-foreground mt-2">Add each model on a new line or separate them with commas.</p>
               </div>
+            )}
+            {showChargerType && (
+              <div>
+                <span className="text-[11px] uppercase tracking-[0.25em] text-muted-foreground">Step 3</span>
+                <Label>Charger Type *</Label>
+                <Select value={form.charger_type} onValueChange={charger_type => setForm(f => ({ ...f, charger_type, model: charger_type }))}>
+                  <SelectTrigger className="w-full mt-2">
+                    <SelectValue placeholder="Select charger type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {chargerTypes.map(type => (
+                      <SelectItem key={type} value={type}>
+                        {type}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-4">
+              {showOtherBrandField && (
+                <div>
+                  <Label>{form.compatibility_type === "universal" ? "Compatibility" : "Brand *"}</Label>
+                  {form.compatibility_type === "universal" ? (
+                    <Input
+                      value="Universal"
+                      disabled
+                      className="mt-2"
+                    />
+                  ) : (
+                    <>
+                      <Select
+                        value={brandOptions.includes(form.brand) ? form.brand : (form.brand ? "other" : "")}
+                        onValueChange={value => {
+                          if (value === "other") {
+                            setForm(f => ({ ...f, brand: "" }));
+                          } else {
+                            setForm(f => ({ ...f, brand: value }));
+                          }
+                        }}
+                      >
+                        <SelectTrigger className="w-full mt-2">
+                          <SelectValue placeholder="Choose brand" />
+                        </SelectTrigger>
+                        <SelectContent side="bottom" position="popper" align="start">
+                          {brandOptions.map(brandOption => (
+                            <SelectItem key={brandOption} value={brandOption}>
+                              {brandOption}
+                            </SelectItem>
+                          ))}
+                          <SelectItem value="other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {isCustomBrand && (
+                        <Input
+                          value={form.brand}
+                          onChange={e => setForm(f => ({ ...f, brand: e.target.value }))}
+                          placeholder="Enter custom brand"
+                          className="mt-2"
+                        />
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
+
+              {showOtherModelField && (
+                <div>
+                  <span className="text-[11px] uppercase tracking-[0.25em] text-muted-foreground">Step 4</span>
+                  <Label>Model *</Label>
+                  <Input
+                    value={form.model}
+                    onChange={e => setForm(f => ({ ...f, model: e.target.value }))}
+                    placeholder="e.g. Galaxy S23 Ultra"
+                    className="mt-2"
+                  />
+                </div>
+              )}
             </div>
 
             {/* Available Colors */}
@@ -698,6 +1002,23 @@ const AdminProductFormPage = () => {
                   <p className="text-sm font-medium mb-2">Selected: {selectedColors.join(", ")}</p>
                 </div>
               )}
+              <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto]">
+                <Input
+                  value={customColor}
+                  onChange={e => setCustomColor(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      addCustomColor();
+                    }
+                  }}
+                  placeholder="Add custom color"
+                  className="w-full"
+                />
+                <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={addCustomColor}>
+                  Add
+                </Button>
+              </div>
             </div>
           </div>
 

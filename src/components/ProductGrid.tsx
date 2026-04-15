@@ -135,6 +135,8 @@ const ProductGrid = () => {
                         category={product.category}
                         brand={product.brand}
                         stockStatus={product.stock_status}
+                        rating={product.rating}
+                        reviewCount={product.review_count}
                         index={i}
                       />
                     </div>

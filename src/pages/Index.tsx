@@ -50,7 +50,7 @@ const Index = () => (
         <MiniHeroBanner
           sectionNumber={2}
           fallbackTitle="New Arrivals Every Week"
-          fallbackSubtitle="Be the first to own the latest phones, tablets, and accessories in Nairobi."
+          fallbackSubtitle="Be the first to shop the latest phone cases, screen protectors, and accessories in Nairobi."
           fallbackBg="bg-slate-900"
         />
       </Suspense>

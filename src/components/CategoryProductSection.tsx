@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
 import ProductCard from "./ProductCard";
+import { categoryMatches, getDisplayCategoryName } from "@/lib/utils";
 
 interface CategoryProductSectionProps {
   category: string;
@@ -15,24 +16,45 @@ const CategoryProductSection = ({ category, bgClass = "bg-white" }: CategoryProd
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase
-      .from("products")
-      .select("*, product_images(*)")
-      .eq("category", category)
-      .order("created_at", { ascending: false })
-      .limit(4)
-      .then(({ data }) => { setProducts(data || []); setLoading(false); });
+    const load = async () => {
+      setLoading(true);
+      const { data } = await supabase
+        .from("products")
+        .select("*, product_images(*), reviews(rating)")
+        .order("created_at", { ascending: false })
+        .limit(50);
+
+      const results = (data || []).map((product: any) => {
+        const reviews = Array.isArray(product.reviews) ? product.reviews : [];
+        const reviewCount = reviews.length;
+        const rating = reviewCount
+          ? reviews.reduce((sum: number, review: any) => sum + (review.rating || 0), 0) / reviewCount
+          : 0;
+        return {
+          ...product,
+          rating,
+          review_count: reviewCount,
+        };
+      }).filter(product =>
+        category === "All Accessories" ? true : categoryMatches(product, category)
+      ).slice(0, 4);
+
+      setProducts(results);
+      setLoading(false);
+    };
+
+    load();
   }, [category]);
 
-  if (!loading && products.length === 0) return null;
+  const displayCategory = getDisplayCategoryName(category);
 
   return (
     <section className={`py-8 sm:py-10 border-t border-border ${bgClass}`}>
       <div className="container">
         <div className="flex items-center justify-between mb-5">
           <div>
-            <h2 className="text-base sm:text-lg lg:text-xl font-bold tracking-tight">{category}</h2>
-            <p className="text-xs text-muted-foreground mt-0.5">Top picks in {category}</p>
+            <h2 className="text-base sm:text-lg lg:text-xl font-bold tracking-tight">{displayCategory}</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">Top picks in {displayCategory}</p>
           </div>
           <Link
             to={`/products?category=${encodeURIComponent(category)}`}
@@ -55,6 +77,10 @@ const CategoryProductSection = ({ category, bgClass = "bg-white" }: CategoryProd
               </div>
             ))}
           </div>
+        ) : products.length === 0 ? (
+          <div className="py-8 text-center text-sm text-muted-foreground">
+            No products available in this category yet.
+          </div>
         ) : (
           <div className="flex gap-3 sm:gap-4 overflow-x-auto scrollbar-hide pb-2">
             {products.map((product, i) => (
@@ -75,6 +101,8 @@ const CategoryProductSection = ({ category, bgClass = "bg-white" }: CategoryProd
                   category={product.category}
                   brand={product.brand}
                   stockStatus={product.stock_status}
+                  rating={product.rating}
+                  reviewCount={product.review_count}
                   index={i}
                 />
               </motion.div>

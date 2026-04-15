@@ -1,6 +1,22 @@
 import { useQuery, UseQueryOptions } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
+const attachReviewAggregates = (products: any[]) => {
+  return products.map(product => {
+    const reviews = Array.isArray(product.reviews) ? product.reviews : [];
+    const reviewCount = reviews.length;
+    const rating = reviewCount
+      ? reviews.reduce((sum: number, review: any) => sum + (review.rating || 0), 0) / reviewCount
+      : 0;
+
+    return {
+      ...product,
+      rating,
+      review_count: reviewCount,
+    };
+  });
+};
+
 // ===== PRODUCTS =====
 export const useProducts = (
   options?: Omit<UseQueryOptions, "queryKey" | "queryFn">
@@ -10,9 +26,9 @@ export const useProducts = (
     queryFn: async () => {
       const { data } = await supabase
         .from("products")
-        .select("*, product_images(*)")
+        .select("*, product_images(*), reviews(rating)")
         .order("created_at", { ascending: false });
-      return data || [];
+      return attachReviewAggregates(data || []);
     },
     staleTime: 10 * 60 * 1000, // 10 minutes
     gcTime: 30 * 60 * 1000, // 30 minutes (formerly cacheTime)
@@ -32,10 +48,10 @@ export const useProductsPaginated = (
       const to = from + pageSize - 1;
       const { data, count } = await supabase
         .from("products")
-        .select("*, product_images(*)", { count: "exact" })
+        .select("*, product_images(*), reviews(rating)", { count: "exact" })
         .order("created_at", { ascending: false })
         .range(from, to);
-      return { data: data || [], total: count || 0, page, pageSize };
+      return { data: attachReviewAggregates(data || []), total: count || 0, page, pageSize };
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 30 * 60 * 1000,
@@ -73,11 +89,11 @@ export const useProductsByCategory = (
     queryFn: async () => {
       const { data } = await supabase
         .from("products")
-        .select("*, product_images(*)")
+        .select("*, product_images(*), reviews(rating)")
         .eq("category", category!)
         .order("created_at", { ascending: false })
         .limit(10);
-      return data || [];
+      return attachReviewAggregates(data || []);
     },
     enabled: !!category,
     staleTime: 10 * 60 * 1000,

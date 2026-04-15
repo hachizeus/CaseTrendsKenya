@@ -3,6 +3,23 @@ import { Link, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 
+const staticPhoneBrands = [
+  "Samsung",
+  "iPhone",
+  "Universal",
+  "Itel",
+  "Infinix",
+  "Tecno",
+  "Xiaomi",
+  "Oppo",
+  "Vivo",
+  "Realme",
+  "Huawei",
+  "Nokia",
+  "Motorola",
+  "OnePlus",
+];
+
 const BrandFilter = () => {
   const [searchParams] = useSearchParams();
   const [brands, setBrands] = useState<string[]>([]);
@@ -12,8 +29,10 @@ const BrandFilter = () => {
   useEffect(() => {
     supabase.from("products").select("brand").then(({ data }) => {
       if (data) {
-        const unique = Array.from(new Set(data.map(d => d.brand).filter(Boolean))).sort();
-        setBrands(unique);
+        const unique = Array.from(new Set(data.map(d => d.brand).filter(Boolean)));
+        const merged = Array.from(new Set([...staticPhoneBrands, ...unique]));
+        merged.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+        setBrands(merged);
       }
       setLoading(false);
     });

@@ -405,11 +405,13 @@ export type Database = {
           brand: string
           category: string
           color: string | null
+          compatibility_type: string | null
           created_at: string
           description: string | null
           id: string
           is_featured: boolean
           is_trending: boolean
+          model: string | null
           name: string
           original_price: number | null
           price: number
@@ -425,11 +427,13 @@ export type Database = {
           brand: string
           category: string
           color?: string | null
+          compatibility_type?: string | null
           created_at?: string
           description?: string | null
           id?: string
           is_featured?: boolean
           is_trending?: boolean
+          model?: string | null
           name: string
           original_price?: number | null
           price: number
@@ -445,11 +449,13 @@ export type Database = {
           brand?: string
           category?: string
           color?: string | null
+          compatibility_type?: string | null
           created_at?: string
           description?: string | null
           id?: string
           is_featured?: boolean
           is_trending?: boolean
+          model?: string | null
           name?: string
           original_price?: number | null
           price?: number

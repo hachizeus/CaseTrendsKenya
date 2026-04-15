@@ -91,6 +91,21 @@
     height: 100%;
     width: 100%;
   }
+  .mobile-marquee {
+    animation: marquee 22s linear infinite;
+  }
+  .mobile-marquee:hover {
+    animation-play-state: paused;
+  }
+}
+
+@keyframes marquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
 }
 
 /* Prevent zoom on input focus on mobile devices */

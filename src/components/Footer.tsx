@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Phone, Mail, MapPin, Instagram } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { getDisplayCategoryName } from "@/lib/utils";
 
 const TikTokIcon = () => (
   <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
@@ -36,7 +37,7 @@ const Footer = () => {
               {categories.map(cat => (
                 <li key={cat.slug}>
                   <Link to={`/products?category=${encodeURIComponent(cat.name)}`} className="hover:text-white transition-colors">
-                    {cat.name}
+                    {getDisplayCategoryName(cat.name)}
                   </Link>
                 </li>
               ))}

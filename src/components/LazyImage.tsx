@@ -8,6 +8,7 @@ interface Props {
   width?: number;
   height?: number;
   sizes?: string;
+  resize?: "contain" | "cover" | "fill";
 }
 
 export const LazyImage = ({
@@ -18,12 +19,13 @@ export const LazyImage = ({
   width,
   height,
   sizes,
+  resize = "contain",
 }: Props) => {
   const optimizedSrc = getOptimizedImageUrl(src, {
     width: width ? Math.min(width, 1200) : undefined,
     height,
     quality: 70,
-    resize: "contain",
+    resize,
   });
 
   return (

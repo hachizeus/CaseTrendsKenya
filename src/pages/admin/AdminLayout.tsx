@@ -15,7 +15,6 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 const adminLinks = [
   { path: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { path: "/admin/products", label: "Products", icon: Package },
-  { path: "/admin/categories", label: "Categories", icon: FolderTree },
   { path: "/admin/slides-overview", label: "Hero Slides", icon: Image },
   { path: "/admin/orders", label: "Orders", icon: ShoppingBag },
   { path: "/admin/audit-logs", label: "Audit Logs", icon: Settings },

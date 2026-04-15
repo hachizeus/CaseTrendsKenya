@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { queryOptionalTable } from "@/lib/supabaseHelpers";
@@ -17,6 +18,7 @@ import ImageLightbox from "@/components/ImageLightbox";
 
 const ProductPage = () => {
   const { id } = useParams();
+  const queryClient = useQueryClient();
   const { addToCart } = useCart();
   const { user } = useAuth();
   const [product, setProduct] = useState<any>(null);
@@ -90,6 +92,12 @@ const ProductPage = () => {
     setZoomX(0);
     setZoomY(0);
   };
+
+  const splitModels = (value?: string) =>
+    (value || "")
+      .split(/[\r\n,]+/)
+      .map(item => item.trim())
+      .filter(Boolean);
 
   const loadProduct = async () => {
     setLoading(true);
@@ -225,6 +233,7 @@ const ProductPage = () => {
       setRating(5);
       setComment("");
       await loadReviews();
+      queryClient.invalidateQueries({ queryKey: ["products"], exact: false });
     } finally {
       setSubmitting(false);
     }
@@ -236,6 +245,7 @@ const ProductPage = () => {
     if (error) { toast.error(error.message); return; }
     toast.success("Review deleted");
     await loadReviews();
+    queryClient.invalidateQueries({ queryKey: ["products"], exact: false });
   };
 
   const avgRating = reviews.length
@@ -303,14 +313,14 @@ const ProductPage = () => {
               <ArrowLeft className="w-4 h-4" /> Back
             </Link>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 lg:gap-8 min-h-[calc(100vh-220px)] md:min-h-auto">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 lg:gap-8">
               {/* Image gallery - constrained height */}
-              <div className="md:col-span-1 flex flex-col max-h-[calc(100vh-300px)] md:max-h-[500px]">
+              <div className="md:col-span-1 flex flex-col max-h-[400px] md:max-h-[450px]">
                 <motion.div
                   key={activeImg}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className="relative flex-1 bg-secondary rounded-xl overflow-hidden mb-2 sm:mb-3 flex items-center justify-center group cursor-zoom-in"
+                  className="relative flex-1 rounded-xl overflow-hidden mb-2 sm:mb-3 flex items-center justify-center group cursor-zoom-in"
                   onMouseMove={handleImageMouseMove}
                   onMouseEnter={handleImageMouseEnter}
                   onMouseLeave={handleImageMouseLeave}
@@ -355,44 +365,44 @@ const ProductPage = () => {
                         key={img.id}
                         aria-label={`View image ${i + 1} of ${images.length}`}
                         onClick={() => setActiveImg(i)}
-                        className={`flex-shrink-0 w-12 h-12 sm:w-14 sm:h-14 rounded-lg border-2 overflow-hidden transition-all hover:border-primary ${i === activeImg ? "border-primary ring-2 ring-primary/30" : "border-border"}`}
+                        className={`flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-lg border-2 overflow-hidden transition-all hover:border-primary ${i === activeImg ? "border-primary ring-2 ring-primary/30" : "border-border"}`}
                       >
                         <img src={getOptimizedImageUrl(img.image_url, {
-                          width: 120,
-                          height: 120,
+                          width: 80,
+                          height: 80,
                           quality: 60,
                           resize: "contain",
-                        })} alt={`Thumbnail ${i + 1}: ${product.name}`} width={56} height={56} loading="lazy" decoding="async" className="w-full h-full object-contain p-1 bg-secondary" />
+                        })} alt={`Thumbnail ${i + 1}: ${product.name}`} width={48} height={48} loading="lazy" decoding="async" className="w-full h-full object-contain p-1 bg-secondary" />
                       </button>
                     ))}
                   </div>
                 )}
               </div>
 
-              {/* Product info - optimized layout */}
-              <div className="md:col-span-2 flex flex-col justify-between">
-                <div className="space-y-4">
+              {/* Product info - optimized layout with smaller Phone Models section */}
+              <div className="md:col-span-2">
+                <div className="space-y-3">
                   <div>
                     <p className="text-xs sm:text-sm font-medium text-primary uppercase tracking-widest">{product.brand}</p>
-                    <h1 className="text-2xl sm:text-3xl font-bold mt-1.5 mb-2 leading-tight">{product.name}</h1>
-                    <p className="text-xs sm:text-sm text-muted-foreground">{product.category}</p>
+                    <h1 className="text-xl sm:text-2xl font-bold mt-1 mb-1 leading-tight">{product.name}</h1>
+                    <p className="text-xs text-muted-foreground">{product.category}</p>
                   </div>
 
-                  {/* Price section */}
-                  <div className="bg-secondary/50 p-4 rounded-lg">
-                    <div className="flex items-baseline gap-3 mb-2">
-                      <span className="text-3xl sm:text-4xl font-bold text-primary">KSh {Number(product.price).toLocaleString()}</span>
+                  {/* Price section - compact */}
+                  <div className="bg-secondary/50 p-3 rounded-lg">
+                    <div className="flex items-baseline gap-3">
+                      <span className="text-2xl sm:text-3xl font-bold text-primary">KSh {Number(product.price).toLocaleString()}</span>
                       {product.original_price && (
                         <>
-                          <span className="text-sm sm:text-base text-muted-foreground line-through">KSh {Number(product.original_price).toLocaleString()}</span>
-                          <span className="bg-red-100 text-red-700 text-xs font-bold px-2 py-1 rounded">-{discount}%</span>
+                          <span className="text-xs sm:text-sm text-muted-foreground line-through">KSh {Number(product.original_price).toLocaleString()}</span>
+                          <span className="bg-red-100 text-red-700 text-xs font-bold px-1.5 py-0.5 rounded">-{discount}%</span>
                         </>
                       )}
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 mt-1">
                       <div className="flex gap-0.5">
                         {[1, 2, 3, 4, 5].map(s => (
-                          <Star key={s} className={`w-4 h-4 ${s <= Math.round(avgRating) ? "text-yellow-400 fill-yellow-400" : "text-muted-foreground"}`} />
+                          <Star key={s} className={`w-3 h-3 ${s <= Math.round(avgRating) ? "text-yellow-400 fill-yellow-400" : "text-muted-foreground"}`} />
                         ))}
                       </div>
                       <span className="text-xs text-muted-foreground">
@@ -401,41 +411,49 @@ const ProductPage = () => {
                     </div>
                   </div>
 
-                  {/* Description */}
+                  {/* Stock & Trust badges - compact row */}
+                  <div className="flex flex-wrap items-center gap-2 text-xs">
+                    <span className={`px-2 py-0.5 rounded text-xs font-semibold ${product.stock_status === "in_stock" ? "bg-green-100 text-green-700" : product.stock_status === "low_stock" ? "bg-yellow-100 text-yellow-700" : "bg-red-100 text-red-700"}`}>
+                      {product.stock_status === "in_stock" ? "In Stock" : product.stock_status === "low_stock" ? "Low Stock" : "Sold Out"}
+                    </span>
+                    {product.stock_quantity > 0 && (
+                      <span className="text-muted-foreground text-xs">
+                        ({product.stock_quantity} available)
+                      </span>
+                    )}
+                    <span className="text-muted-foreground">✅ Genuine</span>
+                    <span className="text-muted-foreground">🚚 Free delivery over KSh 5,000</span>
+                  </div>
+
+                  {/* Description - compact */}
                   {product.description && (
-                    <p className="text-sm text-muted-foreground leading-relaxed line-clamp-3">{product.description}</p>
+                    <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">{product.description}</p>
                   )}
 
-                  {/* Stock & Trust badges */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                    <div className="flex items-center gap-2 text-muted-foreground flex-col sm:flex-row">
-                      <span className={`px-2 py-1 rounded text-xs font-semibold ${product.stock_status === "in_stock" ? "bg-green-100 text-green-700" : product.stock_status === "low_stock" ? "bg-yellow-100 text-yellow-700" : "bg-red-100 text-red-700"}`}>
-                        {product.stock_status === "in_stock" ? "In Stock" : product.stock_status === "low_stock" ? "Low Stock" : "Sold Out"}
-                      </span>
-                      {product.stock_quantity > 0 && (
-                        <span className="text-muted-foreground text-xs">
-                          ({product.stock_quantity} available)
-                        </span>
-                      )}
+                  {/* Phone Models - COMPACT VERSION with smaller chips */}
+                  {splitModels(product.model).length > 0 && (
+                    <div className="bg-secondary/30 p-2 rounded-lg">
+                      <p className="text-xs font-semibold mb-1.5">Phone Models</p>
+                      <div className="flex flex-wrap gap-1.5 max-h-[80px] overflow-y-auto">
+                        {splitModels(product.model).map(model => (
+                          <span key={model} className="text-[11px] bg-card border border-border px-2 py-0.5 rounded-full whitespace-nowrap">
+                            {model}
+                          </span>
+                        ))}
+                      </div>
                     </div>
-                    <div className="text-muted-foreground space-y-0.5">
-                      <p>✅ Genuine product</p>
-                      <p>🚚 Free delivery over KSh 5,000</p>
-                    </div>
-                  </div>
-                </div>
+                  )}
 
-                {/* Color Selector */}
-                {colors.length > 0 && (
-                  <div className="border-t border-border pt-4 space-y-3">
-                    <div>
-                      <p className="text-sm font-semibold mb-3">Select Color</p>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                  {/* Color Selector - compact */}
+                  {colors.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-xs font-semibold">Select Color</p>
+                      <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5">
                         {colors.map(color => (
                           <button
                             key={color}
                             onClick={() => setSelectedColor(color)}
-                            className={`px-3 py-2 text-xs sm:text-sm font-medium rounded-lg border-2 transition-all ${
+                            className={`px-2 py-1 text-[11px] font-medium rounded-lg border transition-all ${
                               selectedColor === color
                                 ? "border-primary bg-primary text-primary-foreground"
                                 : "border-border hover:border-primary text-foreground"
@@ -446,14 +464,14 @@ const ProductPage = () => {
                         ))}
                       </div>
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
 
-                {/* CTA Buttons */}
-                <div className="flex gap-3 pt-4 border-t border-border">
+                {/* CTA Buttons - NOW VISIBLE WITHOUT SCROLLING */}
+                <div className="flex gap-2 pt-3 mt-3 border-t border-border sticky bottom-0 bg-white/95 backdrop-blur-sm md:static md:bg-transparent md:backdrop-blur-none">
                   <Button 
-                    size="lg" 
-                    className="flex-1" 
+                    size="default" 
+                    className="flex-1 text-sm py-2"
                     onClick={() => addToCart({ 
                       id: product.id, 
                       name: product.name, 
@@ -463,17 +481,17 @@ const ProductPage = () => {
                     })} 
                     disabled={product.stock_status === "out_of_stock"}
                   >
-                    <ShoppingCart className="w-4 h-4 mr-2" /> 
+                    <ShoppingCart className="w-3.5 h-3.5 mr-1.5" /> 
                     {product.stock_status === "out_of_stock" ? "Out of Stock" : "Add to Cart"}
                   </Button>
                   <Button 
-                    size="lg" 
+                    size="default" 
                     variant="outline"
                     onClick={toggleFavorite}
                     className="px-3"
                     title={isFav ? "Remove from favorites" : "Add to favorites"}
                   >
-                    <Heart className={`w-5 h-5 ${isFav ? "fill-red-500 text-red-500" : ""}`} />
+                    <Heart className={`w-4 h-4 ${isFav ? "fill-red-500 text-red-500" : ""}`} />
                   </Button>
                 </div>
               </div>

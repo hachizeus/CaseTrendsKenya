@@ -95,7 +95,6 @@ const AdminDashboard = () => {
   const statCards = [
     { label: "Total Products", value: stats.products, icon: Package, color: "bg-slate-700", link: "/admin/products" },
     { label: "Low Stock Items", value: lowStockCount, icon: FolderTree, color: "bg-yellow-500", link: "/admin/products" },
-    { label: "Categories", value: stats.categories, icon: FolderTree, color: "bg-violet-500", link: "/admin/categories" },
     { label: "Registered Users", value: stats.users, icon: Users, color: "bg-emerald-500", link: "/admin/users", adminOnly: true },
     { label: "Orders", value: stats.orders, icon: ShoppingBag, color: "bg-primary", link: "/admin/orders" },
     { label: "Reviews", value: stats.reviews, icon: Star, color: "bg-yellow-500", link: "/admin/reviews" },
@@ -105,7 +104,6 @@ const AdminDashboard = () => {
 
   const quickActions = [
     { label: "Add Product", to: "/admin/products", icon: Plus, color: "bg-slate-100 text-slate-700 border-slate-200" },
-    { label: "Add Category", to: "/admin/categories", icon: Plus, color: "bg-violet-50 text-violet-600 border-violet-200" },
     { label: "Add Hero Slide", to: "/admin/slides", icon: Plus, color: "bg-orange-50 text-orange-600 border-orange-200" },
     { label: "View Orders", to: "/admin/orders", icon: ShoppingBag, color: "bg-primary/10 text-primary border-primary/20" },
   ];

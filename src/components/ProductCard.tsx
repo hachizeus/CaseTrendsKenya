@@ -1,4 +1,4 @@
-import { ShoppingCart, Heart } from "lucide-react";
+import { ShoppingCart, Heart, Star } from "lucide-react";
 import { motion } from "framer-motion";
 import React, { useState, useEffect, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
@@ -16,15 +16,25 @@ interface ProductCardProps {
   originalPrice?: number | null;
   category: string;
   brand: string;
+  model?: string | null;
   stockStatus: string;
   index: number;
+  rating?: number;
+  reviewCount?: number;
 }
 
-const ProductCard = ({ id, name, images, price, originalPrice, category, brand, stockStatus, index }: ProductCardProps) => {
+const ProductCard = ({ id, name, images, price, originalPrice, category, brand, model, stockStatus, index, rating, reviewCount }: ProductCardProps) => {
   const discount = originalPrice ? Math.round(((originalPrice - price) / originalPrice) * 100) : 0;
   const sorted = [...images].sort((a, b) => a.display_order - b.display_order);
   const primaryImg = sorted.find(i => i.is_primary)?.image_url || sorted[0]?.image_url || "/placeholder.svg";
   const secondaryImg = sorted.length > 1 ? sorted[1]?.image_url : primaryImg;
+  const displayModel = model
+    ? model
+        .split(/[\r\n,]+/)
+        .map(s => s.trim())
+        .filter(Boolean)[0]
+    : undefined;
+  const avgRating = rating ? Math.max(0, Math.min(5, rating)) : 0;
   const [hovered, setHovered] = useState(false);
   const [isFav, setIsFav] = useState(false);
   const [addingToCart, setAddingToCart] = useState(false);
@@ -114,7 +124,8 @@ const ProductCard = ({ id, name, images, price, originalPrice, category, brand, 
               width={500}
               height={625}
               sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
-              className="w-full h-full object-contain object-center bg-white"
+              resize="cover"
+              className="block w-full h-full object-cover object-center"
             />
           </motion.div>
 
@@ -165,10 +176,28 @@ const ProductCard = ({ id, name, images, price, originalPrice, category, brand, 
 
         {/* Info */}
         <div className="p-3 sm:p-4 border-t border-border">
-          <p className="text-[10px] sm:text-xs text-muted-foreground mb-1 uppercase tracking-wide">{brand}</p>
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wide">{brand}</p>
+            {displayModel && <span className="text-[10px] sm:text-xs text-muted-foreground lowercase">· {displayModel}</span>}
+          </div>
           <h3 className="text-[11px] sm:text-sm lg:text-base font-semibold line-clamp-2 mb-2 group-hover:text-primary transition-colors leading-snug min-h-[2.5rem]">
             {name}
           </h3>
+          <div className="space-y-2">
+            <div className="flex items-center gap-0.5">
+              {[1, 2, 3, 4, 5].map(s => (
+                <Star
+                  key={s}
+                  className={`w-3 h-3 ${s <= avgRating ? "text-yellow-400 fill-yellow-400" : "text-muted-foreground"}`}
+                />
+              ))}
+            </div>
+            {reviewCount !== undefined && (
+              <p className="text-[10px] sm:text-xs text-muted-foreground">
+                {reviewCount > 0 ? `${reviewCount} review${reviewCount === 1 ? "" : "s"}` : "No reviews"}
+              </p>
+            )}
+          </div>
           <div className="flex items-center justify-between gap-2">
             <div>
               <span className="text-sm sm:text-base font-bold text-primary">
@@ -204,6 +233,8 @@ export default React.memo(ProductCard, (prevProps, nextProps) => {
     prevProps.id === nextProps.id &&
     prevProps.price === nextProps.price &&
     prevProps.name === nextProps.name &&
-    prevProps.images === nextProps.images
+    prevProps.images === nextProps.images &&
+    prevProps.rating === nextProps.rating &&
+    prevProps.reviewCount === nextProps.reviewCount
   );
 });

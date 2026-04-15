@@ -67,7 +67,8 @@ const AdminProducts = () => {
       !query ||
       p.name?.toLowerCase().includes(query) ||
       p.brand?.toLowerCase().includes(query) ||
-      p.category?.toLowerCase().includes(query)
+      p.category?.toLowerCase().includes(query) ||
+      p.model?.toLowerCase().includes(query)
     );
   }, [products, search]);
 
@@ -79,18 +80,18 @@ const AdminProducts = () => {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl font-bold">Products</h1>
           <p className="text-sm text-muted-foreground">{products.length} total</p>
         </div>
-        <Button onClick={() => navigate("/admin/products/new")} className="gap-2">
+        <Button onClick={() => navigate("/admin/products/new")} className="gap-2 w-full sm:w-auto">
           <Plus className="w-4 h-4" /> Add Product
         </Button>
       </div>
 
       {/* Search */}
-      <div className="relative">
+      <div className="relative max-w-2xl">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <Input
           placeholder="Search products..."
@@ -104,33 +105,120 @@ const AdminProducts = () => {
       {loading ? (
         <TableSkeleton rows={6} columns={6} />
       ) : (
-        <div className="bg-white border border-border overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-secondary border-b border-border">
-                <tr>
-                  <th className="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wide text-muted-foreground">
-                    Product
-                  </th>
-                  <th className="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wide text-muted-foreground hidden sm:table-cell">
-                    Category
-                  </th>
-                  <th className="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wide text-muted-foreground">
-                    Price
-                  </th>
-                  <th className="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wide text-muted-foreground hidden md:table-cell">
-                    Status
-                  </th>
-                  <th className="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wide text-muted-foreground hidden lg:table-cell">
-                    Images
-                  </th>
-                  <th className="text-right px-4 py-3 font-semibold text-xs uppercase tracking-wide text-muted-foreground">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {filteredProducts.map((p) => {
+        <>
+          <div className="space-y-3 md:hidden">
+            {filteredProducts.map((p) => {
+              const primaryImg =
+                p.product_images?.find((i: any) => i.is_primary)?.image_url ||
+                p.product_images?.[0]?.image_url ||
+                "/placeholder.svg";
+              const stockQuantity = typeof p.stock_quantity === "number" ? p.stock_quantity : null;
+              const statusLabel =
+                stockQuantity === 0 || p.stock_status === "out_of_stock"
+                  ? "Out of Stock"
+                  : p.stock_status === "in_stock"
+                  ? "In Stock"
+                  : p.stock_status === "low_stock"
+                  ? "Low Stock"
+                  : "Sold Out";
+              const statusClass =
+                stockQuantity === 0 || p.stock_status === "out_of_stock"
+                  ? "bg-red-100 text-red-600"
+                  : p.stock_status === "in_stock"
+                  ? "bg-emerald-100 text-emerald-700"
+                  : p.stock_status === "low_stock"
+                  ? "bg-yellow-100 text-yellow-700"
+                  : "bg-red-100 text-red-600";
+
+              return (
+                <div key={p.id} className="bg-white border border-border rounded-3xl p-4 shadow-sm">
+                  <div className="flex items-start gap-4">
+                    <img
+                      src={getOptimizedImageUrl(primaryImg, {
+                        width: 140,
+                        height: 140,
+                        quality: 70,
+                        resize: "contain",
+                      })}
+                      alt={p.name}
+                      className="w-20 h-20 rounded-2xl bg-secondary object-contain p-2 border border-border"
+                    />
+                    <div className="min-w-0 space-y-2">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="font-semibold text-sm truncate">{p.name}</p>
+                          <p className="text-[11px] text-muted-foreground truncate">{p.brand}</p>
+                        </div>
+                        <p className="text-sm font-semibold text-primary">KSh {Number(p.price).toLocaleString()}</p>
+                      </div>
+                      <div className="flex flex-wrap gap-2 text-[11px]">
+                        <span className="px-2 py-1 rounded-full bg-secondary text-muted-foreground">{p.category}</span>
+                        <span className="px-2 py-1 rounded-full bg-secondary text-muted-foreground">{p.model || "—"}</span>
+                      </div>
+                      <div className="flex flex-wrap gap-2 items-center text-[11px]">
+                        <span className={`inline-flex items-center rounded-full px-2.5 py-1 ${statusClass}`}>{statusLabel}</span>
+                        <span className="text-muted-foreground">{stockQuantity > 0 ? `${stockQuantity} left` : "0 left"}</span>
+                        <span className="text-muted-foreground">{p.product_images?.length || 0}/10 images</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-4 flex flex-wrap gap-2 justify-end">
+                    {p.is_featured && <span className="inline-flex items-center gap-1 rounded-full bg-yellow-100 text-yellow-700 px-2 py-1 text-[11px]">Featured</span>}
+                    {p.is_trending && <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary px-2 py-1 text-[11px]">Trending</span>}
+                    <button
+                      onClick={() => navigate(`/admin/products/${p.id}`)}
+                      className="inline-flex items-center justify-center rounded-full border border-border px-3 py-1.5 text-xs text-foreground hover:bg-secondary transition-colors"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDelete(p.id)}
+                      disabled={isDeletingId === p.id}
+                      className="inline-flex items-center justify-center rounded-full border border-border px-3 py-1.5 text-xs text-destructive hover:bg-red-50 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {isDeletingId === p.id ? "Deleting…" : "Delete"}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+            {filteredProducts.length === 0 && (
+              <p className="text-muted-foreground text-center py-12 text-sm">
+                {products.length === 0 ? "No products yet." : "No products match your search."}
+              </p>
+            )}
+          </div>
+
+          <div className="hidden md:block bg-white border border-border overflow-hidden rounded-3xl shadow-sm">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm min-w-[760px]">
+                <thead className="bg-secondary border-b border-border">
+                  <tr>
+                    <th className="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wide text-muted-foreground">
+                      Product
+                    </th>
+                    <th className="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wide text-muted-foreground hidden sm:table-cell">
+                      Category
+                    </th>
+                    <th className="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wide text-muted-foreground hidden sm:table-cell">
+                      Model
+                    </th>
+                    <th className="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wide text-muted-foreground">
+                      Price
+                    </th>
+                    <th className="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wide text-muted-foreground hidden md:table-cell">
+                      Status
+                    </th>
+                    <th className="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wide text-muted-foreground hidden lg:table-cell">
+                      Images
+                    </th>
+                    <th className="text-right px-4 py-3 font-semibold text-xs uppercase tracking-wide text-muted-foreground">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {filteredProducts.map((p) => {
                     const primaryImg =
                       p.product_images?.find((i: any) => i.is_primary)?.image_url ||
                       p.product_images?.[0]?.image_url ||
@@ -165,17 +253,19 @@ const AdminProducts = () => {
                                 resize: "contain",
                               })}
                               alt={p.name}
-                              title={primaryImg}
-                              className="w-10 h-10 object-contain bg-secondary border border-border flex-shrink-0"
+                              className="w-12 h-12 rounded-2xl object-contain bg-secondary border border-border flex-shrink-0"
                             />
                             <div className="min-w-0">
                               <p className="font-medium truncate max-w-[160px]">{p.name}</p>
-                              <p className="text-xs text-muted-foreground">{p.brand}</p>
+                              <p className="text-xs text-muted-foreground truncate">{p.brand}</p>
                             </div>
                           </div>
                         </td>
                         <td className="px-4 py-3 text-muted-foreground hidden sm:table-cell">
                           {p.category}
+                        </td>
+                        <td className="px-4 py-3 text-muted-foreground hidden sm:table-cell max-w-[180px] truncate">
+                          {p.model || "—"}
                         </td>
                         <td className="px-4 py-3 font-semibold text-primary">
                           KSh {Number(p.price).toLocaleString()}
@@ -223,15 +313,16 @@ const AdminProducts = () => {
                       </tr>
                     );
                   })}
-              </tbody>
-            </table>
-            {filteredProducts.length === 0 && (
-              <p className="text-muted-foreground text-center py-12 text-sm">
-                {products.length === 0 ? "No products yet." : "No products match your search."}
-              </p>
-            )}
+                </tbody>
+              </table>
+              {filteredProducts.length === 0 && (
+                <p className="text-muted-foreground text-center py-12 text-sm">
+                  {products.length === 0 ? "No products yet." : "No products match your search."}
+                </p>
+              )}
+            </div>
           </div>
-        </div>
+        </>
       )}
     </div>
   );

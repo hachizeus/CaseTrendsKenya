@@ -5,7 +5,8 @@ import Header from "@/components/Header";
 import CategoryNav from "@/components/CategoryNav";
 import Footer from "@/components/Footer";
 import ProductCard from "@/components/ProductCard";
-import { useProductsPaginated, useCategories } from "@/hooks/queries";
+import { useProductsPaginated } from "@/hooks/queries";
+import { categoryMatches, getDisplayCategoryName } from "@/lib/utils";
 import { SlidersHorizontal, X, ChevronDown, ChevronUp, ChevronLeft, ChevronRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,14 @@ const priceRanges = [
   { label: "Over KSh 100,000", min: 100000, max: Infinity },
 ];
 
+const homepageCategories = [
+  "All Accessories",
+  "Phone Cases",
+  "Wearables",
+  "Audio & Earbuds",
+  "Screen Protectors",
+];
+
 const colorOptions = ["Black", "White", "Blue", "Red", "Green", "Gold", "Silver", "Pink", "Purple"];
 
 const ProductsPage = () => {
@@ -29,38 +38,94 @@ const ProductsPage = () => {
 
   // Fetch paginated products and categories
   const { data: paginatedData, isLoading, error } = useProductsPaginated(page, PAGE_SIZE);
-  const { data: categories = [], isLoading: categoriesLoading } = useCategories();
+  const paginated = paginatedData as any;
 
-  const products = paginatedData?.data || [];
-  const totalProducts = paginatedData?.total || 0;
+  const products = (paginated?.data as any[]) || [];
+  const totalProducts = (paginated?.total as number) || 0;
   const totalPages = Math.ceil(totalProducts / PAGE_SIZE);
 
   // Filter state
   const selectedCategory = searchParams.get("category") || "";
   const selectedBrand = searchParams.get("brand") || "";
+  const selectedModel = searchParams.get("model") || "";
+  const selectedCompatibility = searchParams.get("compatibility") || "";
   const selectedColor = searchParams.get("color") || "";
   const selectedPrice = searchParams.get("price") || "";
-  const selectedStock = searchParams.get("stock") || "";
   const searchQuery = searchParams.get("q") || "";
   const sortBy = searchParams.get("sort") || "newest";
 
   // Collapsible filter sections
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
-    category: true, brand: true, price: true, color: true, stock: true,
+    category: true, brand: true, model: true, compatibility: true, price: true, color: true,
   });
 
   const toggleSection = (key: string) => setOpenSections(s => ({ ...s, [key]: !s[key] }));
 
   // Derive unique brands from current products
   const brands = useMemo(() => {
-    const set = new Set(products.map(p => p.brand).filter(Boolean));
+    const set = new Set<string>(products.map((p: any) => p.brand).filter(Boolean));
     return Array.from(set).sort();
   }, [products]);
 
   // Derive unique colors from current products
   const availableColors = useMemo(() => {
-    const set = new Set(products.map(p => p.color).filter(Boolean));
+    const set = new Set<string>(products.map((p: any) => p.color).filter(Boolean));
     return Array.from(set).sort();
+  }, [products]);
+
+  const splitModels = (value?: string) =>
+    (value || "")
+      .split(/[\r\n,]+/)
+      .map(s => s.trim())
+      .filter(Boolean);
+
+  const availableModels = useMemo(() => {
+    const filteredByBrand = selectedBrand ? products.filter((p: any) => p.brand === selectedBrand) : products;
+    const models = new Set<string>();
+    filteredByBrand.forEach((p: any) => splitModels(p.model).forEach(model => models.add(model)));
+    return Array.from(models).sort();
+  }, [products, selectedBrand]);
+
+  const availableCompatibilities = useMemo(() => {
+    const set = new Set<string>(products.map((p: any) => p.compatibility_type || "" ).filter(Boolean));
+    return Array.from(set).sort();
+  }, [products]);
+
+  const categoryCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    homepageCategories.forEach(cat => {
+      counts[cat] = products.filter((p: any) => cat === "All Accessories" ? true : categoryMatches(p, cat)).length;
+    });
+    return counts;
+  }, [products]);
+
+  const brandCounts = useMemo(() => {
+    const counts = products.reduce((acc: Record<string, number>, product: any) => {
+      if (product.brand) {
+        acc[product.brand] = (acc[product.brand] || 0) + 1;
+      }
+      return acc;
+    }, {});
+    return counts;
+  }, [products]);
+
+  const modelCounts = useMemo(() => {
+    const counts = products.reduce((acc: Record<string, number>, product: any) => {
+      splitModels(product.model).forEach(model => {
+        acc[model] = (acc[model] || 0) + 1;
+      });
+      return acc;
+    }, {});
+    return counts;
+  }, [products]);
+
+  const compatibilityCounts = useMemo(() => {
+    const counts = products.reduce((acc: Record<string, number>, product: any) => {
+      const compatibility = product.compatibility_type || "Other";
+      acc[compatibility] = (acc[compatibility] || 0) + 1;
+      return acc;
+    }, {});
+    return counts;
   }, [products]);
 
   // Apply client-side filters to paginated results
@@ -72,14 +137,16 @@ const ProductsPage = () => {
       result = result.filter(p => 
         p.name.toLowerCase().includes(q) || 
         p.brand.toLowerCase().includes(q) || 
-        p.category.toLowerCase().includes(q)
+        p.category.toLowerCase().includes(q) || 
+        (p.model?.toLowerCase() || "").includes(q) || 
+        (p.compatibility_type?.toLowerCase() || "").includes(q)
       );
     }
-    if (selectedCategory) result = result.filter(p => p.category === selectedCategory);
+    if (selectedCategory && selectedCategory !== "All Accessories") result = result.filter(p => categoryMatches(p, selectedCategory));
     if (selectedBrand) result = result.filter(p => p.brand === selectedBrand);
+    if (selectedModel) result = result.filter(p => splitModels(p.model).some(model => model.toLowerCase() === selectedModel.toLowerCase()));
+    if (selectedCompatibility) result = result.filter(p => (p.compatibility_type || "").toLowerCase().includes(selectedCompatibility.toLowerCase()));
     if (selectedColor) result = result.filter(p => p.color === selectedColor);
-    if (selectedStock === "in_stock") result = result.filter(p => p.stock_status === "in_stock");
-    if (selectedStock === "out_of_stock") result = result.filter(p => p.stock_status === "out_of_stock");
 
     if (selectedPrice) {
       const range = priceRanges[Number(selectedPrice)];
@@ -95,7 +162,7 @@ const ProductsPage = () => {
     }
 
     return result;
-  }, [products, searchQuery, selectedCategory, selectedBrand, selectedColor, selectedStock, selectedPrice, sortBy]);
+  }, [products, searchQuery, selectedCategory, selectedBrand, selectedColor, selectedPrice, sortBy]);
 
   const setFilter = (key: string, value: string) => {
     const params = new URLSearchParams(searchParams);
@@ -106,24 +173,71 @@ const ProductsPage = () => {
 
   const clearFilters = () => setSearchParams({}, { replace: true });
 
-  const activeFilterCount = [selectedCategory, selectedBrand, selectedColor, selectedPrice, selectedStock].filter(Boolean).length;
+const activeFilterCount = [selectedCategory, selectedBrand, selectedModel, selectedCompatibility, selectedColor, selectedPrice].filter(Boolean).length;
 
   const FilterSidebar = () => (
     <div className="space-y-1">
       {/* Category */}
-      <FilterSection title="Category" isOpen={openSections.category} toggle={() => toggleSection("category")}>
-        {categories.map(cat => (
-          <FilterButton key={cat.id} label={cat.name} active={selectedCategory === cat.name} onClick={() => setFilter("category", selectedCategory === cat.name ? "" : cat.name)} />
+      <FilterSection title="Category" isOpen={openSections.category} toggle={() => toggleSection("category")}> 
+        {homepageCategories.map(cat => (
+          <FilterButton
+            key={cat}
+            label={cat}
+            count={categoryCounts[cat]}
+            active={selectedCategory === cat}
+            onClick={() => setFilter("category", selectedCategory === cat ? "" : cat)}
+          />
         ))}
       </FilterSection>
 
       {/* Brand */}
       <FilterSection title="Brand" isOpen={openSections.brand} toggle={() => toggleSection("brand")}>
         {brands.map(brand => (
-          <FilterButton key={brand} label={brand} active={selectedBrand === brand} onClick={() => setFilter("brand", selectedBrand === brand ? "" : brand)} />
+          <FilterButton
+            key={brand}
+            label={brand}
+            active={selectedBrand === brand}
+            onClick={() => {
+              if (selectedBrand === brand) {
+                setFilter("brand", "");
+                setFilter("model", "");
+              } else {
+                setFilter("brand", brand);
+                setFilter("model", "");
+              }
+            }}
+          />
         ))}
         {brands.length === 0 && <p className="text-xs text-muted-foreground px-3">No brands available</p>}
       </FilterSection>
+
+      {availableModels.length > 0 && (
+        <FilterSection title="Model" isOpen={openSections.model} toggle={() => toggleSection("model")}>
+          {availableModels.map(model => (
+            <FilterButton
+              key={model}
+              label={model}
+              count={modelCounts[model] || 0}
+              active={selectedModel === model}
+              onClick={() => setFilter("model", selectedModel === model ? "" : model)}
+            />
+          ))}
+        </FilterSection>
+      )}
+
+      {availableCompatibilities.length > 0 && (
+        <FilterSection title="Compatibility" isOpen={openSections.compatibility} toggle={() => toggleSection("compatibility")}>
+          {availableCompatibilities.map(compatibility => (
+            <FilterButton
+              key={compatibility}
+              label={compatibility}
+              count={compatibilityCounts[compatibility] || 0}
+              active={selectedCompatibility === compatibility}
+              onClick={() => setFilter("compatibility", selectedCompatibility === compatibility ? "" : compatibility)}
+            />
+          ))}
+        </FilterSection>
+      )}
 
       {/* Price */}
       <FilterSection title="Price Range" isOpen={openSections.price} toggle={() => toggleSection("price")}>
@@ -147,12 +261,6 @@ const ProductsPage = () => {
             </button>
           ))}
         </div>
-      </FilterSection>
-
-      {/* Stock */}
-      <FilterSection title="Availability" isOpen={openSections.stock} toggle={() => toggleSection("stock")}>
-        <FilterButton label="In Stock" active={selectedStock === "in_stock"} onClick={() => setFilter("stock", selectedStock === "in_stock" ? "" : "in_stock")} />
-        <FilterButton label="Out of Stock" active={selectedStock === "out_of_stock"} onClick={() => setFilter("stock", selectedStock === "out_of_stock" ? "" : "out_of_stock")} />
       </FilterSection>
 
       {activeFilterCount > 0 && (
@@ -187,13 +295,19 @@ const ProductsPage = () => {
             {/* Desktop sidebar */}
             <aside className="hidden lg:block w-64 flex-shrink-0">
               <div className="sticky top-20 bg-card border border-border rounded-xl p-4">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-bold text-sm flex items-center gap-2">
-                    <SlidersHorizontal className="w-4 h-4" /> Filters
-                  </h3>
-                  {activeFilterCount > 0 && (
-                    <span className="bg-primary text-primary-foreground text-xs px-2 py-0.5 rounded-full">{activeFilterCount}</span>
-                  )}
+                <div className="flex items-center justify-between mb-4 gap-2">
+                  <div className="flex items-center gap-2">
+                    <SlidersHorizontal className="w-4 h-4" />
+                    <h3 className="font-bold text-sm">Filters</h3>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {activeFilterCount > 0 && (
+                      <span className="bg-primary text-primary-foreground text-xs px-2 py-0.5 rounded-full">{activeFilterCount}</span>
+                    )}
+                    {activeFilterCount > 0 && (
+                      <button onClick={clearFilters} className="text-xs text-destructive hover:underline">Clear All</button>
+                    )}
+                  </div>
                 </div>
                 <FilterSidebar />
               </div>
@@ -205,7 +319,7 @@ const ProductsPage = () => {
               <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
                 <div>
                   <h1 className="text-lg sm:text-2xl lg:text-3xl font-bold">
-                    {selectedCategory || "All Products"}
+                    {selectedCategory && selectedCategory !== "All Accessories" ? selectedCategory : "All Products"}
                   </h1>
                   <p className="text-sm text-muted-foreground">{filtered.length} products found</p>
                 </div>
@@ -235,11 +349,12 @@ const ProductsPage = () => {
               {/* Active filter tags */}
               {activeFilterCount > 0 && (
                 <div className="flex flex-wrap gap-2 mb-4">
-                  {selectedCategory && <FilterTag label={`Category: ${selectedCategory}`} onRemove={() => setFilter("category", "")} />}
+                  {selectedCategory && selectedCategory !== "All Accessories" && <FilterTag label={`Category: ${selectedCategory}`} onRemove={() => setFilter("category", "")} />}
                   {selectedBrand && <FilterTag label={`Brand: ${selectedBrand}`} onRemove={() => setFilter("brand", "")} />}
+                  {selectedModel && <FilterTag label={`Model: ${selectedModel}`} onRemove={() => setFilter("model", "")} />}
+                  {selectedCompatibility && <FilterTag label={`Compatibility: ${selectedCompatibility}`} onRemove={() => setFilter("compatibility", "")} />}
                   {selectedPrice && <FilterTag label={priceRanges[Number(selectedPrice)]?.label || ""} onRemove={() => setFilter("price", "")} />}
                   {selectedColor && <FilterTag label={`Color: ${selectedColor}`} onRemove={() => setFilter("color", "")} />}
-                  {selectedStock && <FilterTag label={selectedStock === "in_stock" ? "In Stock" : "Out of Stock"} onRemove={() => setFilter("stock", "")} />}
                 </div>
               )}
 
@@ -281,7 +396,10 @@ const ProductsPage = () => {
                         originalPrice={product.original_price ? Number(product.original_price) : null}
                         category={product.category}
                         brand={product.brand}
+                        model={product.model}
                         stockStatus={product.stock_status}
+                        rating={product.rating}
+                        reviewCount={product.review_count}
                         index={i}
                       />
                     ))}
@@ -378,14 +496,17 @@ const FilterSection = ({ title, isOpen, toggle, children }: { title: string; isO
   </div>
 );
 
-const FilterButton = ({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) => (
+const FilterButton = ({ label, count, active, onClick }: { label: string; count?: number; active: boolean; onClick: () => void }) => (
   <button
     onClick={onClick}
     className={`block w-full text-left px-3 py-1.5 text-sm rounded-md transition-colors ${
       active ? "bg-primary/10 text-primary font-medium" : "text-muted-foreground hover:text-foreground hover:bg-muted"
     }`}
   >
-    {label}
+    <div className="flex items-center justify-between gap-2">
+      <span>{label}</span>
+      {typeof count === "number" && <span className="text-[11px] text-muted-foreground">{count}</span>}
+    </div>
   </button>
 );
 

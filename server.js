@@ -15,10 +15,11 @@ const app = express();
 
 const SUPABASE_URL = process.env.SUPABASE_URL || "";
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SERVICE_ROLE_KEY || "";
-const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || "http://localhost:5173,http://localhost:3000,https://casetrendskenya.onrender.com").split(",").map((origin) => origin.trim()).filter(Boolean);
-const EMAIL_FROM = process.env.EMAIL_FROM || process.env.EMAIL_USER || "info@casetrendskenya.co.ke";
-const EMAIL_REPLY_TO = process.env.EMAIL_REPLY_TO || EMAIL_FROM;
-const ADMIN_NOTIFICATION_EMAIL = process.env.ADMIN_NOTIFICATION_EMAIL || EMAIL_FROM;
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || "http://localhost:5173,http://localhost:3000,https://casetrendskenya.onrender.com,https://casetrendskenya.co.ke").split(",").map((origin) => origin.trim()).filter(Boolean);
+const EMAIL_USER = "info@casetrendskenya.co.ke";
+const EMAIL_FROM = `Case Trends Kenya <${EMAIL_USER}>`;
+const EMAIL_REPLY_TO = "info@casetrendskenya.co.ke";
+const ADMIN_NOTIFICATION_EMAIL = EMAIL_USER;
 
 const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
   auth: { persistSession: false, autoRefreshToken: false, storage: null },
@@ -146,21 +147,22 @@ app.use(express.static(path.join(__dirname, 'dist'), {
   etag: false,
 }));
 
-const POSTMARK_API_TOKEN = process.env.POSTMARK_API_TOKEN || "";
+const POSTMARK_API_TOKEN = "10b0fffa-aa2b-4302-8568-199e0ecb31df";
 
 const postmarkClient = new ServerClient(POSTMARK_API_TOKEN);
 
-if (!process.env.EMAIL_USER || !POSTMARK_API_TOKEN) {
+if (!POSTMARK_API_TOKEN) {
   console.warn(
-    "EMAIL_USER and POSTMARK_API_TOKEN are required to send emails. Email delivery will fail without them."
+    "POSTMARK_API_TOKEN is required to send emails. Email delivery will fail without it."
   );
 }
 
 // Order Confirmation Email Template
 const generateOrderConfirmationEmail = (orderData) => {
-  const siteUrl = process.env.SITE_URL || "https://casetrendskenya.com";
+  const siteUrl = process.env.SITE_URL || "https://casetrendskenya.co.ke";
   const trackingLink = `${siteUrl}/account/orders`;
   const safeCustomerName = escapeHtml(orderData.customer_name);
+  const isGuestOrder = !orderData.user_id;
   const safeCustomerEmail = escapeHtml(orderData.customer_email);
   const safeDeliveryAddress = escapeHtml(orderData.delivery_address || "");
   const safeStatus = escapeHtml(orderData.status);
@@ -184,6 +186,10 @@ const generateOrderConfirmationEmail = (orderData) => {
       ? `Pickup at Case Trends Kenya Store`
       : `${safeDeliveryAddress || "Delivery address will be confirmed with you shortly"}`;
 
+  const statusUpdateText = isGuestOrder
+    ? "Since you placed this order as a guest, we will send order status updates to your email."
+    : `We will contact you shortly to confirm your order details and provide you with shipping information. You can track your order at: ${trackingLink}`;
+
   const text = `Order Confirmation
 
 Dear ${safeCustomerName},
@@ -204,9 +210,9 @@ Delivery Address: ${deliveryInfo}
 
 Order Status: PENDING
 
-We will contact you shortly to confirm your order details and provide you with shipping information. You can track your order at: ${trackingLink}
+${statusUpdateText}
 
-If you have any questions or need to make changes, please reply to this email or contact us at support@casetrendskenya.com
+If you have any questions or need to make changes, please reply to this email or contact us at support@casetrendskenya.co.ke
 
 Thank you for choosing Case Trends Kenya!
 
@@ -255,6 +261,7 @@ Website: ${siteUrl}`;
         <div class="wrapper">
           <div class="container">
             <div class="header">
+              <img src="${siteUrl}/logo.png" alt="Case Trends Kenya" width="140" style="display:block; margin: 0 auto 20px; max-width: 100%; height: auto;" />
               <h1>Order Confirmed!</h1>
               <p>Thank you for your purchase</p>
             </div>
@@ -307,22 +314,24 @@ Website: ${siteUrl}`;
                 </div>
               </div>
               
-              <p>We'll contact you shortly to confirm your order details. You can track your order status anytime by visiting your account.</p>
-              
+<p>${isGuestOrder ? "Since you placed this order as a guest, we will send order status updates to your email." : "We'll contact you shortly to confirm your order details. You can track your order status anytime by visiting your account."}</p>
+               
+              ${isGuestOrder ? "" : `
               <div style="text-align: center;">
                 <a href="${trackingLink}" class="cta-button">Track Your Order</a>
               </div>
+              `}
               
               <hr class="divider">
               
-              <p style="font-size: 13px; color: #666;">If you have any questions about your order or need assistance, please don't hesitate to reach out to our support team at <strong>support@casetrendskenya.com</strong> or reply to this email.</p>
+              <p style="font-size: 13px; color: #666;">If you have any questions about your order or need assistance, please don't hesitate to reach out to our support team at <strong>support@casetrendskenya.co.ke</strong> or reply to this email.</p>
             </div>
             
             <div class="footer">
               <p><strong>Case Trends Kenya</strong></p>
               <p>Your Trusted Mobile Phone & Accessories Provider</p>
               <div class="contact-info">
-                <p>Email: <a href="mailto:support@casetrendskenya.com">support@casetrendskenya.com</a></p>
+                <p>Email: <a href="mailto:support@casetrendskenya.co.ke">support@casetrendskenya.co.ke</a></p>
                 <p>Website: <a href="${siteUrl}">${siteUrl}</a></p>
               </div>
               <p style="margin-top: 12px; color: #999;">© 2026 Case Trends Kenya. All rights reserved.</p>
@@ -343,9 +352,10 @@ Website: ${siteUrl}`;
 
 // Status Update Email Template
 const generateStatusUpdateEmail = (orderData) => {
-  const siteUrl = process.env.SITE_URL || "https://casetrendskenya.com";
+  const siteUrl = process.env.SITE_URL || "https://casetrendskenya.co.ke";
   const orderLink = `${siteUrl}/account/orders`;
   const safeCustomerName = escapeHtml(orderData.customer_name);
+  const isGuestOrder = !orderData.user_id;
   const safeOrderId = escapeHtml(orderData.id);
   const safeStatus = escapeHtml(orderData.status);
   const safeTotal = Number(orderData.total_amount).toLocaleString();
@@ -357,6 +367,10 @@ const generateStatusUpdateEmail = (orderData) => {
     pending: "Your order is pending and awaiting confirmation.",
     cancelled: "Your order has been cancelled. Please contact support if you have questions."
   };
+
+  const statusUpdateText = isGuestOrder
+    ? "Since you placed this order as a guest, we will send status updates to your email."
+    : `View your full order details at: ${orderLink}`;
 
   const text = `Order Status Update
 
@@ -370,13 +384,13 @@ Status: ${safeStatus.toUpperCase()}
 
 ${statusMessages[orderData.status] || "Thank you for your business!"}
 
-View your full order details at: ${orderLink}
+${statusUpdateText}
 
-If you have any questions about your order, please reply to this email or contact us at support@casetrendskenya.com
+If you have any questions about your order, please reply to this email or contact us at support@casetrendskenya.co.ke
 
 Best regards,
 Case Trends Kenya Customer Support Team
-visit: https://casetrendskenya.com
+visit: https://casetrendskenya.co.ke
   `.trim();
 
   const html = `
@@ -413,6 +427,7 @@ visit: https://casetrendskenya.com
         <div class="wrapper">
           <div class="container">
             <div class="header">
+              <img src="${siteUrl}/logo.png" alt="Case Trends Kenya" width="140" style="display:block; margin: 0 auto 20px; max-width: 100%; height: auto;" />
               <h1>Order Update</h1>
               <p>Your Case Trends Kenya order status has changed</p>
             </div>
@@ -439,11 +454,14 @@ visit: https://casetrendskenya.com
               
               <p>${statusMessages[orderData.status] || "Thank you for your business!"}</p>
               
-              <p>If you have any questions about your order, feel free to reach out to us at <strong>support@casetrendskenya.com</strong> or reply directly to this email.</p>
-              
+<p>If you have any questions about your order, feel free to reach out to us at <strong>support@casetrendskenya.co.ke</strong> or reply directly to this email.</p>
+              ${isGuestOrder ? `
+              <p style="margin-top: 16px;">Since you placed this order as a guest, we will send status updates to your email.</p>
+              ` : `
               <div style="text-align: center; margin: 20px 0;">
                 <a href="${orderLink}" class="cta-button">View Order Details</a>
               </div>
+              `}
               
               <hr class="divider">
               
@@ -456,7 +474,7 @@ visit: https://casetrendskenya.com
               <p><strong>Case Trends Kenya</strong></p>
               <p>Mobile Phone & Accessories</p>
               <div class="contact-info">
-                <p>Email: <a href="mailto:support@casetrendskenya.com">support@casetrendskenya.com</a></p>
+                <p>Email: <a href="mailto:support@casetrendskenya.co.ke">support@casetrendskenya.co.ke</a></p>
                 <p>Website: <a href="${siteUrl}">${siteUrl}</a></p>
               </div>
               <p style="margin-top: 12px; color: #999;">© 2026 Case Trends Kenya. All rights reserved.</p>
@@ -565,7 +583,7 @@ app.post("/api/send-email", async (req, res) => {
     console.log(`Sending ${type} email to ${emailTemplate.to}...`);
 
     const info = await postmarkClient.sendEmail({
-      From: process.env.EMAIL_USER,
+      From: EMAIL_FROM,
       To: emailTemplate.to,
       ReplyTo: EMAIL_REPLY_TO,
       Subject: emailTemplate.subject,
@@ -575,7 +593,7 @@ app.post("/api/send-email", async (req, res) => {
         { Name: "X-Mailer", Value: "CaseTrendsKenya/1.0" },
         { Name: "X-Priority", Value: "3" },
         { Name: "Importance", Value: "normal" },
-        { Name: "List-Unsubscribe", Value: `<mailto:${process.env.EMAIL_USER}?subject=Unsubscribe>, <https://casetrendskenya.com/unsubscribe>` },
+        { Name: "List-Unsubscribe", Value: `<mailto:${EMAIL_USER}?subject=Unsubscribe>, <https://casetrendskenya.co.ke/unsubscribe>` },
       ],
     });
 

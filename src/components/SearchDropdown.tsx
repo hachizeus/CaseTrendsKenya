@@ -35,8 +35,8 @@ const SearchDropdown = ({ query, onSuggestionSelect, isOpen }: SearchDropdownPro
 
     supabase
       .from("products")
-      .select("id, name, price, brand, category, product_images(image_url, is_primary)")
-      .or(`name.ilike.%${searchTerm}%,brand.ilike.%${searchTerm}%,category.ilike.%${searchTerm}%`)
+      .select("id, name, price, brand, category, model, product_images(image_url, is_primary)")
+      .or(`name.ilike.%${searchTerm}%,brand.ilike.%${searchTerm}%,category.ilike.%${searchTerm}%,model.ilike.%${searchTerm}%`)
       .limit(8)
       .then(({ data, error }) => {
         if (error) {

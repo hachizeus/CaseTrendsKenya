@@ -3,8 +3,16 @@ import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCart } from "@/contexts/CartContext";
-import { supabase } from "@/integrations/supabase/client";
 import SearchDropdown from "./SearchDropdown";
+import { getDisplayCategoryName } from "@/lib/utils";
+
+const headerCategoryOptions = [
+  "All Accessories",
+  "Phone Cases",
+  "Wearables",
+  "Audio & Earbuds",
+  "Screen Protectors",
+];
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,7 +27,6 @@ const Header = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
-  const [categories, setCategories] = useState<any[]>([]);
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
   const { user, role, isAdmin, isModerator, signOut } = useAuth();
@@ -37,15 +44,6 @@ const Header = () => {
       };
     }
   }, [searchOpen]);
-
-  useEffect(() => {
-    supabase
-      .from("categories")
-      .select("name")
-      .eq("is_active", true)
-      .order("display_order")
-      .then(({ data }) => setCategories(data || []));
-  }, []);
 
   // Close category dropdown when clicking outside
   useEffect(() => {
@@ -99,7 +97,7 @@ const Header = () => {
               onClick={() => setShowCategoryDropdown(!showCategoryDropdown)}
               className="absolute left-0 top-0 h-full px-3 flex items-center gap-1.5 border-r border-border text-muted-foreground hover:text-foreground transition-colors text-sm"
             >
-              {selectedCategory || "All Categories"}
+              {selectedCategory ? getDisplayCategoryName(selectedCategory) : "All Categories"}
               <ChevronDown className="w-4 h-4" />
             </button>
             {showCategoryDropdown && (
@@ -114,19 +112,19 @@ const Header = () => {
                 >
                   All Categories
                 </button>
-                {categories.map(cat => (
+                {headerCategoryOptions.map(cat => (
                   <button
-                    key={cat.name}
+                    key={cat}
                     type="button"
                     onClick={() => {
-                      setSelectedCategory(cat.name);
+                      setSelectedCategory(cat);
                       setShowCategoryDropdown(false);
                     }}
                     className={`w-full text-left px-4 py-2.5 text-sm transition-colors hover:bg-secondary ${
-                      selectedCategory === cat.name ? "bg-secondary font-medium" : ""
+                      selectedCategory === cat ? "bg-secondary font-medium" : ""
                     }`}
                   >
-                    {cat.name}
+                    {getDisplayCategoryName(cat)}
                   </button>
                 ))}
               </div>
@@ -136,7 +134,7 @@ const Header = () => {
             <div className="flex border border-border rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-primary">
               <input
                 type="text"
-                placeholder="Search for phones, tablets, accessories..."
+                placeholder="Search phone cases, protectors, earbuds, chargers..."
                 className="flex-1 px-4 py-2.5 text-sm bg-background outline-none"
                 value={searchQuery}
                 onChange={e => {
@@ -263,7 +261,7 @@ const Header = () => {
           <div className="flex w-full border border-border rounded-lg overflow-hidden">
             <input
               type="text"
-              placeholder="Search products..."
+              placeholder="Search cases, protectors, earbuds..."
               className="flex-1 px-4 py-2.5 text-base bg-background outline-none"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}

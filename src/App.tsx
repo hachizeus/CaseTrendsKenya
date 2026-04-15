@@ -24,7 +24,6 @@ const AdminLayout = lazy(() => import("./pages/admin/AdminLayout.tsx"));
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard.tsx"));
 const AdminProducts = lazy(() => import("./pages/admin/AdminProducts.tsx"));
 const AdminProductsForm = lazy(() => import("./pages/admin/AdminProductsForm.tsx"));
-const AdminCategories = lazy(() => import("./pages/admin/AdminCategories.tsx"));
 const AdminSlides = lazy(() => import("./pages/admin/AdminSlides.tsx"));
 const AdminUsers = lazy(() => import("./pages/admin/AdminUsers.tsx"));
 const AdminReviews = lazy(() => import("./pages/admin/AdminReviews.tsx"));
@@ -121,7 +120,6 @@ const AppContent = () => {
           <Route path="products" element={<AdminProducts />} />
           <Route path="products/new" element={<AdminProductsForm />} />
           <Route path="products/:id" element={<AdminProductsForm />} />
-          <Route path="categories" element={<AdminCategories />} />
           <Route path="slides" element={<AdminSlides />} />
           <Route
             path="slides-overview"
