@@ -1,5 +1,6 @@
 import CategoryProductSection from "./CategoryProductSection";
 import MiniHeroBanner from "./MiniHeroBanner";
+import { MAIN_CATEGORIES } from "@/lib/categoryData";
 
 const sectionBgs = ["bg-white", "bg-secondary/30", "bg-white", "bg-secondary/30", "bg-white", "bg-secondary/30", "bg-white", "bg-secondary/30", "bg-white"];
 
@@ -8,13 +9,7 @@ const interstitialHeroes = [
   { sectionNumber: 3, title: "Deals You Can't Miss", subtitle: "Limited time offers on top phone accessories. Shop before they're gone.", bg: "bg-slate-900" },
 ];
 
-const homepageSections = [
-  "All Accessories",
-  "Phone Cases",
-  "Wearables",
-  "Audio & Earbuds",
-  "Screen Protectors",
-];
+const homepageSections = MAIN_CATEGORIES.slice(0, 6).map((cat) => cat.slug);
 
 const HomeCategorySections = () => {
   return (

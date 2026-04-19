@@ -35,16 +35,16 @@ const HeroBanner = () => {
         }
         
         supabase
-          .from("hero_slides")
+          .from("hero_slides" as any)
           .select("*")
           .eq("section_id", section.id)
           .eq("is_active", true)
           .order("display_order")
-          .then(({ data }) => {
+          .then(({ data }: any) => {
             setSlides(data || []);
             setLoading(false);
           })
-          .catch((err) => {
+          .catch((err: any) => {
             console.error("HeroBanner - Error fetching hero slides:", err);
             setSlides([]);
             setLoading(false);
@@ -91,7 +91,7 @@ const HeroBanner = () => {
       transition: {
         delay: delay,
         duration: 0.6,
-        ease: "easeOut",
+        ease: "easeOut" as const,
       },
     }),
     exit: { opacity: 0, y: -30, transition: { duration: 0.3 } },
@@ -100,13 +100,14 @@ const HeroBanner = () => {
   return (
     <section className="relative overflow-hidden bg-slate-100">
       <div className="px-4 sm:px-[max(1rem,calc((100vw-1400px)/2))]">
-        <div className="relative" style={{ height: "clamp(260px, 45vw, 480px)" }}>
+        {/* Added rounded corners to the outer container */}
+        <div className="relative rounded-2xl sm:rounded-3xl overflow-hidden shadow-lg" style={{ height: "clamp(260px, 45vw, 480px)" }}>
           {loading ? (
-            // Skeleton state
-            <div className="w-full h-full bg-gradient-to-r from-slate-200 to-slate-100 animate-pulse" />
+            // Skeleton state with rounded corners
+            <div className="w-full h-full bg-gradient-to-r from-slate-200 to-slate-100 animate-pulse rounded-2xl sm:rounded-3xl" />
           ) : slides.length === 0 ? (
-            // Empty state
-            <div className="w-full h-full bg-slate-50 flex items-center justify-center border border-dashed border-border">
+            // Empty state with rounded corners
+            <div className="w-full h-full bg-slate-50 flex items-center justify-center border border-dashed border-border rounded-2xl sm:rounded-3xl">
               <div className="text-center text-muted-foreground">
                 <div className="text-lg font-semibold">No Hero Slides</div>
                 <div className="text-xs mt-1">Add slides in Admin → Hero Slides to display here</div>
@@ -126,7 +127,7 @@ const HeroBanner = () => {
                   transition={{ 
                     type: "tween", 
                     duration: prefersReducedMotion ? 0 : 0.6, 
-                    ease: "easeInOut" 
+                    ease: "easeInOut"
                   }}
                   className="absolute inset-0 flex will-change-transform"
                 >
@@ -147,7 +148,7 @@ const HeroBanner = () => {
                   />
                   
                   {/* Dark Overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-r from-black/65 via-black/35 to-transparent" />
+                  <div className="absolute inset-0 bg-gradient-to-r from-black/65 via-black/35 to-transparent rounded-2xl sm:rounded-3xl" />
 
                   {/* Content - Title, Subtitle, Button */}
                   <div className="absolute inset-0 flex items-center">

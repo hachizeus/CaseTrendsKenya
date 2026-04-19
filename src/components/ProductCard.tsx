@@ -110,9 +110,9 @@ const ProductCard = ({ id, name, images, price, originalPrice, category, brand, 
       onMouseLeave={() => setHovered(false)}
       className="group h-full w-full min-w-0"
     >
-      <Link to={`/product/${id}`} className="block h-full min-h-full w-full bg-white border border-border hover:border-primary transition-colors duration-200 overflow-hidden">
+      <Link to={`/product/${id}`} className="block h-full min-h-full w-full bg-white hover:border-primary transition-colors duration-200 overflow-hidden flex flex-col">
         {/* Image */}
-        <div className="relative aspect-[4/5] bg-white overflow-hidden">
+        <div className="relative aspect-[4/5] bg-white overflow-hidden flex-shrink-0">
           <motion.div
             animate={{ scale: hovered ? 1.05 : 1 }}
             transition={{ duration: 0.4, ease: "easeInOut" }}
@@ -174,15 +174,23 @@ const ProductCard = ({ id, name, images, price, originalPrice, category, brand, 
           )}
         </div>
 
-        {/* Info */}
-        <div className="p-3 sm:p-4 border-t border-border">
-          <div className="flex items-center gap-2 flex-wrap">
-            <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wide">{brand}</p>
-            {displayModel && <span className="text-[10px] sm:text-xs text-muted-foreground lowercase">· {displayModel}</span>}
+        {/* Info - flex column to push rating & price to bottom */}
+        <div className="p-3 sm:p-4 border-t border-border flex flex-col flex-grow">
+          {/* Top section: brand, model, name */}
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wide">{brand}</p>
+              {displayModel && <span className="text-[10px] sm:text-xs text-muted-foreground lowercase">· {displayModel}</span>}
+            </div>
+            <h3 className="text-[11px] sm:text-sm lg:text-base font-semibold line-clamp-2 mb-2 group-hover:text-primary transition-colors leading-snug">
+              {name}
+            </h3>
           </div>
-          <h3 className="text-[11px] sm:text-sm lg:text-base font-semibold line-clamp-2 mb-2 group-hover:text-primary transition-colors leading-snug min-h-[2.5rem]">
-            {name}
-          </h3>
+
+          {/* Spacer to push rating and price to bottom */}
+          <div className="flex-grow" />
+
+          {/* Rating section - always at same level */}
           <div className="space-y-2">
             <div className="flex items-center gap-0.5">
               {[1, 2, 3, 4, 5].map(s => (
@@ -192,13 +200,15 @@ const ProductCard = ({ id, name, images, price, originalPrice, category, brand, 
                 />
               ))}
             </div>
-            {reviewCount !== undefined && (
-              <p className="text-[10px] sm:text-xs text-muted-foreground">
-                {reviewCount > 0 ? `${reviewCount} review${reviewCount === 1 ? "" : "s"}` : "No reviews"}
-              </p>
-            )}
+            <p className="text-[10px] sm:text-xs text-muted-foreground">
+              {reviewCount !== undefined && reviewCount > 0 
+                ? `${reviewCount} review${reviewCount === 1 ? "" : "s"}`
+                : "No reviews"}
+            </p>
           </div>
-          <div className="flex items-center justify-between gap-2">
+
+          {/* Price and mobile cart */}
+          <div className="flex items-center justify-between gap-2 mt-2">
             <div>
               <span className="text-sm sm:text-base font-bold text-primary">
                 KSh {price.toLocaleString()}

@@ -1,17 +1,26 @@
 import { Link } from "react-router-dom";
-import { Smartphone, Tablet, Headphones, Gamepad2, Watch, Cable, Tv, Camera, Laptop, Speaker, Battery, Wifi, type LucideIcon } from "lucide-react";
+import { Shield, Smartphone, Phone, Headphones, Gamepad2, Watch, Cable, Camera, Laptop, Tag, Battery, type LucideIcon } from "lucide-react";
+import { MAIN_CATEGORIES } from "@/lib/categoryData";
 
 const iconMap: Record<string, LucideIcon> = {
-  Smartphone, Tablet, Headphones, Gamepad2, Watch, Cable, Tv, Camera, Laptop, Speaker, Battery, Wifi,
+  Shield,
+  Smartphone,
+  Phone,
+  Headphones,
+  Gamepad2,
+  Watch,
+  Cable,
+  Camera,
+  Laptop,
+  Tag,
+  Battery,
 };
 
-const homepageNavItems = [
-  { label: "All Accessories", to: "/products", icon: "Smartphone" },
-  { label: "Phone Cases", to: "/products?category=Phone%20Cases", icon: "Cable" },
-  { label: "Wearables", to: "/products?category=Wearables", icon: "Watch" },
-  { label: "Audio & Earbuds", to: "/products?category=Audio%20%26%20Earbuds", icon: "Headphones" },
-  { label: "Screen Protectors", to: "/products?category=Screen%20Protectors", icon: "Battery" },
-];
+const homepageNavItems = MAIN_CATEGORIES.map((category) => ({
+  label: category.name,
+  to: `/products?category=${encodeURIComponent(category.slug)}`,
+  icon: category.icon,
+}));
 
 const CategoryNav = () => {
   return (

@@ -1,117 +1,89 @@
 import { Link } from "react-router-dom";
+import { MAIN_CATEGORIES } from "@/lib/categoryData";
 
-// Real-life category images from Unsplash (free, no auth needed)
+// Enhanced Image Mapping with high-quality Unsplash URLs
 const categoryImages: Record<string, string> = {
-  smartphones:    "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=160&q=80",
-  "smart phones": "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=160&q=80",
-  phones:         "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=160&q=80",
-  "phone cases":  "/covers.jpg",
-  cases:          "/covers.jpg",
-  protectors:     "/protector.jpg",
-  "screen protectors": "/protector.jpg",
-  tablets:        "https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=160&q=80",
-  "tablets & ipads": "https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=160&q=80",
-  ipads:          "https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=160&q=80",
-  headphones:     "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=160&q=80",
-  earbuds:        "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=160&q=80",
-  "audio & earbuds": "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=160&q=80",
-  audio:          "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=160&q=80",
-  chargers:       "https://images.unsplash.com/photo-1580910051074-c40fad0a9180?w=160&q=80",
-  "phone accessories": "/Accessories.jpg",
-  "mobile accessories": "/Accessories.jpg",
-  accessories:    "/Accessories.jpg",
-  "all accessories": "/Accessories.jpg",
-  smartwatches:   "/wearable.jpg",
-  wearables:      "/wearable.jpg",
-  watches:        "/wearable.jpg",
-  gaming:         "https://images.unsplash.com/photo-1593118247619-e2d6f056869e?w=160&q=80",
-  cameras:        "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=160&q=80",
-  camera:         "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=160&q=80",
-  speakers:       "https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=160&q=80",
-  speaker:        "https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=160&q=80",
-  "streaming devices": "https://images.unsplash.com/photo-1593305841991-05c297ba4575?w=160&q=80",
-  tv:             "https://images.unsplash.com/photo-1593305841991-05c297ba4575?w=160&q=80",
-  televisions:    "https://images.unsplash.com/photo-1593305841991-05c297ba4575?w=160&q=80",
+  smartphones: "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=300&q=80",
+  "smart phones": "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=300&q=80",
+  phones: "https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=300&q=80",
+  "phone cases": "https://images.unsplash.com/photo-1541807084-5c52b6b3adef?w=300&q=80",
+  cases: "https://images.unsplash.com/photo-1541807084-5c52b6b3adef?w=300&q=80",
+  protectors: "https://images.unsplash.com/photo-1616348436168-de43ad0db179?w=300&q=80",
+  "screen protectors": "https://images.unsplash.com/photo-1616348436168-de43ad0db179?w=300&q=80",
+  tablets: "https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=300&q=80",
+  "tablets & ipads": "https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=300&q=80",
+  ipads: "https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=300&q=80",
+  headphones: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300&q=80",
+  earbuds: "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=300&q=80",
+  "audio & earbuds": "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=300&q=80",
+  audio: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300&q=80",
+  chargers: "https://images.unsplash.com/photo-1583863788434-e58a36330cf0?w=300&q=80",
+  "phone accessories": "https://images.unsplash.com/photo-1603351154351-5e2d0600bb77?w=300&q=80",
+  accessories: "https://images.unsplash.com/photo-1603351154351-5e2d0600bb77?w=300&q=80",
+  "phone holders": "https://images.unsplash.com/photo-1586105251261-72a756497a11?w=300&q=80",
+  "power banks": "https://images.unsplash.com/photo-1609592424083-057d4f9f4a9b?w=300&q=80",
+  // Fixed Smartwatch image
+  smartwatches: "https://images.unsplash.com/photo-1508685096489-7aac2968395d?w=300&q=80",
+  wearables: "https://images.unsplash.com/photo-1508685096489-7aac2968395d?w=300&q=80",
+  watches: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300&q=80",
+  gaming: "https://images.unsplash.com/photo-1593118247619-e2d6f056869e?w=300&q=80",
+  cameras: "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=300&q=80",
+  speakers: "https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=300&q=80",
 };
 
 const getImage = (name: string) =>
   categoryImages[name.toLowerCase()] ||
-  `https://images.unsplash.com/photo-1468495244123-6c6c332eeece?w=160&q=80`;
-
-const featuredCategories = [
-  { name: "All Accessories", slug: "" },
-  { name: "Phone Cases", slug: "Phone Cases" },
-  { name: "Wearables", slug: "Wearables" },
-  { name: "Audio & Earbuds", slug: "Audio & Earbuds" },
-  { name: "Screen Protectors", slug: "Screen Protectors" },
-];
+  `https://images.unsplash.com/photo-1468495244123-6c6c332eeece?w=300&q=80`;
 
 const CategoryCards = () => {
-  const mobileCategories = [...featuredCategories, ...featuredCategories];
+  // Duplicating the array to ensure the loop is seamless
+  const scrollItems = [...MAIN_CATEGORIES, ...MAIN_CATEGORIES];
 
   return (
     <section className="py-8 sm:py-10 border-b border-border bg-white overflow-hidden">
-      <div className="container">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-base sm:text-lg font-bold tracking-tight">Top Phone Accessories</h2>
-          <Link to="/products" className="text-xs text-primary font-medium hover:underline">View All →</Link>
+      <div className="container mx-auto px-4">
+        <div className="flex items-center justify-between mb-8">
+          <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
+            Shop by Category
+          </h2>
+          <Link 
+            to="/products" 
+            className="text-sm font-semibold text-primary hover:text-primary/80 transition-colors"
+          >
+            View All Categories →
+          </Link>
         </div>
       </div>
 
-      <div className="relative overflow-hidden md:hidden px-4 sm:px-[max(1rem,calc((100vw-1400px)/2))]">
-        <div className="mobile-marquee flex gap-4 items-center whitespace-nowrap py-2">
-          {mobileCategories.map((cat, i) => (
+      {/* Marquee Container */}
+      <div className="relative w-full overflow-hidden group">
+        <div className="animate-marquee flex gap-6 sm:gap-10 py-4 scrollbar-hide">
+          {scrollItems.map((cat, i) => (
             <Link
               key={`${cat.slug}-${i}`}
-              to={cat.slug ? `/products?category=${encodeURIComponent(cat.slug)}` : "/products"}
-              className="group inline-flex flex-col items-center gap-2.5 flex-shrink-0 w-24 sm:w-28"
+              to={`/products?category=${encodeURIComponent(cat.slug)}`}
+              className="flex flex-col items-center gap-3 flex-shrink-0 w-28 sm:w-36"
             >
-              <div className="w-20 h-20 sm:w-24 sm:h-24 border border-border bg-secondary overflow-hidden group-hover:border-primary transition-colors duration-200 rounded-3xl">
+              <div className="w-24 h-24 sm:w-32 sm:h-32 bg-slate-50 overflow-hidden rounded-full border-2 border-transparent group-hover:border-slate-100 hover:!border-primary transition-all duration-300 shadow-sm">
                 <img
                   src={getImage(cat.name)}
                   alt={cat.name}
-                  width={96}
-                  height={96}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  className="w-full h-full object-cover hover:scale-110 transition-transform duration-500"
                   loading="lazy"
                 />
               </div>
-              <div className="text-center">
-                <p className="text-[11px] sm:text-xs font-semibold text-foreground group-hover:text-primary transition-colors leading-tight">
+              <div className="text-center px-2">
+                <p className="text-[11px] sm:text-xs font-bold text-slate-700 uppercase tracking-wider leading-tight">
                   {cat.name}
                 </p>
-                <p className="text-[10px] text-muted-foreground">{cat.name}</p>
               </div>
             </Link>
           ))}
         </div>
-      </div>
 
-      <div className="hidden md:grid container grid-cols-2 lg:grid-cols-5 gap-4 px-4 sm:px-[max(1rem,calc((100vw-1400px)/2))]">
-        {featuredCategories.map((cat, i) => (
-          <Link
-            key={`${cat.slug}-desktop-${i}`}
-            to={cat.slug ? `/products?category=${encodeURIComponent(cat.slug)}` : "/products"}
-            className="group flex flex-col items-center gap-2.5 rounded-3xl border border-border bg-secondary p-4 text-center hover:border-primary transition-colors duration-200"
-          >
-            <div className="w-20 h-20 sm:w-24 sm:h-24 border border-border bg-white overflow-hidden rounded-3xl">
-              <img
-                src={getImage(cat.name)}
-                alt={cat.name}
-                width={96}
-                height={96}
-                className="w-full h-full object-cover"
-                loading="lazy"
-              />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors leading-tight">
-                {cat.name}
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">{cat.name}</p>
-            </div>
-          </Link>
-        ))}
+        {/* Gradient Fades for a professional edge-to-edge look */}
+        <div className="pointer-events-none absolute inset-y-0 left-0 w-20 bg-gradient-to-r from-white to-transparent z-10" />
+        <div className="pointer-events-none absolute inset-y-0 right-0 w-20 bg-gradient-to-l from-white to-transparent z-10" />
       </div>
     </section>
   );

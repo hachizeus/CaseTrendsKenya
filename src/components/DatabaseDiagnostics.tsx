@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { generateCategoryIssuesReport } from "@/lib/categoryValidation";
 
 /**
  * DatabaseDiagnostics Component
@@ -25,6 +26,9 @@ export default function DatabaseDiagnostics() {
     heroSlidesError: string | null;
     sampleSections: any[];
     sampleSlides: any[];
+    productsCount: number | null;
+    productsError: string | null;
+    categoryReport: any;
   }>({
     heroSectionsCount: null,
     heroSlidesCount: null,
@@ -32,6 +36,9 @@ export default function DatabaseDiagnostics() {
     heroSlidesError: null,
     sampleSections: [],
     sampleSlides: [],
+    productsCount: null,
+    productsError: null,
+    categoryReport: null,
   });
 
   useEffect(() => {
@@ -96,6 +103,43 @@ export default function DatabaseDiagnostics() {
         heroSlidesError: err.message,
       }));
     }
+
+    // Test products table and validate categories
+    try {
+      console.log("Checking products table and categories...");
+      const { data: products, error: productsError, count: productsCount } = await (supabase
+        .from("products" as any)
+        .select("id, name, category, subcategory", { count: "exact" })
+        .limit(100) as any);
+
+      console.log("products response:", {
+        count: productsCount,
+        error: productsError,
+      });
+
+      if (!productsError && products) {
+        const report = generateCategoryIssuesReport(products);
+        console.log("📊 Category Validation Report:", report);
+        
+        setResults((prev) => ({
+          ...prev,
+          productsCount: productsCount || products?.length || 0,
+          productsError: null,
+          categoryReport: report,
+        }));
+      } else {
+        setResults((prev) => ({
+          ...prev,
+          productsError: productsError?.message || null,
+        }));
+      }
+    } catch (err: any) {
+      console.error("Error querying products:", err);
+      setResults((prev) => ({
+        ...prev,
+        productsError: err.message,
+      }));
+    }
   };
 
   const getStatusColor = (count: number | null, error: string | null) => {
@@ -158,6 +202,41 @@ export default function DatabaseDiagnostics() {
                   • {slide.title} (active: {slide.is_active ? "yes" : "no"})
                 </div>
               ))}
+            </div>
+          )}
+        </div>
+
+        <div className="space-y-2 text-xs border-t pt-3">
+          <div className="flex items-center justify-between">
+            <span>Products Table:</span>
+            <div className="flex items-center gap-2">
+              <Badge variant={getStatusColor(results.productsCount, results.productsError)}>
+                {results.productsError ? "Error" : `${results.productsCount} rows`}
+              </Badge>
+            </div>
+          </div>
+          {results.productsError && (
+            <div className="bg-red-50 text-red-800 p-2 rounded font-mono text-[10px] break-words">
+              {results.productsError}
+            </div>
+          )}
+          {results.categoryReport && (
+            <div className="bg-blue-50 p-2 rounded">
+              <div className="font-semibold mb-1">📊 Category Health:</div>
+              <div className="text-[10px] space-y-0.5">
+                <div>Total: {results.categoryReport.total} products</div>
+                <div>Valid: {results.categoryReport.valid} ({results.categoryReport.validPercentage}%)</div>
+                <div className={results.categoryReport.invalid > 0 ? "text-red-600 font-semibold" : ""}>
+                  Invalid: {results.categoryReport.invalid}
+                </div>
+                {results.categoryReport.invalid > 0 && (
+                  <div className="text-red-600 text-[9px] mt-1">
+                    <div>Missing Category: {results.categoryReport.summary.missingCategory}</div>
+                    <div>Invalid Category: {results.categoryReport.summary.invalidCategory}</div>
+                    <div>Invalid Subcategory: {results.categoryReport.summary.invalidSubcategory}</div>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>

@@ -1,34 +1,22 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { MAIN_CATEGORIES, SUBCATEGORIES } from "./categoryData";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
 const categoryDisplayNameMap: Record<string, string> = {
-  smartphones: "Phone Cases",
-  "smart phones": "Phone Cases",
-  phones: "Phone Cases",
-  "phone cases": "Phone Cases",
-  cases: "Phone Cases",
-  protectors: "Screen Protectors",
-  "screen protectors": "Screen Protectors",
-  tablets: "Screen Protectors",
-  "tablets & ipads": "Screen Protectors",
-  ipads: "Screen Protectors",
-  "audio & earbuds": "Earbuds",
-  audio: "Earbuds",
-  earbuds: "Earbuds",
-  chargers: "Chargers",
-  "power banks": "Chargers",
-  "streaming devices": "Chargers",
-  wearables: "Accessories",
-  smartwatches: "Accessories",
-  watch: "Accessories",
-  accessories: "Accessories",
-  "phone accessories": "Accessories",
-  "mobile accessories": "Accessories",
-  gaming: "Accessories",
+  ...MAIN_CATEGORIES.reduce((acc, cat) => {
+    acc[cat.slug] = cat.name;
+    acc[cat.name.toLowerCase()] = cat.name;
+    return acc;
+  }, {} as Record<string, string>),
+  ...SUBCATEGORIES.reduce((acc, sub) => {
+    acc[sub.slug] = sub.name;
+    acc[sub.name.toLowerCase()] = sub.name;
+    return acc;
+  }, {} as Record<string, string>),
 };
 
 export function getDisplayCategoryName(name: string) {
@@ -36,31 +24,104 @@ export function getDisplayCategoryName(name: string) {
   return categoryDisplayNameMap[normalized] || name;
 }
 
-const categorySearchPatterns: Record<string, RegExp> = {
-  Smartphones: /smartphone|smart phones|phone|iphone|samsung|tecno|infinix|itel|xiaomi|oppo|vivo|realme|huawei|nokia|motorola|oneplus/i,
-  "Tablets & iPads": /tablet|ipad|tablets|ipads/i,
-  "Audio & Earbuds": /audio|earbud|earphone|headphone|headset/i,
-  Gaming: /game|gaming|playstation|xbox|nintendo|controller/i,
-  Wearables: /wearable|watch|smartwatch|fitness tracker|glasses|spectacles/i,
-  "Streaming Devices": /stream|tv|firestick|roku|chromecast|streaming/i,
-  "Phone case": /case|cover|bumper/i,
-  "Phone Cases": /case|cover|bumper/i,
-  Protector: /protector|screen protector|tempered glass/i,
-  "Screen Protectors": /protector|screen protector|tempered glass/i,
-};
+export function productMatchesCategoryFilter(
+  product: { category?: string; subcategory?: string; brand?: string; model?: string; compatibility_type?: string; name?: string; category_id?: string; subcategory_id?: string },
+  categorySlug?: string,
+  subcategorySlug?: string
+) {
+  // If no filters specified, include product
+  if (!categorySlug && !subcategorySlug) return true;
 
-export function categoryMatches(product: { category?: string; brand?: string; model?: string; compatibility_type?: string; name?: string }, selectedCategory: string) {
-  if (!selectedCategory || selectedCategory === "All Accessories") return true;
-
-  const matcher = categorySearchPatterns[selectedCategory];
-  const text = [product.category, product.brand, product.model, product.compatibility_type, product.name]
+  // Normalize all text fields to lowercase for consistent comparison
+  const normalizeText = (text?: string) => (text ? String(text).toLowerCase().trim() : "");
+  const productCategory = normalizeText(product.category);
+  const productSubcategory = normalizeText(product.subcategory);
+  
+  // Build searchable text from all product fields
+  const searchText = [productCategory, productSubcategory, product.brand, product.model, product.compatibility_type, product.name]
     .filter(Boolean)
     .join(" ")
     .toLowerCase();
 
-  if (matcher) {
-    return matcher.test(text);
+  // Check subcategory filter if specified
+  if (subcategorySlug) {
+    const normalizedSubSlug = normalizeText(subcategorySlug);
+    const subDisplayName = normalizeText(getDisplayCategoryName(subcategorySlug));
+    
+    // Match if product's subcategory field matches OR search text includes subcategory slug/name
+    const subMatches = 
+      productSubcategory === normalizedSubSlug ||
+      productSubcategory === subDisplayName ||
+      searchText.includes(normalizedSubSlug) ||
+      searchText.includes(subDisplayName);
+    
+    if (!subMatches) return false;
   }
 
-  return text.includes(selectedCategory.trim().toLowerCase());
+  // Check category filter if specified
+  if (categorySlug) {
+    const normalizedCatSlug = normalizeText(categorySlug);
+    const catDisplayName = normalizeText(getDisplayCategoryName(categorySlug));
+    
+    // Match if product's category field matches OR search text includes category slug/name
+    const catMatches = 
+      productCategory === normalizedCatSlug ||
+      productCategory === catDisplayName ||
+      searchText.includes(normalizedCatSlug) ||
+      searchText.includes(catDisplayName);
+    
+    if (!catMatches) return false;
+  }
+
+  return true;
+}
+
+/**
+ * Validates that a product has a properly formatted category field.
+ * Returns true if the category is a valid main category slug or display name.
+ */
+export function isValidProductCategory(product: { category?: string; subcategory?: string }): boolean {
+  if (!product.category) return false;
+  
+  const normalized = (product.category || "").toLowerCase().trim();
+  
+  // Check if it matches any main category slug
+  const matchesMainCategory = MAIN_CATEGORIES.some(cat => 
+    cat.slug.toLowerCase() === normalized ||
+    cat.name.toLowerCase() === normalized
+  );
+  
+  return matchesMainCategory;
+}
+
+/**
+ * Gets the slug for a product's category, returning null if invalid.
+ * Useful for normalizing category values.
+ */
+export function getCategorySlugFromProduct(product: { category?: string; subcategory?: string }): string | null {
+  if (!product.category) return null;
+  
+  const normalized = (product.category || "").toLowerCase().trim();
+  
+  // Find matching category
+  const matchedCategory = MAIN_CATEGORIES.find(cat => 
+    cat.slug.toLowerCase() === normalized ||
+    cat.name.toLowerCase() === normalized
+  );
+  
+  return matchedCategory?.slug || null;
+}
+
+/**
+ * Validates that a product belongs to a specific category.
+ * More strict than productMatchesCategoryFilter - requires exact category match.
+ */
+export function productBelongsToCategory(
+  product: { category?: string; subcategory?: string },
+  categorySlug: string
+): boolean {
+  if (!product.category || !categorySlug) return false;
+  
+  const productCatSlug = getCategorySlugFromProduct(product);
+  return productCatSlug === categorySlug.toLowerCase();
 }

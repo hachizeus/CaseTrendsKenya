@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
 import ProductCard from "./ProductCard";
-import { categoryMatches, getDisplayCategoryName } from "@/lib/utils";
+import { getDisplayCategoryName, productMatchesCategoryFilter } from "@/lib/utils";
 
 interface CategoryProductSectionProps {
   category: string;
@@ -18,29 +18,56 @@ const CategoryProductSection = ({ category, bgClass = "bg-white" }: CategoryProd
   useEffect(() => {
     const load = async () => {
       setLoading(true);
-      const { data } = await supabase
-        .from("products")
-        .select("*, product_images(*), reviews(rating)")
-        .order("created_at", { ascending: false })
-        .limit(50);
+      try {
+        // Fetch more products to ensure we have enough after filtering
+        // Use 100 as a reasonable limit for fetching before in-memory filtering
+        const { data, error } = await supabase
+          .from("products")
+          .select("*, product_images(*), reviews(rating)")
+          .order("created_at", { ascending: false })
+          .limit(100);
 
-      const results = (data || []).map((product: any) => {
-        const reviews = Array.isArray(product.reviews) ? product.reviews : [];
-        const reviewCount = reviews.length;
-        const rating = reviewCount
-          ? reviews.reduce((sum: number, review: any) => sum + (review.rating || 0), 0) / reviewCount
-          : 0;
-        return {
-          ...product,
-          rating,
-          review_count: reviewCount,
-        };
-      }).filter(product =>
-        category === "All Accessories" ? true : categoryMatches(product, category)
-      ).slice(0, 4);
+        if (error) {
+          console.error("Error fetching products:", error);
+          setProducts([]);
+          setLoading(false);
+          return;
+        }
 
-      setProducts(results);
-      setLoading(false);
+        const results = (data || [])
+          .map((product: any) => {
+            const reviews = Array.isArray(product.reviews) ? product.reviews : [];
+            const reviewCount = reviews.length;
+            const rating = reviewCount
+              ? reviews.reduce((sum: number, review: any) => sum + (review.rating || 0), 0) / reviewCount
+              : 0;
+            return {
+              ...product,
+              rating,
+              review_count: reviewCount,
+            };
+          })
+          .filter(product => {
+            // Handle special case "All Accessories"
+            if (category === "All Accessories") return true;
+            
+            // Filter by category - ensure product has a valid category field
+            if (!product.category) {
+              console.warn(`Product ${product.id} has no category field set`);
+              return false;
+            }
+            
+            return productMatchesCategoryFilter(product, category);
+          })
+          .slice(0, 4);
+
+        setProducts(results);
+      } catch (err) {
+        console.error("Failed to load products for category", category, err);
+        setProducts([]);
+      } finally {
+        setLoading(false);
+      }
     };
 
     load();

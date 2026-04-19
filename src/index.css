@@ -91,9 +91,11 @@
     height: 100%;
     width: 100%;
   }
+  .horizontal-marquee,
   .mobile-marquee {
     animation: marquee 22s linear infinite;
   }
+  .horizontal-marquee:hover,
   .mobile-marquee:hover {
     animation-play-state: paused;
   }

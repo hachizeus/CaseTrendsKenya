@@ -24,7 +24,6 @@ const Index = () => (
   <div className="min-h-screen flex flex-col">
     <TopBar />
     <Header />
-    <CategoryNav />
     <main className="flex-1">
 
       {/* Hero 1 — Main banner (display_order 0–9) */}

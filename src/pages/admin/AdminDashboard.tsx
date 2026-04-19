@@ -160,7 +160,16 @@ const AdminDashboard = () => {
         },
       },
       scales: {
-        x: { grid: { display: false }, ticks: { color: "#64748b" } },
+        x: { 
+          grid: { display: false }, 
+          ticks: { 
+            color: "#64748b",
+            maxRotation: 45,
+            minRotation: 45,
+            autoSkip: true,
+            maxTicksLimit: 6
+          } 
+        },
         y: {
           ticks: {
             color: "#64748b",
@@ -185,14 +194,14 @@ const AdminDashboard = () => {
     "bg-yellow-100 text-yellow-700";
 
   return (
-    <div className="space-y-6">
+    <div className="w-full max-w-full overflow-x-hidden px-3 sm:px-4 md:px-5 lg:px-6 space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-foreground">Dashboard</h1>
           <p className="text-sm text-muted-foreground mt-0.5">Welcome back — here's what's happening.</p>
         </div>
-        <Link to="/admin/products" className="hidden sm:flex items-center gap-2 bg-primary text-white px-4 py-2 text-sm font-medium hover:bg-primary/90 transition-colors">
+        <Link to="/admin/products" className="hidden sm:flex items-center gap-2 bg-primary text-white px-4 py-2 text-sm font-medium hover:bg-primary/90 transition-colors w-fit">
           <Plus className="w-4 h-4" /> Add Product
         </Link>
       </div>
@@ -200,14 +209,14 @@ const AdminDashboard = () => {
       {/* Revenue overview */}
       {isAdmin && (
         <div className="grid gap-4 lg:grid-cols-[1.5fr_0.9fr]">
-          <div className="rounded-3xl border border-border bg-white p-5 shadow-sm">
-            <div className="flex items-center justify-between mb-4">
+          <div className="rounded-3xl border border-border bg-white p-4 sm:p-5 shadow-sm overflow-x-auto">
+            <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
               <div>
                 <h2 className="text-sm font-semibold text-slate-900">Revenue Overview</h2>
                 <p className="mt-1 text-xs text-muted-foreground">Paystack-only revenue for the last 30 days, sourced directly from orders.</p>
               </div>
             </div>
-            <div className="h-[320px]">
+            <div className="h-[280px] sm:h-[320px] min-w-[280px]">
               {loading ? (
                 <div className="flex h-full items-center justify-center text-sm text-slate-500">Loading revenue chart...</div>
               ) : paystackRevenue === 0 ? (
@@ -221,14 +230,14 @@ const AdminDashboard = () => {
             </div>
           </div>
 
-          <div className="grid gap-4">
-            <div className="rounded-3xl border border-border bg-white p-5 shadow-sm">
+          <div className="grid gap-4 grid-cols-2 sm:grid-cols-1">
+            <div className="rounded-3xl border border-border bg-white p-4 sm:p-5 shadow-sm">
               <p className="text-sm text-muted-foreground">Total Paystack Revenue</p>
-              <p className="mt-3 text-3xl font-semibold text-slate-900">KSh {processedRevenue.total.toLocaleString()}</p>
+              <p className="mt-2 sm:mt-3 text-2xl sm:text-3xl font-semibold text-slate-900 break-words">KSh {processedRevenue.total.toLocaleString()}</p>
             </div>
-            <div className="rounded-3xl border border-border bg-white p-5 shadow-sm">
+            <div className="rounded-3xl border border-border bg-white p-4 sm:p-5 shadow-sm">
               <p className="text-sm text-muted-foreground">Average Paystack Order</p>
-              <p className="mt-3 text-3xl font-semibold text-slate-900">KSh {processedRevenue.avg.toFixed(0).toLocaleString()}</p>
+              <p className="mt-2 sm:mt-3 text-2xl sm:text-3xl font-semibold text-slate-900 break-words">KSh {processedRevenue.avg.toFixed(0).toLocaleString()}</p>
             </div>
           </div>
         </div>
@@ -236,21 +245,21 @@ const AdminDashboard = () => {
 
       {/* Stat cards */}
       {!isAdmin && (
-        <div className="rounded-xl border border-yellow-200 bg-yellow-50 p-4 text-sm text-amber-900">
+        <div className="rounded-xl border border-yellow-200 bg-yellow-50 p-3 sm:p-4 text-xs sm:text-sm text-amber-900">
           Moderators have limited admin access: you can view and manage orders, products, categories, slides, and reviews, but user management and financial dashboards are restricted to admins only.
         </div>
       )}
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3 md:gap-4">
         {visibleStatCards.map(card => (
-          <Link key={card.label} to={card.link} className="bg-white border border-border p-4 sm:p-5 hover:border-primary transition-colors group">
-            <div className={`w-9 h-9 ${card.color} flex items-center justify-center mb-3`}>
-              <card.icon className="w-4 h-4 text-white" />
+          <Link key={card.label} to={card.link} className="bg-white border border-border p-3 sm:p-4 md:p-5 hover:border-primary transition-colors group block">
+            <div className={`w-8 h-8 sm:w-9 sm:h-9 ${card.color} flex items-center justify-center mb-2 sm:mb-3`}>
+              <card.icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" />
             </div>
-            <p className="text-2xl sm:text-3xl font-bold text-foreground">
+            <p className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground break-words">
               {loading ? <span className="inline-block w-8 h-6 bg-secondary animate-pulse" /> : card.value}
             </p>
-            <p className="text-xs text-muted-foreground mt-1">{card.label}</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 break-words">{card.label}</p>
           </Link>
         ))}
       </div>
@@ -258,9 +267,9 @@ const AdminDashboard = () => {
       {/* Recent Orders + Recent Products */}
       <div className="grid lg:grid-cols-2 gap-4 sm:gap-6">
         {/* Recent Orders */}
-        <div className="bg-white border border-border">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-border">
-            <h2 className="font-semibold text-sm flex items-center gap-2">
+        <div className="bg-white border border-border overflow-hidden">
+          <div className="flex items-center justify-between px-4 sm:px-5 py-3 sm:py-4 border-b border-border">
+            <h2 className="font-semibold text-xs sm:text-sm flex items-center gap-2">
               <ShoppingBag className="w-4 h-4 text-primary" /> Recent Orders
             </h2>
             <Link to="/admin/orders" className="text-xs text-primary hover:underline flex items-center gap-1">
@@ -269,23 +278,23 @@ const AdminDashboard = () => {
           </div>
           <div className="divide-y divide-border">
             {loading ? Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="flex items-center gap-3 px-5 py-3 animate-pulse">
+              <div key={i} className="flex items-center gap-3 px-4 sm:px-5 py-3 animate-pulse">
                 <div className="flex-1 space-y-1.5">
                   <div className="h-3 bg-secondary rounded w-3/4" />
                   <div className="h-3 bg-secondary rounded w-1/3" />
                 </div>
               </div>
             )) : recentOrders.map(o => (
-              <div key={o.id} className="flex items-center gap-3 px-5 py-3 hover:bg-secondary/40 transition-colors">
+              <div key={o.id} className="flex items-center gap-2 sm:gap-3 px-4 sm:px-5 py-3 hover:bg-secondary/40 transition-colors">
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{o.customer_name}</p>
-                  <p className="text-xs text-muted-foreground">{o.customer_phone}</p>
+                  <p className="text-xs sm:text-sm font-medium truncate">{o.customer_name}</p>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground truncate">{o.customer_phone}</p>
                 </div>
                 <div className="text-right flex-shrink-0">
-                  <p className="text-sm font-semibold text-primary">
+                  <p className="text-xs sm:text-sm font-semibold text-primary whitespace-nowrap">
                     {isAdmin ? `KSh ${Number(o.total_amount).toLocaleString()}` : "KSh ****"}
                   </p>
-                  <span className={`text-[10px] font-semibold px-1.5 py-0.5 capitalize ${orderBadge(o.status)}`}>
+                  <span className={`text-[9px] sm:text-[10px] font-semibold px-1.5 py-0.5 capitalize ${orderBadge(o.status)} whitespace-nowrap`}>
                     {o.status}
                   </span>
                 </div>
@@ -298,9 +307,9 @@ const AdminDashboard = () => {
         </div>
 
         {/* Recent Products */}
-        <div className="bg-white border border-border">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-border">
-            <h2 className="font-semibold text-sm flex items-center gap-2">
+        <div className="bg-white border border-border overflow-hidden">
+          <div className="flex items-center justify-between px-4 sm:px-5 py-3 sm:py-4 border-b border-border">
+            <h2 className="font-semibold text-xs sm:text-sm flex items-center gap-2">
               <TrendingUp className="w-4 h-4 text-primary" /> Recent Products
             </h2>
             <Link to="/admin/products" className="text-xs text-primary hover:underline flex items-center gap-1">
@@ -309,8 +318,8 @@ const AdminDashboard = () => {
           </div>
           <div className="divide-y divide-border">
             {loading ? Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="flex items-center gap-3 px-5 py-3 animate-pulse">
-                <div className="w-10 h-10 bg-secondary flex-shrink-0" />
+              <div key={i} className="flex items-center gap-3 px-4 sm:px-5 py-3 animate-pulse">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-secondary flex-shrink-0" />
                 <div className="flex-1 space-y-1.5">
                   <div className="h-3 bg-secondary rounded w-3/4" />
                   <div className="h-3 bg-secondary rounded w-1/3" />
@@ -319,7 +328,7 @@ const AdminDashboard = () => {
             )) : recentProducts.map(p => {
               const img = p.product_images?.find((i: any) => i.is_primary)?.image_url || p.product_images?.[0]?.image_url || "/placeholder.svg";
               return (
-                <div key={p.id} className="flex items-center gap-3 px-5 py-3 hover:bg-secondary/40 transition-colors">
+                <div key={p.id} className="flex items-center gap-2 sm:gap-3 px-4 sm:px-5 py-3 hover:bg-secondary/40 transition-colors">
                   <img
                     src={getOptimizedImageUrl(img, {
                       width: 120,
@@ -330,13 +339,13 @@ const AdminDashboard = () => {
                     alt={p.name}
                     loading="lazy"
                     decoding="async"
-                    className="w-10 h-10 object-contain bg-secondary border border-border flex-shrink-0"
+                    className="w-8 h-8 sm:w-10 sm:h-10 object-contain bg-secondary border border-border flex-shrink-0"
                   />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{p.name}</p>
-                    <p className="text-xs text-muted-foreground">KSh {Number(p.price).toLocaleString()}</p>
+                    <p className="text-xs sm:text-sm font-medium truncate">{p.name}</p>
+                    <p className="text-[10px] sm:text-xs text-muted-foreground whitespace-nowrap">KSh {Number(p.price).toLocaleString()}</p>
                   </div>
-                  <span className={`text-[10px] font-semibold px-2 py-0.5 ${stockBadge(p.stock_status)}`}>
+                  <span className={`text-[9px] sm:text-[10px] font-semibold px-1.5 sm:px-2 py-0.5 whitespace-nowrap ${stockBadge(p.stock_status)}`}>
                     {p.stock_status === "in_stock" ? "In Stock" : p.stock_status === "low_stock" ? "Low Stock" : "Sold Out"}
                   </span>
                 </div>
@@ -350,16 +359,16 @@ const AdminDashboard = () => {
       </div>
 
       {/* Quick Actions */}
-      <div className="bg-white border border-border">
-        <div className="px-5 py-4 border-b border-border">
-          <h2 className="font-semibold text-sm">Quick Actions</h2>
+      <div className="bg-white border border-border overflow-hidden">
+        <div className="px-4 sm:px-5 py-3 sm:py-4 border-b border-border">
+          <h2 className="font-semibold text-xs sm:text-sm">Quick Actions</h2>
         </div>
-        <div className="p-4 grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <div className="p-3 sm:p-4 grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
           {quickActions.map(a => (
-            <Link key={a.label} to={a.to} className={`flex items-center gap-3 px-4 py-3 border text-sm font-medium hover:opacity-80 transition-opacity ${a.color}`}>
-              <a.icon className="w-4 h-4" />
-              {a.label}
-              <ArrowRight className="w-3.5 h-3.5 ml-auto" />
+            <Link key={a.label} to={a.to} className={`flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 sm:py-3 border text-xs sm:text-sm font-medium hover:opacity-80 transition-opacity ${a.color}`}>
+              <a.icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span className="truncate">{a.label}</span>
+              <ArrowRight className="w-3 h-3 sm:w-3.5 sm:h-3.5 ml-auto flex-shrink-0" />
             </Link>
           ))}
         </div>

@@ -5,7 +5,7 @@ const TopBar = () => (
     <div className="container flex justify-between items-center">
       <div className="flex items-center gap-4">
         <span className="flex items-center gap-1.5">
-          <Phone className="w-3 h-3" /> +254 700 123 456
+          <Phone className="w-3 h-3" /> +254 707 177 657  | +254 714 204 2716
         </span>
         <span className="flex items-center gap-1.5">
           <Mail className="w-3 h-3" /> support@casetrendskenya.co.ke

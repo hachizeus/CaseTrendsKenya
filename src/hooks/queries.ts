@@ -48,7 +48,7 @@ export const useProductsPaginated = (
       const to = from + pageSize - 1;
       const { data, count } = await supabase
         .from("products")
-        .select("*, product_images(*), reviews(rating)", { count: "exact" })
+        .select("*, product_images(*), product_colors(*), reviews(rating)", { count: "exact" })
         .order("created_at", { ascending: false })
         .range(from, to);
       return { data: attachReviewAggregates(data || []), total: count || 0, page, pageSize };
