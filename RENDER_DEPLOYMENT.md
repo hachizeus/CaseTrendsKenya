@@ -18,7 +18,7 @@
 - **Region**: Choose closest to your users (e.g., Frankfurt for EU, Singapore for Asia)
 - **Branch**: `main`
 - **Runtime**: `Node`
-- **Build Command**: `npm install && npm run build`
+- **Build Command**: `npm install --legacy-peer-deps && npm run build`
 - **Start Command**: `npm run server`
 
 ### 3. Add Environment Variables
