@@ -187,9 +187,10 @@ CREATE TABLE public.cart_items (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   cart_id UUID NOT NULL REFERENCES public.carts(id) ON DELETE CASCADE,
   product_id UUID NOT NULL REFERENCES public.products(id) ON DELETE CASCADE,
+  color TEXT NOT NULL DEFAULT '',
   quantity INT NOT NULL DEFAULT 1 CHECK (quantity > 0),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  UNIQUE (cart_id, product_id)
+  UNIQUE (cart_id, product_id, color)
 );
 ALTER TABLE public.cart_items ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can view own cart items" ON public.cart_items FOR SELECT USING (

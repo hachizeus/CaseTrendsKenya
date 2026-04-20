@@ -33,7 +33,7 @@ function generateOrderConfirmationEmail(orderData: any): EmailTemplate {
   const itemsHtml = orderData.items
     .map((item: any) => `
       <tr>
-        <td style="padding: 10px; border-bottom: 1px solid #eee;">${item.name}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #eee;">${item.name}${item.color ? ` (${item.color})` : ""}</td>
         <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">KES ${(item.price).toLocaleString()}</td>
         <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: center;">${item.quantity}</td>
         <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">KES ${(item.price * item.quantity).toLocaleString()}</td>
@@ -199,7 +199,7 @@ function generateOrderNotificationEmail(orderData: any, adminEmail: string): Ema
   const itemsHtml = orderData.items
     .map((item: any) => `
       <tr>
-        <td style="padding: 10px; border-bottom: 1px solid #eee;">${item.name}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #eee;">${item.name}${item.color ? ` (${item.color})` : ""}</td>
         <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">KES ${(item.price).toLocaleString()}</td>
         <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: center;">${item.quantity}</td>
         <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">KES ${(item.price * item.quantity).toLocaleString()}</td>

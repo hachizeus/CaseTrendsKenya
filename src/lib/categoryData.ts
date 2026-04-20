@@ -3,6 +3,7 @@ export type CategoryDefinition = {
   slug: string;
   icon: string;
   displayOrder: number;
+  image?: string;
 };
 
 export type SubcategoryDefinition = {
@@ -13,20 +14,20 @@ export type SubcategoryDefinition = {
 };
 
 export const MAIN_CATEGORIES: CategoryDefinition[] = [
-  { name: "Protectors", slug: "protectors", icon: "Shield", displayOrder: 0 },
-  { name: "Phone Cases", slug: "phone-cases", icon: "Smartphone", displayOrder: 1 },
-  { name: "Android Phones (Protectors)", slug: "android-phones", icon: "Smartphone", displayOrder: 2 },
-  { name: "iPhone Model (Protectors)", slug: "iphone-model", icon: "Smartphone", displayOrder: 3 },
-  { name: "Audio", slug: "audio", icon: "Headphones", displayOrder: 4 },
-  { name: "Smart Watch", slug: "smart-watch", icon: "Watch", displayOrder: 5 },
-  { name: "Charging Devices", slug: "charging-devices", icon: "Cable", displayOrder: 6 },
-  { name: "Power Banks", slug: "power-banks", icon: "Battery", displayOrder: 7 },
-  { name: "Camera Lens Protectors", slug: "camera-lens-protectors", icon: "Camera", displayOrder: 8 },
-  { name: "Accessories", slug: "accessories", icon: "Laptop", displayOrder: 9 },
-  { name: "Phone Holders", slug: "phone-holders", icon: "Phone", displayOrder: 10 },
-  { name: "Gaming", slug: "gaming", icon: "Gamepad2", displayOrder: 11 },
-  { name: "MagSafe Cases", slug: "magsafe-cases", icon: "Smartphone", displayOrder: 12 },
-  { name: "Stickers", slug: "stickers", icon: "Tag", displayOrder: 13 },
+  { name: "Protectors", slug: "protectors", icon: "Shield", displayOrder: 0, image: "/Iphonescreenprotectors.webp" },
+  { name: "Phone Cases", slug: "phone-cases", icon: "Smartphone", displayOrder: 1, image: "/covers.jpg" },
+  { name: "Android Phones (Protectors)", slug: "android-phones", icon: "Smartphone", displayOrder: 2, image: "/androidscreenprotector.jpg" },
+  { name: "iPhone Model (Protectors)", slug: "iphone-model", icon: "Smartphone", displayOrder: 3, image: "/Iphonescreenprotectors.webp" },
+  { name: "Audio", slug: "audio", icon: "Headphones", displayOrder: 4, image: "/Audio.png" },
+  { name: "Smart Watch", slug: "smart-watch", icon: "Watch", displayOrder: 5, image: "/smartwatch.jpg" },
+  { name: "Charging Devices", slug: "charging-devices", icon: "Cable", displayOrder: 6, image: "/charging-devices.jpg" },
+  { name: "Power Banks", slug: "power-banks", icon: "Battery", displayOrder: 7, image: "/powerbanks.png" },
+  { name: "Camera Lens Protectors", slug: "camera-lens-protectors", icon: "Camera", displayOrder: 8, image: "/cameralens.jpg" },
+  { name: "Accessories", slug: "accessories", icon: "Laptop", displayOrder: 9, image: "/Accessories.jpg" },
+  { name: "Phone Holders", slug: "phone-holders", icon: "Phone", displayOrder: 10, image: "/phone-holder.webp" },
+  { name: "Gaming", slug: "gaming", icon: "Gamepad2", displayOrder: 11, image: "/Accessories.jpg" },
+  { name: "MagSafe Cases", slug: "magsafe-cases", icon: "Smartphone", displayOrder: 12, image: "/covers.jpg" },
+  { name: "Stickers", slug: "stickers", icon: "Tag", displayOrder: 13, image: "/Accessories.jpg" },
 ];
 
 export const SUBCATEGORIES: SubcategoryDefinition[] = [

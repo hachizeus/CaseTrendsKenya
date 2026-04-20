@@ -659,7 +659,7 @@ const AdminOrders = () => {
                     <div className="space-y-2">
                       {(selected.items || []).map((item: any, i: number) => (
                         <div key={i} className="flex justify-between text-sm py-2 border-b border-border last:border-0">
-                          <span className="flex-1">{item.name} <span className="text-muted-foreground">×{item.quantity}</span></span>
+                          <span className="flex-1">{item.name}{item.color ? ` (${item.color})` : ""} <span className="text-muted-foreground">×{item.quantity}</span></span>
                           <span className="font-medium ml-4">KSh {(item.price * item.quantity).toLocaleString()}</span>
                         </div>
                       ))}

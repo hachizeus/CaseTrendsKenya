@@ -46,7 +46,7 @@ const ProductCard = ({ id, name, images, price, originalPrice, category, brand, 
     if (user?.id) {
       // Logged-in user: check database
       const checkFav = async () => {
-        const { data } = await supabase.from("favorites").select("id").eq("user_id", user.id).eq("product_id", id).maybeSingle();
+        const { data } = await (supabase.from("favorites") as any).select("id").eq("user_id", user.id).eq("product_id", id).maybeSingle();
         setIsFav(!!data);
       };
       checkFav();
@@ -62,10 +62,10 @@ const ProductCard = ({ id, name, images, price, originalPrice, category, brand, 
     if (user?.id) {
       // Logged-in user: use database
       if (isFav) {
-        await supabase.from("favorites").delete().eq("user_id", user.id).eq("product_id", id);
+        await (supabase.from("favorites") as any).delete().eq("user_id", user.id).eq("product_id", id);
         setIsFav(false);
       } else {
-        await supabase.from("favorites").insert({ user_id: user.id, product_id: id });
+        await (supabase.from("favorites") as any).insert({ user_id: user.id, product_id: id });
         setIsFav(true);
         toast.success("Added to wishlist!");
       }
@@ -110,7 +110,7 @@ const ProductCard = ({ id, name, images, price, originalPrice, category, brand, 
       onMouseLeave={() => setHovered(false)}
       className="group h-full w-full min-w-0"
     >
-      <Link to={`/product/${id}`} className="block h-full min-h-full w-full bg-white hover:border-primary transition-colors duration-200 overflow-hidden flex flex-col">
+      <Link to={`/product/${id}`} className="h-full min-h-full w-full bg-white hover:border-primary transition-colors duration-200 overflow-hidden flex flex-col">
         {/* Image */}
         <div className="relative aspect-[4/5] bg-white overflow-hidden flex-shrink-0">
           <motion.div

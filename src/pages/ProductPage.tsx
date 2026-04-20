@@ -102,8 +102,7 @@ const ProductPage = () => {
   const loadProduct = async () => {
     setLoading(true);
     try {
-      // @ts-ignore - Supabase type issue
-      const { data, error } = await supabase.from("products").select("*, product_images(*)").eq("id", id!).single();
+      const { data, error } = await supabase.from("products").select("*, product_images(*)").eq("id", id!).single() as any;
       if (error || !data) {
         console.error("Product not found:", error);
         setProduct(null);
@@ -112,19 +111,19 @@ const ProductPage = () => {
       }
       
       setProduct(data);
-      const sorted = (data.product_images || []).sort((a: any, b: any) => a.display_order - b.display_order);
+      const sorted = ((data?.product_images as any[]) || []).sort((a: any, b: any) => a.display_order - b.display_order);
       setImages(sorted);
       
       // Set SEO meta tags
-      const discount = data.original_price ? Math.round(((data.original_price - data.price) / data.original_price) * 100) : 0;
-      document.title = `${data.name} | Case Trends Kenya`;
+      const discount = data?.original_price ? Math.round(((data.original_price - data.price) / data.original_price) * 100) : 0;
+      document.title = `${data?.name} | Case Trends Kenya`;
       let metaDescription = document.querySelector('meta[name="description"]');
       if (!metaDescription) {
         metaDescription = document.createElement('meta');
         metaDescription.setAttribute('name', 'description');
         document.head.appendChild(metaDescription);
       }
-      metaDescription.setAttribute('content', `Buy ${data.name} for KSh ${data.price.toLocaleString()} at Case Trends Kenya. ${discount > 0 ? `Save ${discount}% off!` : ''} ${data.description || ''}`.substring(0, 160));
+      metaDescription.setAttribute('content', `Buy ${data?.name} for KSh ${data?.price?.toLocaleString()} at Case Trends Kenya. ${discount > 0 ? `Save ${discount}% off!` : ''} ${data?.description || ''}`.substring(0, 160));
       
       // Fetch product specifications and colors (silently handles 404s for pending migrations)
       const [specsData, colorsData] = await Promise.all([
@@ -141,7 +140,7 @@ const ProductPage = () => {
       }
       
       // @ts-ignore - Supabase type issue
-      const { data: related } = await supabase.from("products").select("*, product_images(*)").eq("category", data.category).neq("id", id!).limit(4);
+      const { data: related } = await supabase.from("products").select("*, product_images(*)").eq("category", (data as any)?.category).neq("id", id!).limit(4) as any;
       setRelatedProducts(related || []);
     } finally {
       setLoading(false);
@@ -454,7 +453,6 @@ const ProductPage = () => {
                       </span>
                     )}
                     <span className="text-muted-foreground">✅ Genuine</span>
-                    <span className="text-muted-foreground">🚚 Free delivery over KSh 5,000</span>
                   </div>
 
                   {/* Description - compact */}

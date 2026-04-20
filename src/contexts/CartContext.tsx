@@ -10,6 +10,7 @@ export interface CartItem {
   price: number;
   image: string;
   quantity: number;
+  color?: string;
 }
 
 export interface ComparisonProduct {
@@ -83,7 +84,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
     const { data: cartItems } = await supabase
       .from("cart_items")
-      .select("id, product_id, quantity, products(name, price, product_images(image_url, is_primary))")
+      .select("id, product_id, quantity, color, products(name, price, product_images(image_url, is_primary))")
       .eq("cart_id", cart.id);
 
     const mapped: CartItem[] = (cartItems || []).map((ci: any) => ({
@@ -94,6 +95,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       image: ci.products?.product_images?.find((img: any) => img.is_primary)?.image_url
         || ci.products?.product_images?.[0]?.image_url || "",
       quantity: ci.quantity,
+      color: ci.color || undefined,
     }));
     setItems(mapped);
 
@@ -101,16 +103,19 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     const localItems = getLocalCart();
     if (localItems.length > 0) {
       const mergePromises = localItems
-        .filter(li => !(cartItems || []).find((ci: any) => ci.product_id === li.product_id))
+        .filter(li => !(cartItems || []).find((ci: any) => ci.product_id === li.product_id && (ci.color || "") === (li.color || "")))
         .map(li => supabase.from("cart_items").insert({
-          cart_id: cart!.id, product_id: li.product_id, quantity: li.quantity,
+          cart_id: cart!.id,
+          product_id: li.product_id,
+          quantity: li.quantity,
+          color: li.color || "",
         }));
       await Promise.all(mergePromises);
       localStorage.removeItem(LOCAL_STORAGE_KEY);
       // Reload after merge
       const { data: merged } = await supabase
         .from("cart_items")
-        .select("id, product_id, quantity, products(name, price, product_images(image_url, is_primary))")
+        .select("id, product_id, quantity, color, products(name, price, product_images(image_url, is_primary))")
         .eq("cart_id", cart.id);
       setItems((merged || []).map((ci: any) => ({
         id: ci.id,
@@ -120,6 +125,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         image: ci.products?.product_images?.find((img: any) => img.is_primary)?.image_url
           || ci.products?.product_images?.[0]?.image_url || "",
         quantity: ci.quantity,
+        color: ci.color || undefined,
       })));
     }
   }, []); // stable — reads user via ref
@@ -137,20 +143,26 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     const currentUser = userRef.current;
     const currentCartId = dbCartIdRef.current;
 
+    const productColor = product.color || "";
     if (currentUser && currentCartId) {
-      const existing = items.find(i => i.product_id === product.id);
+      const existing = items.find(i => i.product_id === product.id && (i.color || "") === productColor);
       if (existing) {
         await supabase.from("cart_items").update({ quantity: existing.quantity + 1 }).eq("id", existing.id);
       } else {
-        await supabase.from("cart_items").insert({ cart_id: currentCartId, product_id: product.id, quantity: 1 });
+        await supabase.from("cart_items").insert({
+          cart_id: currentCartId,
+          product_id: product.id,
+          quantity: 1,
+          color: productColor,
+        });
       }
       await loadDbCart();
     } else {
       setItems(prev => {
-        const existing = prev.find(i => i.product_id === product.id);
+        const existing = prev.find(i => i.product_id === product.id && (i.color || "") === productColor);
         const next = existing
-          ? prev.map(i => i.product_id === product.id ? { ...i, quantity: i.quantity + 1 } : i)
-          : [...prev, { id: crypto.randomUUID(), product_id: product.id, name: product.name, price: product.price, image: product.image, quantity: 1 }];
+          ? prev.map(i => i.product_id === product.id && (i.color || "") === productColor ? { ...i, quantity: i.quantity + 1 } : i)
+          : [...prev, { id: crypto.randomUUID(), product_id: product.id, name: product.name, price: product.price, image: product.image, quantity: 1, color: productColor || undefined }];
         setLocalCart(next);
         return next;
       });

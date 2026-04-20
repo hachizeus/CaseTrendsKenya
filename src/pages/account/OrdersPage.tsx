@@ -178,7 +178,7 @@ const OrdersPage = () => {
                               className="flex justify-between text-sm py-2 border-b border-border/50 last:border-0"
                             >
                               <span>
-                                {item.name} x{item.quantity}
+                                {item.name}{item.color ? ` (${item.color})` : ""} x{item.quantity}
                               </span>
                               <span className="font-medium">
                                 KSh {(item.price * item.quantity).toLocaleString()}

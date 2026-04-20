@@ -11,7 +11,7 @@ interface OrderData {
   customer_phone: string;
   delivery_method: string;
   delivery_address: string | null;
-  items: Array<{ name: string; price: number; quantity: number }>;
+  items: Array<{ name: string; price: number; quantity: number; color?: string }>;
   total_amount: number;
   status: string;
   created_at: string;
@@ -155,7 +155,7 @@ export function generateOrderConfirmationEmail(order: OrderData): EmailTemplate 
       (item) =>
         `
       <div class="item">
-        <span class="item-name">${item.name} × ${item.quantity}</span>
+        <span class="item-name">${item.name}${item.color ? ` (${item.color})` : ""} × ${item.quantity}</span>
         <span class="item-price">KSh ${(item.price * item.quantity).toLocaleString()}</span>
       </div>
     `
@@ -274,7 +274,7 @@ export function generateOrderNotificationEmail(order: OrderData, adminEmail: str
       (item) =>
         `
         <div class="item">
-          <span class="item-name">${item.name} × ${item.quantity}</span>
+          <span class="item-name">${item.name}${item.color ? ` (${item.color})` : ""} × ${item.quantity}</span>
           <span class="item-price">KSh ${(item.price * item.quantity).toLocaleString()}</span>
         </div>
       `
@@ -426,7 +426,7 @@ export function generateStatusUpdateEmail(order: OrderData): EmailTemplate {
                 .map(
                   (item) =>
                     `<div class="info-row">
-                <span class="info-label">${item.name}</span>
+                <span class="info-label">${item.name}${item.color ? ` (${item.color})` : ""}</span>
                 <span class="info-value">× ${item.quantity}</span>
               </div>`
                 )

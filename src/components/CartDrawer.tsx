@@ -109,6 +109,7 @@ const CartDrawer = () => {
                     <img src={item.image} alt={item.name} loading="lazy" decoding="async" className="w-16 h-16 sm:w-20 sm:h-20 object-contain rounded bg-background flex-shrink-0" />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm sm:text-base font-medium line-clamp-1">{item.name}</p>
+                      {item.color && <p className="text-[11px] uppercase tracking-[0.08em] text-muted-foreground mt-1">Color: {item.color}</p>}
                       <p className="text-xs sm:text-sm font-bold text-primary mt-1">KSh {item.price.toLocaleString()}</p>
                       <div className="flex items-center gap-2 mt-2">
                         <button 

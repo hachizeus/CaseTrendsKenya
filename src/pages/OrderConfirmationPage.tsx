@@ -76,7 +76,7 @@ const OrderConfirmationPage = () => {
     const productList = order?.items
       .map(
         (i: any) =>
-          `• ${i.name} x${i.quantity} - KSh ${(i.price * i.quantity).toLocaleString()}`
+          `• ${i.name}${i.color ? ` (${i.color})` : ""} x${i.quantity} - KSh ${(i.price * i.quantity).toLocaleString()}`
       )
       .join("\n");
 
@@ -236,7 +236,7 @@ const OrderConfirmationPage = () => {
                 {order.items.map((item: any, idx: number) => (
                   <div key={idx} className="flex justify-between py-2">
                     <span>
-                      {item.name} x{item.quantity}
+                      {item.name}{item.color ? ` (${item.color})` : ""} x{item.quantity}
                     </span>
                     <span className="font-medium">
                       KSh {(item.price * item.quantity).toLocaleString()}

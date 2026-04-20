@@ -1,34 +1,42 @@
 import { Link } from "react-router-dom";
 import { MAIN_CATEGORIES } from "@/lib/categoryData";
 
-// Enhanced Image Mapping with high-quality Unsplash URLs
+// Category Image Mapping using local images from public folder
 const categoryImages: Record<string, string> = {
-  smartphones: "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=300&q=80",
-  "smart phones": "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=300&q=80",
-  phones: "https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=300&q=80",
-  "phone cases": "https://images.unsplash.com/photo-1541807084-5c52b6b3adef?w=300&q=80",
-  cases: "https://images.unsplash.com/photo-1541807084-5c52b6b3adef?w=300&q=80",
-  protectors: "https://images.unsplash.com/photo-1616348436168-de43ad0db179?w=300&q=80",
-  "screen protectors": "https://images.unsplash.com/photo-1616348436168-de43ad0db179?w=300&q=80",
-  tablets: "https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=300&q=80",
-  "tablets & ipads": "https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=300&q=80",
-  ipads: "https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=300&q=80",
-  headphones: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300&q=80",
-  earbuds: "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=300&q=80",
-  "audio & earbuds": "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=300&q=80",
-  audio: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300&q=80",
-  chargers: "https://images.unsplash.com/photo-1583863788434-e58a36330cf0?w=300&q=80",
-  "phone accessories": "https://images.unsplash.com/photo-1603351154351-5e2d0600bb77?w=300&q=80",
-  accessories: "https://images.unsplash.com/photo-1603351154351-5e2d0600bb77?w=300&q=80",
-  "phone holders": "https://images.unsplash.com/photo-1586105251261-72a756497a11?w=300&q=80",
-  "power banks": "https://images.unsplash.com/photo-1609592424083-057d4f9f4a9b?w=300&q=80",
-  // Fixed Smartwatch image
-  smartwatches: "https://images.unsplash.com/photo-1508685096489-7aac2968395d?w=300&q=80",
-  wearables: "https://images.unsplash.com/photo-1508685096489-7aac2968395d?w=300&q=80",
-  watches: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300&q=80",
+  // Exact matches from MAIN_CATEGORIES
+  protectors: "/Iphonescreenprotectors.webp",
+  "phone cases": "/covers.jpg",
+  "android phones (protectors)": "/androidscreenprotector.jpg",
+  "iphone model (protectors)": "/Iphonescreenprotectors.webp",
+  audio: "/Audio.png",
+  "smart watch": "/smartwatch.jpg",
+  "charging devices": "/charging-devices.jpg",
+  "power banks": "/powerbanks.png",
+  "camera lens protectors": "/cameralens.jpg",
+  accessories: "/Accessories.jpg",
+  "phone holders": "/phone-holder.webp",
   gaming: "https://images.unsplash.com/photo-1593118247619-e2d6f056869e?w=300&q=80",
-  cameras: "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=300&q=80",
-  speakers: "https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=300&q=80",
+  "magsafe cases": "/covers.jpg",
+  stickers: "/Accessories.jpg",
+  // Additional aliases
+  smartphones: "/Accessories.jpg",
+  "smart phones": "/Accessories.jpg",
+  phones: "/Accessories.jpg",
+  cases: "/covers.jpg",
+  "screen protectors": "/androidscreenprotector.jpg",
+  tablets: "/Accessories.jpg",
+  "tablets & ipads": "/Accessories.jpg",
+  ipads: "/Accessories.jpg",
+  headphones: "/Audio.png",
+  earbuds: "/Audio.png",
+  "audio & earbuds": "/Audio.png",
+  chargers: "/charging-devices.jpg",
+  "phone accessories": "/Accessories.jpg",
+  smartwatches: "/smartwatch.jpg",
+  wearables: "/smartwatch.jpg",
+  watches: "/smartwatch.jpg",
+  cameras: "/cameralens.jpg",
+  speakers: "/Audio.png",
 };
 
 const getImage = (name: string) =>

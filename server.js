@@ -69,6 +69,19 @@ async function isAdminUser(userId) {
   return !!(data && !error);
 }
 
+// Ensure order items are parsed correctly from JSONB
+function normalizeOrderData(orderData) {
+  if (!orderData) return orderData;
+  return {
+    ...orderData,
+    items: Array.isArray(orderData.items) 
+      ? orderData.items 
+      : typeof orderData.items === 'string' 
+        ? JSON.parse(orderData.items) 
+        : [],
+  };
+}
+
 async function fetchOrderWithGuestToken(orderId, token) {
   if (!orderId || !token) return null;
   const { data, error } = await supabaseAdmin
@@ -80,7 +93,7 @@ async function fetchOrderWithGuestToken(orderId, token) {
   if (error) {
     return null;
   }
-  return data;
+  return normalizeOrderData(data);
 }
 
 function buildSecureHeaders(req, res, next) {
@@ -172,7 +185,7 @@ const generateOrderConfirmationEmail = (orderData) => {
     .map(
       (item) => `
       <tr>
-        <td style="padding: 10px; border-bottom: 1px solid #eee; font-size: 14px;">${escapeHtml(item.name)}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #eee; font-size: 14px;">${escapeHtml(item.name)}${item.color ? ` (${escapeHtml(item.color)})` : ""}</td>
         <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right; font-size: 14px;">KES ${Number(item.price).toLocaleString()}</td>
         <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: center; font-size: 14px;">${escapeHtml(item.quantity)}</td>
         <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right; font-weight: 600; font-size: 14px;">KES ${Number(item.price * item.quantity).toLocaleString()}</td>
@@ -201,7 +214,7 @@ Order Number: ${safeId}
 Order Date: ${new Date(orderData.created_at).toLocaleDateString()}
 
 Items Ordered:
-${orderData.items.map((item) => `- ${escapeHtml(item.name)} x${escapeHtml(item.quantity)} = KES ${Number(item.price * item.quantity).toLocaleString()}`).join("\n")}
+${orderData.items.map((item) => `- ${escapeHtml(item.name)}${item.color ? ` (${escapeHtml(item.color)})` : ""} x${escapeHtml(item.quantity)} = KES ${Number(item.price * item.quantity).toLocaleString()}`).join("\n")}
 
 Order Summary:
 Total Amount: KES ${Number(orderData.total_amount).toLocaleString()}
@@ -502,7 +515,7 @@ app.get("/api/order/:orderId", async (req, res) => {
   if (user) {
     const { data, error } = await supabaseAdmin.from("orders").select("*").eq("id", orderId).single();
     if (!error && data && (data.user_id === user.id || await isAdminUser(user.id))) {
-      order = data;
+      order = normalizeOrderData(data);
     }
   } else if (token) {
     order = await fetchOrderWithGuestToken(orderId, token);
@@ -527,7 +540,7 @@ app.post("/api/orders", async (req, res) => {
       return res.status(400).json({ error: error.message, details: error });
     }
 
-    res.json({ order: data });
+    res.json({ order: normalizeOrderData(data) });
   } catch (error) {
     console.error("Order creation error:", error);
     res.status(500).json({ error: "Failed to create order" });
@@ -561,7 +574,7 @@ app.post("/api/send-email", async (req, res) => {
         if (order.user_id !== user.id && !(await isAdminUser(user.id))) {
           return res.status(403).json({ error: "Forbidden" });
         }
-        orderData = order;
+        orderData = normalizeOrderData(order);
       } else {
         return res.status(401).json({ error: "Authentication required for order confirmation emails" });
       }
@@ -571,11 +584,11 @@ app.post("/api/send-email", async (req, res) => {
       if (!user || !(await isAdminUser(user.id))) {
         return res.status(403).json({ error: "Admin authorization required" });
       }
-      emailTemplate = generateStatusUpdateEmail(orderData);
+      emailTemplate = generateStatusUpdateEmail(normalizeOrderData(orderData));
     } else if (type === "order_notification") {
       // Order notifications are sent by the checkout flow and do not require admin auth.
       const orderNotificationRecipient = to || ADMIN_NOTIFICATION_EMAIL;
-      emailTemplate = generateOrderNotificationEmail(orderData, orderNotificationRecipient);
+      emailTemplate = generateOrderNotificationEmail(normalizeOrderData(orderData), orderNotificationRecipient);
     } else {
       return res.status(400).json({ error: "Invalid email type" });
     }
@@ -617,7 +630,7 @@ function generateOrderNotificationEmail(orderData, adminEmail) {
   const itemsHtml = (orderData.items || [])
     .map((item) => `
       <div style="display:flex; justify-content:space-between; padding: 10px 0; border-bottom: 1px solid #eee;">
-        <span style="color:#374151;">${escapeHtml(item.name)} × ${escapeHtml(item.quantity)}</span>
+        <span style="color:#374151;">${escapeHtml(item.name)}${item.color ? ` (${escapeHtml(item.color)})` : ""} × ${escapeHtml(item.quantity)}</span>
         <span style="color:#1f2937; font-weight:600;">KSh ${(item.price * item.quantity).toLocaleString()}</span>
       </div>
     `)

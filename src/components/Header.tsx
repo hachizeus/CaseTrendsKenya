@@ -40,6 +40,77 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+// Custom hook for typing placeholder animation
+const useTypingPlaceholder = () => {
+  const [displayText, setDisplayText] = useState("");
+  const [currentWordIndex, setCurrentWordIndex] = useState(0);
+  const [isDeleting, setIsDeleting] = useState(false);
+  
+  const words = [
+    "Covers",
+    "Protectors",
+    "Phone Cases",
+    "Android Phones (Protectors)",
+    "iPhone Model (Protectors)",
+    "Audio",
+    "Smart Watch",
+    "Charging Devices",
+    "Power Banks",
+    "Camera Lens Protectors",
+    "Accessories",
+    "Phone Holders",
+    "Gaming"
+  ];
+  
+  // Color mapping for each word
+  const getColorForWord = (word: string): string => {
+    const colorMap: Record<string, string> = {
+      "Covers": "text-blue-500",
+      "Protectors": "text-green-500",
+      "Phone Cases": "text-purple-500",
+      "Android Phones (Protectors)": "text-orange-500",
+      "iPhone Model (Protectors)": "text-indigo-500",
+      "Audio": "text-pink-500",
+      "Smart Watch": "text-red-500",
+      "Charging Devices": "text-yellow-600",
+      "Power Banks": "text-teal-500",
+      "Camera Lens Protectors": "text-cyan-500",
+      "Accessories": "text-amber-600",
+      "Phone Holders": "text-emerald-500",
+      "Gaming": "text-violet-500"
+    };
+    return colorMap[word] || "text-gray-500";
+  };
+  
+  useEffect(() => {
+    const currentWord = words[currentWordIndex];
+    let timeout: NodeJS.Timeout;
+    
+    if (!isDeleting && displayText === currentWord) {
+      timeout = setTimeout(() => setIsDeleting(true), 2000);
+    } else if (isDeleting && displayText === "") {
+      setIsDeleting(false);
+      setCurrentWordIndex((currentWordIndex + 1) % words.length);
+    } else {
+      timeout = setTimeout(() => {
+        setDisplayText(prev => 
+          isDeleting 
+            ? prev.slice(0, -1)
+            : currentWord.slice(0, prev.length + 1)
+        );
+      }, isDeleting ? 50 : 100);
+    }
+    
+    return () => clearTimeout(timeout);
+  }, [displayText, isDeleting, currentWordIndex]);
+  
+  return { 
+    displayText, 
+    currentColor: getColorForWord(words[currentWordIndex]),
+    isTyping: !isDeleting && displayText !== words[currentWordIndex]
+  };
+};
+
 // Map category names to icons
 const getCategoryIcon = (categoryName: string): LucideIcon => {
   const iconMap: Record<string, LucideIcon> = {
@@ -89,6 +160,9 @@ const Header = () => {
   const scrollTimeoutRef = useRef<NodeJS.Timeout>();
   const mobileScrollTimeoutRef = useRef<NodeJS.Timeout>();
   const canAccessAdminPanel = isAdmin || isModerator;
+
+  // Typing placeholder hook
+  const { displayText, currentColor, isTyping } = useTypingPlaceholder();
 
   // Desktop Auto-scrolling categories
   useEffect(() => {
@@ -413,10 +487,9 @@ const Header = () => {
               )}
             </div>
             <div className="flex-1 relative">
-              <div className="flex border border-border rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-primary">
+              <div className="flex border border-border rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-primary relative">
                 <input
                   type="text"
-                  placeholder="Search phone cases, protectors, earbuds, chargers..."
                   className="flex-1 px-4 py-2.5 text-sm bg-background outline-none"
                   value={searchQuery}
                   onChange={e => {
@@ -426,6 +499,15 @@ const Header = () => {
                   onFocus={() => setShowSearchDropdown(true)}
                   onBlur={() => setTimeout(() => setShowSearchDropdown(false), 200)}
                 />
+                {!searchQuery && (
+                  <div className="absolute left-4 top-1/2 transform -translate-y-1/2 pointer-events-none text-sm text-gray-500 whitespace-nowrap">
+                    Search for{" "}
+                    <span className={`${currentColor} inline-block`}>
+                      {displayText}
+                      <span className="animate-pulse ml-0.5">|</span>
+                    </span>
+                  </div>
+                )}
                 <button type="submit" className="bg-primary text-primary-foreground px-5 hover:opacity-90 transition-colors" aria-label="Search products">
                   <Search className="w-4 h-4" />
                 </button>
@@ -829,6 +911,17 @@ const Header = () => {
           )}
         </div>
       )}
+
+      {/* Add the animation CSS */}
+      <style>{`
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0; }
+        }
+        .animate-pulse {
+          animation: pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+      `}</style>
     </header>
   );
 };

@@ -1,7 +1,6 @@
 import { Truck, Shield, Headphones, CreditCard } from "lucide-react";
 
 const features = [
-  { icon: Truck, title: "Free Delivery", desc: "Orders over KSh 5,000" },
   { icon: Shield, title: "Genuine Products", desc: "100% authentic with warranty" },
   { icon: Headphones, title: "24/7 Support", desc: "WhatsApp & call anytime" },
   { icon: CreditCard, title: "M-Pesa Accepted", desc: "Easy mobile payment" },

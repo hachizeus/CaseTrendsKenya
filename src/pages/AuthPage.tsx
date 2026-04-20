@@ -13,7 +13,6 @@ import Footer from "@/components/Footer";
 const perks = [
   { icon: ShoppingBag, text: "Track your orders easily" },
   { icon: Shield, text: "Secure checkout every time" },
-  { icon: Truck, text: "Free delivery on KSh 5,000+" },
   { icon: Star, text: "Save favourites & wishlists" },
 ];
 

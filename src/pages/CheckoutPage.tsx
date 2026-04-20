@@ -50,7 +50,9 @@ const CheckoutPage = () => {
 
   const buildWhatsAppLink = (orderId: string) => {
     const itemLines = items
-      .map((item) => `${item.quantity} x ${item.name} (KSh ${item.price.toLocaleString()})`)
+      .map((item) =>
+        `${item.quantity} x ${item.name}${item.color ? ` (${item.color})` : ""} (KSh ${item.price.toLocaleString()})`
+      )
       .join("\n");
 
     const googleMapsLink = coordinates
@@ -287,6 +289,7 @@ const CheckoutPage = () => {
           name: i.name,
           price: i.price,
           quantity: i.quantity,
+          color: i.color || null,
         })),
         total_amount: finalTotal,
         status: "pending",
@@ -403,7 +406,7 @@ const CheckoutPage = () => {
             <h2 className="font-semibold text-base sm:text-lg mb-4">Order Summary</h2>
             {items.map(item => (
               <div key={item.product_id} className="flex justify-between text-sm py-2 border-b last:border-0 gap-2">
-                <span className="flex-1 min-w-0 truncate">{item.name} x{item.quantity}</span>
+                <span className="flex-1 min-w-0 truncate">{item.name}{item.color ? ` (${item.color})` : ""} x{item.quantity}</span>
                 <span className="font-medium flex-shrink-0">KSh {(item.price * item.quantity).toLocaleString()}</span>
               </div>
             ))}
