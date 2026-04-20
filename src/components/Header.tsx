@@ -50,8 +50,8 @@ const useTypingPlaceholder = () => {
     "Covers",
     "Protectors",
     "Phone Cases",
-    "Android Phones (Protectors)",
-    "iPhone Model (Protectors)",
+    "Android Phones",
+    "iPhone Models",
     "Audio",
     "Smart Watch",
     "Charging Devices",
@@ -68,8 +68,8 @@ const useTypingPlaceholder = () => {
       "Covers": "text-blue-500",
       "Protectors": "text-green-500",
       "Phone Cases": "text-purple-500",
-      "Android Phones (Protectors)": "text-orange-500",
-      "iPhone Model (Protectors)": "text-indigo-500",
+      "Android Phones": "text-orange-500",
+      "iPhone Models": "text-indigo-500",
       "Audio": "text-pink-500",
       "Smart Watch": "text-red-500",
       "Charging Devices": "text-yellow-600",
@@ -412,7 +412,7 @@ const Header = () => {
               <button
                 type="button"
                 onClick={() => setShowCategoryDropdown(!showCategoryDropdown)}
-                className="absolute left-0 top-0 h-full px-3 flex items-center gap-1.5 border-r border-border text-muted-foreground hover:text-foreground transition-colors text-sm"
+                className="absolute left-0 top-0 h-full px-3 flex items-center gap-1.5 border-r border-border text-muted-foreground hover:text-foreground transition-colors text-sm z-10 bg-background"
               >
                 {selectedSubcategory
                   ? getDisplayCategoryName(selectedSubcategory)
@@ -490,7 +490,8 @@ const Header = () => {
               <div className="flex border border-border rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-primary relative">
                 <input
                   type="text"
-                  className="flex-1 px-4 py-2.5 text-sm bg-background outline-none"
+                  className="flex-1 px-4 py-2.5 text-sm bg-background outline-none w-full"
+                  style={{ paddingLeft: "140px", paddingRight: "50px" }}
                   value={searchQuery}
                   onChange={e => {
                     setSearchQuery(e.target.value);
@@ -500,7 +501,16 @@ const Header = () => {
                   onBlur={() => setTimeout(() => setShowSearchDropdown(false), 200)}
                 />
                 {!searchQuery && (
-                  <div className="absolute left-4 top-1/2 transform -translate-y-1/2 pointer-events-none text-sm text-gray-500 whitespace-nowrap">
+                  <div 
+                    className="absolute left-4 top-1/2 transform -translate-y-1/2 pointer-events-none text-sm text-gray-500"
+                    style={{ 
+                      left: "16px",
+                      right: "50px",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap"
+                    }}
+                  >
                     Search for{" "}
                     <span className={`${currentColor} inline-block`}>
                       {displayText}
@@ -508,7 +518,11 @@ const Header = () => {
                     </span>
                   </div>
                 )}
-                <button type="submit" className="bg-primary text-primary-foreground px-5 hover:opacity-90 transition-colors" aria-label="Search products">
+                <button 
+                  type="submit" 
+                  className="bg-primary text-primary-foreground px-5 hover:opacity-90 transition-colors flex-shrink-0 absolute right-0 top-0 bottom-0 z-10"
+                  aria-label="Search products"
+                >
                   <Search className="w-4 h-4" />
                 </button>
               </div>

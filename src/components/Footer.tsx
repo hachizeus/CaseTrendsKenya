@@ -118,7 +118,7 @@ const Footer = () => {
           <div>
             <h3 className="font-display font-bold text-lg mb-4">Case Trends Kenya</h3>
             <p className="text-sm text-gray-400 mb-6 leading-relaxed">
-              Your trusted electronics store in Kenya. Genuine products, warranty, and fast delivery across Nairobi.
+              Case Trends Kenya is a mobile accessories shop based in Nairobi, specializing in trendy and premium phone cases, laptop stickers, lens protectors, and other smartphone accessories.
             </p>
             
             <div className="space-y-3">
