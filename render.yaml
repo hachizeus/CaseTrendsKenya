@@ -20,3 +20,8 @@ services:
         scope: build,runtime
       - key: VITE_SUPABASE_SERVICE_KEY
         scope: build,runtime
+# Ensure all unmatched routes are redirected to index.html
+routes:
+  - source: /.*/
+    destination: /index.html
+    status: 200

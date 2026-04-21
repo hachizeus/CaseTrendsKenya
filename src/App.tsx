@@ -20,6 +20,7 @@ const CheckoutPage = lazy(() => import("./pages/CheckoutPage.tsx"));
 const OrderConfirmationPage = lazy(() => import("./pages/OrderConfirmationPage.tsx"));
 const OrdersPage = lazy(() => import("./pages/account/OrdersPage.tsx"));
 const FavoritesPage = lazy(() => import("./pages/FavoritesPage.tsx"));
+const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage.tsx"));
 const AdminLayout = lazy(() => import("./pages/admin/AdminLayout.tsx"));
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard.tsx"));
 const AdminProducts = lazy(() => import("./pages/admin/AdminProducts.tsx"));
@@ -93,6 +94,7 @@ const AppContent = () => {
             </GuestRoute>
           }
         />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/products" element={<ProductsPage />} />
         <Route path="/product/:id" element={<ProductPage />} />
         <Route path="/checkout" element={<CheckoutPage />} />
