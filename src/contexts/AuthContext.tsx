@@ -82,7 +82,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { full_name: fullName }, emailRedirectTo: "https://casetrendskenya.co.ke" },
+      options: { data: { full_name: fullName }, emailRedirectTo: import.meta.env.VITE_SITE_URL || window.location.origin },
     });
     if (error) throw error;
 
@@ -100,8 +100,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;
+
+    // Check if email is verified
+    if (data.user && !data.user.email_confirmed_at) {
+      // Sign out the user since they're not verified
+      await supabase.auth.signOut();
+      throw new Error("Please verify your email address before signing in. Check your inbox for the verification link.");
+    }
   };
 
   const signOut = async () => {

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useRefreshTrigger } from "@/contexts/RefreshContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { Search, User, Loader } from "lucide-react";
+import { Search, User, Loader, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -125,6 +125,43 @@ const AdminUsers = () => {
     }
   };
 
+  const deleteUser = async (userId: string, displayName: string) => {
+    if (!confirm(`Delete user "${displayName}"? This will remove their profile and roles, but they may still be able to sign in.`)) return;
+
+    try {
+      // Delete from user_roles first (due to foreign key constraints)
+      const { error: rolesError } = await supabase
+        .from("user_roles")
+        .delete()
+        .eq("user_id", userId);
+
+      if (rolesError) throw rolesError;
+
+      // Delete from profiles
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .delete()
+        .eq("user_id", userId);
+
+      if (profileError) throw profileError;
+
+      await loadUsersWithRoles();
+      await logAuditAction({
+        action_type: "user_deleted",
+        entity: "users",
+        entity_id: userId,
+        details: { display_name: displayName },
+        user_id: userId,
+        actor_id: user?.id ?? null,
+        actor_email: user?.email ?? null,
+      });
+      toast({ title: "Success", description: `User "${displayName}" deleted` });
+    } catch (err: any) {
+      console.error("Error deleting user:", err);
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    }
+  };
+
   const filtered = users.filter(u =>
     !search ||
     (u.display_name || "").toLowerCase().includes(search.toLowerCase()) ||
@@ -153,6 +190,7 @@ const AdminUsers = () => {
               <th className="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wide text-muted-foreground hidden md:table-cell">Phone</th>
               <th className="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wide text-muted-foreground">Role</th>
               <th className="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wide text-muted-foreground">Joined</th>
+              <th className="text-right px-4 py-3"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
@@ -163,6 +201,7 @@ const AdminUsers = () => {
                 <td className="px-4 py-3 hidden md:table-cell"><div className="h-3 bg-secondary rounded w-24 animate-pulse" /></td>
                 <td className="px-4 py-3"><div className="h-3 bg-secondary rounded w-20 animate-pulse" /></td>
                 <td className="px-4 py-3"><div className="h-3 bg-secondary rounded w-16 animate-pulse" /></td>
+                <td className="px-4 py-3 text-right"><div className="h-3 bg-secondary rounded w-8 animate-pulse" /></td>
               </tr>
             )) : filtered.map(u => (
               <tr key={u.id} className="hover:bg-secondary/30 transition-colors">
@@ -198,6 +237,11 @@ const AdminUsers = () => {
                   </Select>
                 </td>
                 <td className="px-4 py-3 text-muted-foreground text-xs">{new Date(u.created_at).toLocaleDateString()}</td>
+                <td className="px-4 py-3 text-right">
+                  <button onClick={() => deleteUser(u.user_id, u.display_name || "Unknown")} className="p-1.5 hover:bg-red-50 hover:text-red-600 border border-transparent hover:border-red-200 transition-colors">
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>
