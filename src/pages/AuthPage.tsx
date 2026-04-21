@@ -9,6 +9,7 @@ import { Eye, EyeOff, Mail, Lock, User, ArrowRight, ShoppingBag, Shield, Truck, 
 import TopBar from "@/components/TopBar";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import { supabase } from "@/integrations/supabase/client";
 
 const perks = [
   { icon: ShoppingBag, text: "Track your orders easily" },
@@ -81,6 +82,31 @@ const AuthPage = () => {
       } else {
         toast.error(err.message || "An error occurred during authentication");
       }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!email.trim()) {
+      toast.error("Please enter your email address to reset your password.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      toast.success("Password reset email sent! Please check your inbox.");
+    } catch (err) {
+      console.error("Forgot password error:", err);
+      toast.error(err.message || "Failed to send password reset email.");
     } finally {
       setLoading(false);
     }
@@ -240,10 +266,15 @@ const AuthPage = () => {
                 {isLogin && (
                   <div className="text-right">
                     <span className="text-xs text-muted-foreground">
-                      Forgot password?{" "}
-                      <a href="mailto:support@casetrendskenya.co.ke" className="text-primary hover:underline">
-                        Contact support
-                      </a>
+                      Forgot password?{' '}
+                      <button
+                        type="button"
+                        onClick={handleForgotPassword}
+                        className="text-primary hover:underline"
+                        disabled={loading}
+                      >
+                        Reset it here
+                      </button>
                     </span>
                   </div>
                 )}
