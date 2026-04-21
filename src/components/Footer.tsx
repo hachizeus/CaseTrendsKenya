@@ -104,7 +104,7 @@ const Footer = () => {
       hoverColor: "#25D366",
     },
     {
-      href: "https://www.youtube.com/@casetrends",
+      href: "https://www.youtube.com/@CaseTrendsKenya",
       label: "Subscribe on YouTube",
       icon: Youtube,
       hoverColor: "#FF0000",
