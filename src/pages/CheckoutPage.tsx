@@ -328,13 +328,13 @@ const CheckoutPage = () => {
         );
 
         if (order.customer_email) {
-          sendConfirmationEmail(order);
+          await sendConfirmationEmail(order);
         }
-        sendAdminNotificationEmail(order);
+        await sendAdminNotificationEmail(order);
 
         clearCart();
-        toast.success("Payment completed and order created! Redirecting to confirmation...");
-        navigate(`/order/${order.id}${order.guest_access_token ? `?token=${order.guest_access_token}` : ""}`);
+        toast.success("Payment completed and order created! Redirecting to thank you page...");
+        navigate("/thank-you");
         return;
       }
 

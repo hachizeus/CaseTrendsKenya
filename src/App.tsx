@@ -33,6 +33,7 @@ const AdminFinancials = lazy(() => import("./pages/admin/AdminFinancials.tsx"));
 const AdminSlidesOverview = lazy(() => import("./pages/admin/AdminSlidesOverview.tsx"));
 const AdminSlideManager = lazy(() => import("./pages/admin/AdminSlideManager.tsx"));
 const NotFound = lazy(() => import("./pages/NotFound.tsx"));
+const ThankYouPage = lazy(() => import("./pages/ThankYouPage.tsx"));
 
 // Lazy load heavy admin components
 const LazyAdminSlidesOverview = lazy(() => import("./pages/admin/AdminSlidesOverview.tsx"));
@@ -143,6 +144,7 @@ const AppContent = () => {
           <Route path="financials" element={<AdminOnlyRoute><AdminFinancials /></AdminOnlyRoute>} />
           <Route path="users" element={<AdminOnlyRoute><AdminUsers /></AdminOnlyRoute>} />
         </Route>
+        <Route path="/thank-you" element={<ThankYouPage />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </>
