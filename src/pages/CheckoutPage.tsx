@@ -65,63 +65,57 @@ const CheckoutPage = () => {
   };
 
   const sendConfirmationEmail = async (orderData: any) => {
-    try {
-      const headers: Record<string, string> = { "Content-Type": "application/json" };
-      if (session?.access_token) {
-        headers.Authorization = `Bearer ${session.access_token}`;
-      }
-
-      const response = await fetch(`${API_URL}/api/send-email`, {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          to: orderData.customer_email,
-          type: "order_confirmation",
-          data: {
-            order_id: orderData.id,
-            guest_access_token: orderData.guest_access_token,
-          },
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Email API error: ${response.status}`);
-      }
-
-      const result = await response.json();
-      console.log("Confirmation email sent successfully:", result);
-    } catch (error) {
-      console.warn("Email send error:", error);
-      // Don't fail the order if email fails to send
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (session?.access_token) {
+      headers.Authorization = `Bearer ${session.access_token}`;
+    } else {
+      console.error("Authorization token is missing. Ensure the user is logged in.");
+      return;
     }
+
+    const response = await fetch(`${API_URL}/api/send-email`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        to: orderData.customer_email,
+        type: "order_confirmation",
+        data: {
+          order_id: orderData.id,
+          guest_access_token: orderData.guest_access_token,
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Email API error: ${response.status}`);
+    }
+
+    const result = await response.json();
+    console.log("Confirmation email sent successfully:", result);
   };
 
   const sendAdminNotificationEmail = async (orderData: any) => {
-    try {
-      const headers: Record<string, string> = { "Content-Type": "application/json" };
-      if (session?.access_token) {
-        headers.Authorization = `Bearer ${session.access_token}`;
-      }
-
-      const response = await fetch(`${API_URL}/api/send-email`, {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          to: ADMIN_NOTIFICATION_EMAIL,
-          type: "order_notification",
-          data: orderData,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Admin email API error: ${response.status}`);
-      }
-
-      const result = await response.json();
-      console.log("Admin notification email sent successfully:", result);
-    } catch (error) {
-      console.warn("Admin notification email send error:", error);
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (session?.access_token) {
+      headers.Authorization = `Bearer ${session.access_token}`;
     }
+
+    const response = await fetch(`${API_URL}/api/send-email`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        to: ADMIN_NOTIFICATION_EMAIL,
+        type: "order_notification",
+        data: orderData,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Admin email API error: ${response.status}`);
+    }
+
+    const result = await response.json();
+    console.log("Admin notification email sent successfully:", result);
   };
 
   const createOrder = async (payload: any) => {

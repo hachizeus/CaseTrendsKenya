@@ -30,12 +30,29 @@ const AuthPage = () => {
 
   const switchMode = (login: boolean) => {
     setIsLogin(login);
-    setEmail(""); setPassword(""); setFullName("");
+    setEmail("");
+    setPassword("");
+    setFullName("");
+    // Clear any form errors when switching modes
+    setLoading(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Basic validation
+    if (!isLogin && !fullName.trim()) {
+      toast.error("Please enter your full name");
+      return;
+    }
+    
+    if (password.length < 6) {
+      toast.error("Password must be at least 6 characters");
+      return;
+    }
+    
     setLoading(true);
+    
     try {
       if (isLogin) {
         await signIn(email, password);
@@ -43,10 +60,27 @@ const AuthPage = () => {
         navigate(from, { replace: true });
       } else {
         await signUp(email, password, fullName);
-        toast.success("Account created! Check your email to verify.");
+        toast.success("Account created successfully! Please check your email to verify your account.", {
+          duration: 5000,
+        });
+        // Switch to login mode after successful registration
+        switchMode(true);
+        // Optional: Auto-fill the email field
+        setEmail(email);
       }
     } catch (err: any) {
-      toast.error(err.message);
+      console.error("Auth error:", err);
+      
+      // Handle specific error messages
+      if (err.message?.includes("User already registered")) {
+        toast.error("An account with this email already exists. Please sign in instead.");
+        switchMode(true);
+        setEmail(email);
+      } else if (err.message?.includes("password")) {
+        toast.error("Password must be at least 6 characters");
+      } else {
+        toast.error(err.message || "An error occurred during authentication");
+      }
     } finally {
       setLoading(false);
     }
@@ -58,10 +92,10 @@ const AuthPage = () => {
       <Header />
 
       <main className="flex-1 flex items-center justify-center py-10 px-4">
-        <div className="w-full max-w-5xl grid lg:grid-cols-2 shadow-xl overflow-hidden">
+        <div className="w-full max-w-5xl grid lg:grid-cols-2 shadow-xl overflow-hidden rounded-xl">
 
           {/* Left panel — branding */}
-          <div className="hidden lg:flex flex-col justify-between bg-[#0f1117] text-white p-10">
+          <div className="hidden lg:flex flex-col justify-between bg-gradient-to-br from-[#0f1117] to-[#1a1f2e] text-white p-10">
             <div>
               <img src="/logo.png" alt="Case Trends Kenya" className="h-10 w-auto mb-10 brightness-200" />
               <motion.div
@@ -86,7 +120,7 @@ const AuthPage = () => {
                       transition={{ delay: 0.2 + i * 0.1 }}
                       className="flex items-center gap-3"
                     >
-                      <div className="w-8 h-8 bg-primary/20 flex items-center justify-center flex-shrink-0">
+                      <div className="w-8 h-8 bg-primary/20 rounded-lg flex items-center justify-center flex-shrink-0">
                         <p.icon className="w-4 h-4 text-primary" />
                       </div>
                       <span className="text-sm text-white/80">{p.text}</span>
@@ -159,6 +193,7 @@ const AuthPage = () => {
                       onChange={e => setFullName(e.target.value)}
                       required
                       className="pl-10"
+                      disabled={loading}
                     />
                   </div>
                 )}
@@ -174,6 +209,7 @@ const AuthPage = () => {
                     onChange={e => setEmail(e.target.value)}
                     required
                     className="pl-10"
+                    disabled={loading}
                   />
                 </div>
 
@@ -183,17 +219,19 @@ const AuthPage = () => {
                     id="password"
                     name="password"
                     type={showPassword ? "text" : "password"}
-                    placeholder="Password"
+                    placeholder="Password (min. 6 characters)"
                     value={password}
                     onChange={e => setPassword(e.target.value)}
                     required
                     minLength={6}
                     className="pl-10 pr-10"
+                    disabled={loading}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(v => !v)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    disabled={loading}
                   >
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
@@ -234,6 +272,7 @@ const AuthPage = () => {
                     type="button"
                     onClick={() => switchMode(!isLogin)}
                     className="text-primary font-semibold hover:underline"
+                    disabled={loading}
                   >
                     {isLogin ? "Sign Up" : "Sign In"}
                   </button>

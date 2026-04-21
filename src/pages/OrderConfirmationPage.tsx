@@ -44,9 +44,14 @@ const OrderConfirmationPage = () => {
 
       const token = searchParams.get("token");
       const headers: Record<string, string> = {};
-      if (session?.access_token) {
-        headers.Authorization = `Bearer ${session.access_token}`;
+      if (!session?.access_token) {
+        console.error("Authorization token is missing. Ensure the user is logged in.");
+        toast.error("Unauthorized access. Please log in.");
+        navigate("/");
+        return;
       }
+
+      headers.Authorization = `Bearer ${session.access_token}`;
 
       const response = await fetch(
         `${API_URL}/api/order/${orderId}${token ? `?token=${token}` : ""}`,
