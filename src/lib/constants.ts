@@ -11,7 +11,7 @@ export const ADMIN_NOTIFICATION_EMAIL = import.meta.env.VITE_ADMIN_NOTIFICATION_
 export const PAYSTACK_PUBLIC_KEY = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY || "";
 
 // WhatsApp configuration
-export const WHATSAPP_NUMBER = "254759001048";
+export const WHATSAPP_NUMBER = "0141039509";
 
 // Pagination config
 export const PRODUCTS_PER_PAGE = 12;

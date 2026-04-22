@@ -5,7 +5,7 @@ import Header from "@/components/Header";
 import CategoryNav from "@/components/CategoryNav";
 import Footer from "@/components/Footer";
 import ProductCard from "@/components/ProductCard";
-import { useProductsPaginated } from "@/hooks/queries";
+import { useProducts } from "@/hooks/queries";
 import { getDisplayCategoryName, productMatchesCategoryFilter } from "@/lib/utils";
 import { MAIN_CATEGORIES, getSubcategoriesByCategory } from "@/lib/categoryData";
 import { 
@@ -103,10 +103,8 @@ const ProductListItem = ({ product, index }: { product: any; index: number }) =>
     ? Math.round(((product.original_price - product.price) / product.original_price) * 100)
     : 0;
 
-  // Extract actual product colors from the product data
   const productColors = product.product_colors || [];
   
-  // Function to get color hex value
   const getColorHex = (colorName: string) => {
     const colorOption = colorOptions.find(c => c.name.toLowerCase() === colorName.toLowerCase());
     return colorOption?.hex || '#CCCCCC';
@@ -117,7 +115,6 @@ const ProductListItem = ({ product, index }: { product: any; index: number }) =>
   };
 
   const handleAddToCart = () => {
-    // Add your add to cart logic here
     console.log('Add to cart:', product.id);
   };
 
@@ -129,7 +126,6 @@ const ProductListItem = ({ product, index }: { product: any; index: number }) =>
       className="group bg-card border border-border rounded-xl overflow-hidden hover:shadow-lg transition-all duration-300 hover:border-primary/20"
     >
       <div className="flex flex-col sm:flex-row">
-        {/* Image Section - Left side on desktop, top on mobile */}
         <div className="relative sm:w-48 md:w-56 lg:w-64 flex-shrink-0 cursor-pointer" onClick={handleViewDetails}>
           <div className="aspect-square sm:aspect-auto sm:h-full bg-gradient-to-br from-muted/50 to-muted/30">
             {primaryImage && !imageError ? (
@@ -147,14 +143,12 @@ const ProductListItem = ({ product, index }: { product: any; index: number }) =>
             )}
           </div>
           
-          {/* Discount Badge */}
           {discountPercentage > 0 && (
             <div className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-md">
               -{discountPercentage}%
             </div>
           )}
           
-          {/* Stock Status Badge */}
           {product.stock_status === 'out_of_stock' && (
             <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
               <span className="bg-red-500 text-white px-3 py-1 rounded-md text-sm font-semibold">
@@ -164,9 +158,7 @@ const ProductListItem = ({ product, index }: { product: any; index: number }) =>
           )}
         </div>
 
-        {/* Content Section - Right side */}
         <div className="flex-1 p-4 sm:p-5 flex flex-col">
-          {/* Brand and Category Row */}
           <div className="flex flex-wrap items-center gap-2 mb-2">
             {product.brand && (
               <span className="text-xs font-medium text-primary bg-primary/10 px-2 py-0.5 rounded">
@@ -178,21 +170,14 @@ const ProductListItem = ({ product, index }: { product: any; index: number }) =>
                 {getDisplayCategoryName(product.category)}
               </span>
             )}
-            {product.model && (
-              <span className="text-xs text-muted-foreground">
-                • {product.model}
-              </span>
-            )}
           </div>
 
-          {/* Product Name */}
           <h3 className="text-base sm:text-lg font-semibold mb-2 line-clamp-2 group-hover:text-primary transition-colors">
             <button onClick={handleViewDetails} className="hover:underline text-left">
               {product.name}
             </button>
           </h3>
 
-          {/* Rating */}
           {product.rating && (
             <div className="flex items-center gap-2 mb-3">
               <div className="flex items-center">
@@ -207,7 +192,6 @@ const ProductListItem = ({ product, index }: { product: any; index: number }) =>
             </div>
           )}
 
-          {/* Price Section */}
           <div className="flex items-baseline gap-2 mb-3">
             <span className="text-xl sm:text-2xl font-bold text-primary">
               KSh {Number(product.price).toLocaleString()}
@@ -219,7 +203,6 @@ const ProductListItem = ({ product, index }: { product: any; index: number }) =>
             )}
           </div>
 
-          {/* Available Colors - Show actual product colors */}
           {productColors && productColors.length > 0 && (
             <div className="flex items-center gap-2 mb-3">
               <span className="text-xs text-muted-foreground">Colors:</span>
@@ -245,7 +228,6 @@ const ProductListItem = ({ product, index }: { product: any; index: number }) =>
             </div>
           )}
 
-          {/* Action Buttons */}
           <div className="flex items-center gap-2 mt-auto pt-3">
             <Button 
               size="sm" 
@@ -277,12 +259,9 @@ const ProductsPage = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const PAGE_SIZE = 12;
 
-  const { data: paginatedData, isLoading, error } = useProductsPaginated(page, PAGE_SIZE);
-  const paginated = paginatedData as any;
-
-  const products = (paginated?.data as any[]) || [];
-  const totalProducts = (paginated?.total as number) || 0;
-  const totalPages = Math.ceil(totalProducts / PAGE_SIZE);
+  // Fetch ALL products (not paginated) for filtering
+  const { data: allProductsData, isLoading, error } = useProducts();
+  const allProducts = (allProductsData as any[]) || [];
 
   const selectedCategory = searchParams.get("category") || "";
   const selectedSubcategory = searchParams.get("subcategory") || "";
@@ -305,89 +284,94 @@ const ProductsPage = () => {
 
   const toggleSection = (key: string) => setOpenSections(s => ({ ...s, [key]: !s[key] }));
 
-  const brands = useMemo(() => {
-    let filteredProducts = products;
-    if (selectedCategory) {
-      filteredProducts = products.filter((p: any) => 
-        productMatchesCategoryFilter(p, selectedCategory, selectedSubcategory)
-      );
-    }
-    const set = new Set<string>(filteredProducts.map((p: any) => p.brand).filter(Boolean));
-    return Array.from(set).sort();
-  }, [products, selectedCategory, selectedSubcategory]);
-
-  const availableColors = useMemo(() => {
-    const set = new Set<string>();
-    products.forEach((p: any) => {
-      p.product_colors?.forEach((pc: any) => {
-        if (pc.color) set.add(pc.color);
-      });
-    });
-    return Array.from(set).sort();
-  }, [products]);
-
   const splitModels = (value?: string) =>
     (value || "").split(/[\r\n,]+/).map(s => s.trim()).filter(Boolean);
 
-  const availableModels = useMemo(() => {
-    const filteredByBrand = selectedBrand 
-      ? products.filter((p: any) => p.brand === selectedBrand) 
-      : products;
-    const models = new Set<string>();
-    filteredByBrand.forEach((p: any) => 
-      splitModels(p.model).forEach(model => models.add(model))
-    );
-    return Array.from(models).sort();
-  }, [products, selectedBrand]);
+  // ENHANCED: Smart category matching that checks product names and descriptions
+  const matchesCategorySmart = (product: any, categorySlug: string): boolean => {
+    const productName = product.name?.toLowerCase() || "";
+    const productDesc = product.description?.toLowerCase() || "";
+    const productCategory = product.category?.toLowerCase() || "";
+    const productBrand = product.brand?.toLowerCase() || "";
+    
+    // First try exact category match
+    if (productMatchesCategoryFilter(product, categorySlug)) {
+      return true;
+    }
+    
+    // Smart matching based on category type
+    switch (categorySlug) {
+      case "phone-cases":
+        return productName.includes("case") || 
+               productName.includes("cover") ||
+               productDesc.includes("case") ||
+               productDesc.includes("cover") ||
+               productCategory === "phone-cases" ||
+               productCategory === "phone cases";
+               
+      case "protectors":
+        return productName.includes("protector") || 
+               productName.includes("screen protector") ||
+               productName.includes("lens protector") ||
+               productDesc.includes("protector") ||
+               productCategory === "protectors";
+               
+      case "android-phones-protectors":
+        return (productBrand !== "apple" || productName.includes("android")) &&
+               (productName.includes("protector") || productDesc.includes("protector"));
+               
+      case "iphone-model-protectors":
+        return (productBrand === "apple" || productName.includes("iphone")) &&
+               (productName.includes("protector") || productDesc.includes("protector"));
+               
+      case "audio":
+        return productName.includes("headphone") ||
+               productName.includes("earbud") ||
+               productName.includes("speaker") ||
+               productCategory === "audio";
+               
+      case "power-banks":
+        return productName.includes("power bank") ||
+               productName.includes("powerbank") ||
+               productName.includes("portable charger") ||
+               productCategory === "power-banks";
+               
+      default:
+        return false;
+    }
+  };
 
-  const categoryCounts = useMemo(() => {
-    const counts: Record<string, number> = {};
-    homepageCategories.forEach((cat) => {
-      counts[cat] = products.filter((p: any) => productMatchesCategoryFilter(p, cat)).length;
-    });
-    return counts;
-  }, [products]);
+  // ENHANCED: Filter products with smart matching
+  const filteredProducts = useMemo(() => {
+    let result = [...allProducts];
 
-  const currentSubcategories = selectedCategory 
-    ? getSubcategoriesByCategory(selectedCategory) 
-    : [];
-
-  const subcategoryCounts = useMemo(() => {
-    const counts: Record<string, number> = {};
-    currentSubcategories.forEach((sub) => {
-      counts[sub.slug] = products.filter((p: any) => 
-        productMatchesCategoryFilter(p, selectedCategory, sub.slug)
-      ).length;
-    });
-    return counts;
-  }, [products, selectedCategory, currentSubcategories]);
-
-  const filtered = useMemo(() => {
-    let result = [...products];
-
+    // Search query filtering
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
-      result = result.filter(p => 
-        p.name.toLowerCase().includes(q) || 
-        p.brand.toLowerCase().includes(q) || 
-        p.category.toLowerCase().includes(q) || 
-        (p.model?.toLowerCase() || "").includes(q) || 
-        (p.compatibility_type?.toLowerCase() || "").includes(q)
-      );
+      result = result.filter(p => {
+        const nameMatch = p.name?.toLowerCase().includes(q);
+        const brandMatch = p.brand?.toLowerCase().includes(q);
+        const categoryMatch = p.category?.toLowerCase().includes(q);
+        const descMatch = p.description?.toLowerCase().includes(q);
+        const modelMatch = (p.model?.toLowerCase() || "").includes(q);
+        
+        return nameMatch || brandMatch || categoryMatch || descMatch || modelMatch;
+      });
     }
     
+    // Category filter with smart matching
     if (selectedCategory) {
-      result = result.filter(p => 
-        productMatchesCategoryFilter(p, selectedCategory, selectedSubcategory)
-      );
+      result = result.filter(p => matchesCategorySmart(p, selectedCategory));
     }
     
+    // Brand filter
     if (selectedBrand) {
       result = result.filter(p => 
         p.brand?.toLowerCase() === selectedBrand.toLowerCase()
       );
     }
     
+    // Model filter
     if (selectedModel) {
       result = result.filter(p => 
         splitModels(p.model).some(model => 
@@ -396,12 +380,14 @@ const ProductsPage = () => {
       );
     }
     
+    // Compatibility filter
     if (selectedCompatibility) {
       result = result.filter(p => 
         (p.compatibility_type || "").toLowerCase().includes(selectedCompatibility.toLowerCase())
       );
     }
     
+    // Color filter
     if (selectedColor) {
       result = result.filter(p => 
         p.product_colors?.some((pc: any) => 
@@ -410,6 +396,7 @@ const ProductsPage = () => {
       );
     }
 
+    // Price filter
     if (selectedPrice) {
       const range = priceRanges[Number(selectedPrice)];
       if (range) {
@@ -419,6 +406,7 @@ const ProductsPage = () => {
       }
     }
 
+    // Sorting
     switch (sortBy) {
       case "price_asc": 
         result.sort((a, b) => a.price - b.price); 
@@ -430,12 +418,71 @@ const ProductsPage = () => {
         result.sort((a, b) => a.name.localeCompare(b.name)); 
         break;
       default: 
+        if (sortBy === "newest" && result[0]?.created_at) {
+          result.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        }
         break;
     }
 
     return result;
-  }, [products, searchQuery, selectedCategory, selectedSubcategory, selectedBrand, 
-      selectedModel, selectedCompatibility, selectedColor, selectedPrice, sortBy]);
+  }, [allProducts, searchQuery, selectedCategory, selectedBrand, selectedModel, 
+      selectedCompatibility, selectedColor, selectedPrice, sortBy]);
+
+  // Calculate pagination based on filtered results
+  const totalFilteredProducts = filteredProducts.length;
+  const totalPages = Math.ceil(totalFilteredProducts / PAGE_SIZE);
+  
+  // Get current page products
+  const currentPageProducts = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE;
+    const end = start + PAGE_SIZE;
+    return filteredProducts.slice(start, end);
+  }, [filteredProducts, page, PAGE_SIZE]);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery, selectedCategory, selectedBrand, selectedModel, 
+      selectedCompatibility, selectedColor, selectedPrice, sortBy]);
+
+  // Get brands from filtered products (not all products)
+  const brands = useMemo(() => {
+    const set = new Set<string>(filteredProducts.map((p: any) => p.brand).filter(Boolean));
+    return Array.from(set).sort();
+  }, [filteredProducts]);
+
+  const availableModels = useMemo(() => {
+    const filteredByBrand = selectedBrand 
+      ? filteredProducts.filter((p: any) => p.brand === selectedBrand) 
+      : filteredProducts;
+    const models = new Set<string>();
+    filteredByBrand.forEach((p: any) => 
+      splitModels(p.model).forEach(model => models.add(model))
+    );
+    return Array.from(models).sort();
+  }, [filteredProducts, selectedBrand]);
+
+  const categoryCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    homepageCategories.forEach((cat) => {
+      counts[cat] = allProducts.filter((p: any) => matchesCategorySmart(p, cat)).length;
+    });
+    return counts;
+  }, [allProducts]);
+
+  const currentSubcategories = selectedCategory 
+    ? getSubcategoriesByCategory(selectedCategory) 
+    : [];
+
+  const subcategoryCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    currentSubcategories.forEach((sub) => {
+      counts[sub.slug] = allProducts.filter((p: any) => 
+        productMatchesCategoryFilter(p, selectedCategory, sub.slug)
+      ).length;
+    });
+    return counts;
+  }, [allProducts, selectedCategory, currentSubcategories]);
 
   const setFilter = (key: string, value: string) => {
     const params = new URLSearchParams(searchParams);
@@ -600,7 +647,6 @@ const ProductsPage = () => {
       
       <main className="flex-1">
         <div className="container px-4 sm:px-6 py-4 sm:py-8">
-          {/* Breadcrumb - Hidden on mobile */}
           <nav className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground mb-6">
             <a href="/" className="hover:text-primary transition-colors">Home</a>
             <ChevronRight className="w-4 h-4" />
@@ -616,7 +662,6 @@ const ProductsPage = () => {
           </nav>
 
           <div className="flex gap-8">
-            {/* Desktop sidebar */}
             <aside className="hidden lg:block w-72 flex-shrink-0">
               <div className="sticky top-20">
                 <div className="bg-card border border-border rounded-xl overflow-hidden">
@@ -648,9 +693,7 @@ const ProductsPage = () => {
               </div>
             </aside>
 
-            {/* Main content */}
             <div className="flex-1 min-w-0">
-              {/* Header - Mobile optimized */}
               <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4 sm:mb-6">
                 <div>
                   <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-1">
@@ -660,12 +703,11 @@ const ProductsPage = () => {
                     }
                   </h1>
                   <p className="text-xs sm:text-sm text-muted-foreground">
-                    Showing {filtered.length} of {totalProducts} products
+                    Showing {currentPageProducts.length} of {totalFilteredProducts} products
                   </p>
                 </div>
                 
                 <div className="flex items-center justify-between sm:justify-end gap-2">
-                  {/* View toggle */}
                   <div className="hidden sm:flex items-center gap-1 bg-muted rounded-lg p-1">
                     <Button
                       variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
@@ -685,7 +727,6 @@ const ProductsPage = () => {
                     </Button>
                   </div>
 
-                  {/* Sort dropdown */}
                   <Select value={sortBy} onValueChange={(value: string) => setFilter("sort", value)}>
                     <option value="newest">✨ Newest</option>
                     <option value="price_asc">💰 Low to High</option>
@@ -693,7 +734,6 @@ const ProductsPage = () => {
                     <option value="name">📝 A-Z</option>
                   </Select>
 
-                  {/* Mobile filter button */}
                   <Button 
                     variant="outline" 
                     size="sm" 
@@ -711,7 +751,6 @@ const ProductsPage = () => {
                 </div>
               </div>
 
-              {/* Active filter tags */}
               {activeFilterCount > 0 && (
                 <div className="flex flex-nowrap sm:flex-wrap gap-2 mb-4 sm:mb-6 overflow-x-auto pb-2 sm:pb-0 scrollbar-hide">
                   {selectedCategory && selectedCategory !== "All Accessories" && (
@@ -765,7 +804,6 @@ const ProductsPage = () => {
                 </div>
               )}
 
-              {/* Product grid/list */}
               {error ? (
                 <Alert variant="destructive">
                   <AlertDescription className="flex items-center justify-between flex-col sm:flex-row gap-3">
@@ -815,7 +853,7 @@ const ProductsPage = () => {
                     )
                   ))}
                 </div>
-              ) : filtered.length === 0 ? (
+              ) : currentPageProducts.length === 0 ? (
                 <div className="text-center py-12 sm:py-16">
                   <div className="max-w-md mx-auto px-4">
                     <div className="w-16 h-16 sm:w-24 sm:h-24 mx-auto mb-4 sm:mb-6 rounded-full bg-muted flex items-center justify-center">
@@ -838,7 +876,7 @@ const ProductsPage = () => {
                       ? "grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" 
                       : "grid-cols-1"
                   )}>
-                    {filtered.map((product, i) => (
+                    {currentPageProducts.map((product, i) => (
                       viewMode === 'grid' ? (
                         <div key={product.id} className="h-full">
                           <ProductCard
@@ -862,7 +900,6 @@ const ProductsPage = () => {
                     ))}
                   </div>
 
-                  {/* Pagination */}
                   {totalPages > 1 && (
                     <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-0 sm:justify-between mt-6 sm:mt-8 pt-4 sm:pt-6 border-t border-border">
                       <p className="text-xs sm:text-sm text-muted-foreground order-2 sm:order-1">
@@ -943,7 +980,6 @@ const ProductsPage = () => {
       </main>
       <Footer />
 
-      {/* Mobile filters modal - Opens to 1/3 or 1/4 of screen */}
       <AnimatePresence>
         {mobileFiltersOpen && (
           <>

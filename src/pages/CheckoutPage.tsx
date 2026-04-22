@@ -309,7 +309,7 @@ const CheckoutPage = () => {
         status: "pending",
         payment_method: paymentMethod,
         guest_access_token: guestAccessToken,
-        captcha_token: shouldUseCaptcha ? captchaToken : null, // Include CAPTCHA token
+        // NOTE: captcha_token removed - not needed for order creation
       };
 
       if (paymentMethod === "whatsapp") {
@@ -372,10 +372,12 @@ const CheckoutPage = () => {
     } catch (error) {
       console.error("Error creating order:", error);
       
-      // Reset CAPTCHA on error
-      setResetCaptcha(true);
-      setTimeout(() => setResetCaptcha(false), 100);
-      setCaptchaToken(null);
+      // Reset CAPTCHA on error - wrap in setTimeout
+      setTimeout(() => {
+        setResetCaptcha(true);
+        setTimeout(() => setResetCaptcha(false), 100);
+        setCaptchaToken(null);
+      }, 0);
       
       toast.error("Failed to create order. Please try again.");
     } finally {

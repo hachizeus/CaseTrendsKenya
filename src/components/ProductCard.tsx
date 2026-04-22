@@ -28,12 +28,8 @@ const ProductCard = ({ id, name, images, price, originalPrice, category, brand, 
   const sorted = [...images].sort((a, b) => a.display_order - b.display_order);
   const primaryImg = sorted.find(i => i.is_primary)?.image_url || sorted[0]?.image_url || "/placeholder.svg";
   const secondaryImg = sorted.length > 1 ? sorted[1]?.image_url : primaryImg;
-  const displayModel = model
-    ? model
-        .split(/[\r\n,]+/)
-        .map(s => s.trim())
-        .filter(Boolean)[0]
-    : undefined;
+  // Model display removed - no longer showing phone models on product cards
+  
   const avgRating = rating ? Math.max(0, Math.min(5, rating)) : 0;
   const [hovered, setHovered] = useState(false);
   const [isFav, setIsFav] = useState(false);
@@ -176,11 +172,10 @@ const ProductCard = ({ id, name, images, price, originalPrice, category, brand, 
 
         {/* Info - flex column to push rating & price to bottom */}
         <div className="p-3 sm:p-4 border-t border-border flex flex-col flex-grow">
-          {/* Top section: brand, model, name */}
+          {/* Top section: brand only - model removed */}
           <div>
             <div className="flex items-center gap-2 flex-wrap">
               <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wide">{brand}</p>
-              {displayModel && <span className="text-[10px] sm:text-xs text-muted-foreground lowercase">· {displayModel}</span>}
             </div>
             <h3 className="text-[11px] sm:text-sm lg:text-base font-semibold line-clamp-2 mb-2 group-hover:text-primary transition-colors leading-snug">
               {name}
