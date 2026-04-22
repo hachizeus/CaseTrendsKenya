@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -9,7 +9,8 @@ import { Input } from "@/components/ui/input";
 import { 
   Plus, Pencil, Trash2, Search, Star, TrendingUp, Loader2, 
   Smartphone, Filter, ChevronDown, Grid3x3, LayoutList, 
-  ArrowUpDown, Package, DollarSign, Tag, CheckCircle, AlertCircle, XCircle
+  ArrowUpDown, Package, DollarSign, Tag, CheckCircle, AlertCircle, XCircle,
+  RefreshCw
 } from "lucide-react";
 import { toast } from "sonner";
 import { getOptimizedImageUrl } from "@/lib/imageOptimization";
@@ -22,11 +23,49 @@ const AdminProducts = () => {
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [isDeletingId, setIsDeletingId] = useState<string | null>(null);
-  const { refreshTrigger } = useRefreshTrigger();
+  const { refreshTrigger, triggerRefresh } = useRefreshTrigger();
   const [viewMode, setViewMode] = useState<"table" | "grid">("table");
   const [sortBy, setSortBy] = useState<"name" | "price" | "stock" | "newest">("newest");
   const [filterCategory, setFilterCategory] = useState<string>("all");
   const [showFilters, setShowFilters] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  
+  // Pull to refresh
+  const touchStartY = useRef(0);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const loadProducts = async () => {
+    const { data } = await supabase
+      .from("products")
+      .select("*, product_images(*)")
+      .order("created_at", { ascending: false });
+    setProducts(data || []);
+    return data;
+  };
+
+  const handleRefresh = async () => {
+    if (isRefreshing) return;
+    setIsRefreshing(true);
+    await loadProducts();
+    setIsRefreshing(false);
+    toast.success("Products refreshed");
+  };
+
+  // Pull to refresh handlers
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (containerRef.current?.scrollTop === 0) {
+      touchStartY.current = e.touches[0].clientY;
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (containerRef.current?.scrollTop === 0 && touchStartY.current) {
+      const deltaY = e.touches[0].clientY - touchStartY.current;
+      if (deltaY > 60 && !isRefreshing) {
+        handleRefresh();
+      }
+    }
+  };
 
   useEffect(() => {
     const load = async () => {
@@ -36,19 +75,16 @@ const AdminProducts = () => {
     load();
   }, [refreshTrigger]);
 
-  const loadProducts = async () => {
-    const { data } = await supabase
-      .from("products")
-      .select("*, product_images(*)")
-      .order("created_at", { ascending: false });
-    setProducts(data || []);
-  };
-
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this product and all its images?")) return;
     setIsDeletingId(id);
 
-    const { error } = await (supabase.from("products") as any).delete().eq("id", id);
+    // Fix: Correct Supabase delete syntax
+    const { error } = await supabase
+      .from("products")
+      .delete()
+      .eq("id", id);
+
     setIsDeletingId(null);
 
     if (error) {
@@ -56,7 +92,8 @@ const AdminProducts = () => {
       return;
     }
 
-    toast.success("Deleted");
+    toast.success("Deleted successfully");
+    
     await logAuditAction({
       actor_id: user?.id ?? null,
       actor_email: user?.email ?? null,
@@ -66,7 +103,8 @@ const AdminProducts = () => {
       details: null,
       user_id: null,
     });
-    loadProducts();
+    
+    await loadProducts();
   };
 
   const getUniqueCategories = () => {
@@ -128,7 +166,20 @@ const AdminProducts = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50">
+    <div 
+      ref={containerRef}
+      className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 overflow-y-auto"
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+    >
+      {/* Pull to refresh indicator */}
+      {isRefreshing && (
+        <div className="fixed top-0 left-0 right-0 z-50 flex justify-center py-2 bg-primary/10 backdrop-blur-sm">
+          <Loader2 className="w-5 h-5 animate-spin text-primary" />
+          <span className="ml-2 text-sm text-primary">Refreshing...</span>
+        </div>
+      )}
+
       <div className="space-y-5 p-4 md:p-6 max-w-[1400px] mx-auto">
         {/* Header Section */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -143,12 +194,23 @@ const AdminProducts = () => {
               Manage your inventory, track stock levels, and update product information
             </p>
           </div>
-          <Button 
-            onClick={() => navigate("/admin/products/new")} 
-            className="gap-2 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary"
-          >
-            <Plus className="w-4 h-4" /> Add New Product
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline"
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className="gap-2"
+            >
+              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+            <Button 
+              onClick={() => navigate("/admin/products/new")} 
+              className="gap-2 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary"
+            >
+              <Plus className="w-4 h-4" /> Add New Product
+            </Button>
+          </div>
         </div>
 
         {/* Stats Cards */}
