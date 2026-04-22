@@ -10,8 +10,9 @@ export const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || impor
 export const ADMIN_NOTIFICATION_EMAIL = import.meta.env.VITE_ADMIN_NOTIFICATION_EMAIL || "info@casetrendskenya.co.ke";
 export const PAYSTACK_PUBLIC_KEY = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY || "";
 
+
 // WhatsApp configuration
-export const WHATSAPP_NUMBER = "0141039509";
+export const WHATSAPP_NUMBER = "254141039509";
 
 // Pagination config
 export const PRODUCTS_PER_PAGE = 12;
