@@ -171,7 +171,13 @@ const App = () => (
   </QueryClientProvider>
 );
 
-// Register service worker only in production
+// NOTE: Service worker registration temporarily disabled
+// to prevent CSP conflicts with Google Tag Manager and Cloudflare Turnstile.
+// The CSP is now handled entirely by the Express server.
+// 
+// To re-enable, uncomment the code below and ensure service-worker.js
+// has the proper CSP configuration for external domains.
+/*
 if (import.meta.env.PROD) {
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => {
@@ -179,5 +185,6 @@ if (import.meta.env.PROD) {
     });
   }
 }
+*/
 
 export default App;
