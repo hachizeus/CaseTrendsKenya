@@ -13,6 +13,8 @@ import CartDrawer from "@/components/CartDrawer";
 import WhatsAppButton from "@/components/WhatsAppButton";
 import ProductComparisonModal from "@/components/ProductComparisonModal";
 import Index from "./pages/Index.tsx";
+
+// Lazy load pages for better performance
 const AuthPage = lazy(() => import("./pages/AuthPage.tsx"));
 const ProductsPage = lazy(() => import("./pages/ProductsPage.tsx"));
 const ProductPage = lazy(() => import("./pages/ProductPage.tsx"));
@@ -31,8 +33,6 @@ const AdminReviews = lazy(() => import("./pages/admin/AdminReviews.tsx"));
 const AdminOrders = lazy(() => import("./pages/admin/AdminOrders.tsx"));
 const AdminAuditLogs = lazy(() => import("./pages/admin/AdminAuditLogs.tsx"));
 const AdminFinancials = lazy(() => import("./pages/admin/AdminFinancials.tsx"));
-const AdminSlidesOverview = lazy(() => import("./pages/admin/AdminSlidesOverview.tsx"));
-const AdminSlideManager = lazy(() => import("./pages/admin/AdminSlideManager.tsx"));
 const NotFound = lazy(() => import("./pages/NotFound.tsx"));
 const ThankYouPage = lazy(() => import("./pages/ThankYouPage.tsx"));
 
@@ -84,71 +84,77 @@ const AppContent = () => {
         products={comparisonProducts}
         onClose={() => setShowComparison(false)}
       />
-      <Routes>
-        <Route path="/" element={<Index />} />
-        <Route
-          path="/auth"
-          element={
-            <GuestRoute>
-              <AuthPage />
-            </GuestRoute>
-          }
-        />
-        <Route path="/reset-password" element={<ResetPasswordPage />} />
-        <Route path="/products" element={<ProductsPage />} />
-        <Route path="/product/:id" element={<ProductPage />} />
-        <Route path="/checkout" element={<CheckoutPage />} />
-        <Route path="/order/:orderId" element={<OrderConfirmationPage />} />
-        <Route
-          path="/account/orders"
-          element={
-            <ProtectedRoute>
-              <OrdersPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/favorites"
-          element={<FavoritesPage />}
-        />
-        <Route
-          path="/admin"
-          element={
-            <AdminRoute>
-              <AdminLayout />
-            </AdminRoute>
-          }
-        >
-          <Route index element={<AdminDashboard />} />
-          <Route path="products" element={<AdminProducts />} />
-          <Route path="products/new" element={<AdminProductsForm />} />
-          <Route path="products/:id" element={<AdminProductsForm />} />
-          <Route path="slides" element={<AdminSlides />} />
+      <Suspense fallback={<LoadingPlaceholder />}>
+        <Routes>
+          <Route path="/" element={<Index />} />
           <Route
-            path="slides-overview"
+            path="/auth"
             element={
-              <Suspense fallback={<LoadingPlaceholder />}>
-                <LazyAdminSlidesOverview />
-              </Suspense>
+              <GuestRoute>
+                <AuthPage />
+              </GuestRoute>
+            }
+          />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
+          <Route path="/products" element={<ProductsPage />} />
+          <Route path="/product/:id" element={<ProductPage />} />
+          <Route path="/checkout" element={<CheckoutPage />} />
+          <Route path="/order/:orderId" element={<OrderConfirmationPage />} />
+          <Route
+            path="/account/orders"
+            element={
+              <ProtectedRoute>
+                <OrdersPage />
+              </ProtectedRoute>
             }
           />
           <Route
-            path="slides-section/:sectionId"
+            path="/favorites"
             element={
-              <Suspense fallback={<LoadingPlaceholder />}>
-                <LazyAdminSlideManager />
-              </Suspense>
+              <ProtectedRoute>
+                <FavoritesPage />
+              </ProtectedRoute>
             }
           />
-          <Route path="reviews" element={<AdminReviews />} />
-          <Route path="orders" element={<AdminOrders />} />
-          <Route path="audit-logs" element={<AdminAuditLogs />} />
-          <Route path="financials" element={<AdminOnlyRoute><AdminFinancials /></AdminOnlyRoute>} />
-          <Route path="users" element={<AdminOnlyRoute><AdminUsers /></AdminOnlyRoute>} />
-        </Route>
-        <Route path="/thank-you" element={<ThankYouPage />} />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
+          <Route
+            path="/admin"
+            element={
+              <AdminRoute>
+                <AdminLayout />
+              </AdminRoute>
+            }
+          >
+            <Route index element={<AdminDashboard />} />
+            <Route path="products" element={<AdminProducts />} />
+            <Route path="products/new" element={<AdminProductsForm />} />
+            <Route path="products/:id" element={<AdminProductsForm />} />
+            <Route path="slides" element={<AdminSlides />} />
+            <Route
+              path="slides-overview"
+              element={
+                <Suspense fallback={<LoadingPlaceholder />}>
+                  <LazyAdminSlidesOverview />
+                </Suspense>
+              }
+            />
+            <Route
+              path="slides-section/:sectionId"
+              element={
+                <Suspense fallback={<LoadingPlaceholder />}>
+                  <LazyAdminSlideManager />
+                </Suspense>
+              }
+            />
+            <Route path="reviews" element={<AdminReviews />} />
+            <Route path="orders" element={<AdminOrders />} />
+            <Route path="audit-logs" element={<AdminAuditLogs />} />
+            <Route path="financials" element={<AdminOnlyRoute><AdminFinancials /></AdminOnlyRoute>} />
+            <Route path="users" element={<AdminOnlyRoute><AdminUsers /></AdminOnlyRoute>} />
+          </Route>
+          <Route path="/thank-you" element={<ThankYouPage />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </Suspense>
     </>
   );
 };
@@ -171,20 +177,6 @@ const App = () => (
   </QueryClientProvider>
 );
 
-// NOTE: Service worker registration temporarily disabled
-// to prevent CSP conflicts with Google Tag Manager and Cloudflare Turnstile.
-// The CSP is now handled entirely by the Express server.
-// 
-// To re-enable, uncomment the code below and ensure service-worker.js
-// has the proper CSP configuration for external domains.
-/*
-if (import.meta.env.PROD) {
-  if ("serviceWorker" in navigator) {
-    window.addEventListener("load", () => {
-      navigator.serviceWorker.register("/service-worker.js");
-    });
-  }
-}
-*/
-
+// NOTE: Service worker registration disabled to prevent CSP conflicts
+// The CSP is handled entirely by the Express server
 export default App;

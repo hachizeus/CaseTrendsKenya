@@ -26,6 +26,7 @@ const AuthPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [captchaKey, setCaptchaKey] = useState(0); // Used to reset CAPTCHA
   const { signIn, signUp } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -35,8 +36,7 @@ const AuthPage = () => {
   const isProduction = () => {
     const hostname = window.location.hostname;
     return hostname.includes('casetrendskenya.co.ke') || 
-           hostname.includes('onrender.com') ||
-           hostname.includes('casetrendskenya.onrender.com');
+           hostname.includes('onrender.com');
   };
 
   const shouldUseCaptcha = isProduction();
@@ -51,6 +51,11 @@ const AuthPage = () => {
     setFullName("");
     setCaptchaToken(null);
     setLoading(false);
+  };
+
+  const resetCaptcha = () => {
+    setCaptchaToken(null);
+    setCaptchaKey(prev => prev + 1);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -77,12 +82,10 @@ const AuthPage = () => {
     
     try {
       if (isLogin) {
-        // Pass captchaToken only on production
         await signIn(email, password, shouldUseCaptcha ? captchaToken : undefined);
         toast.success("Welcome back!");
         navigate(from, { replace: true });
       } else {
-        // Pass captchaToken only on production
         await signUp(email, password, fullName, shouldUseCaptcha ? captchaToken : undefined);
         toast.success("Account created successfully! Please check your email to verify your account.", {
           duration: 5000,
@@ -93,13 +96,19 @@ const AuthPage = () => {
     } catch (err: any) {
       console.error("Auth error:", err);
       
+      // Reset CAPTCHA on any auth error
+      resetCaptcha();
+      
       if (err.message?.includes("User already registered")) {
         toast.error("An account with this email already exists. Please sign in instead.");
         switchMode(true);
         setEmail(email);
-      } else if (err.message?.includes("captcha")) {
+      } else if (err.message?.includes("captcha") || err.message?.includes("CAPTCHA")) {
         toast.error("CAPTCHA verification failed. Please try again.");
-        setCaptchaToken(null);
+      } else if (err.message?.includes("Invalid login credentials")) {
+        toast.error("Invalid email or password. Please try again.");
+      } else if (err.message?.includes("Email not confirmed")) {
+        toast.error("Please verify your email address before signing in.");
       } else if (err.message?.includes("password")) {
         toast.error("Password must be at least 6 characters");
       } else if (err.message?.includes("verify your email")) {
@@ -306,7 +315,7 @@ const AuthPage = () => {
 
                 {/* Turnstile CAPTCHA Widget - Only show on production */}
                 {shouldUseCaptcha && (
-                  <div className="flex justify-center py-2">
+                  <div className="flex justify-center py-2" key={captchaKey}>
                     <Turnstile
                       sitekey={TURNSTILE_SITE_KEY}
                       onVerify={(token) => setCaptchaToken(token)}

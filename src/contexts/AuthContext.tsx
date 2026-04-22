@@ -82,6 +82,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       emailRedirectTo: import.meta.env.VITE_SITE_URL || window.location.origin,
     };
 
+    // Only add captcha token if provided (for production)
     if (captchaToken) {
       options.captchaToken = captchaToken;
     }
@@ -92,17 +93,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       options,
     });
     
-    if (error) throw error;
+    if (error) {
+      // Handle specific Supabase error codes
+      if (error.message?.includes("captcha")) {
+        throw new Error("CAPTCHA verification failed. Please try again.");
+      }
+      if (error.message?.includes("User already registered")) {
+        throw new Error("User already registered");
+      }
+      throw error;
+    }
 
+    // Update profile with email if signup was successful
     if (data.user?.id) {
-      // Fix TypeScript errors with 'as any'
-      const { error: profileError } = await (supabase
-        .from("profiles") as any)
-        .update({ email })
-        .eq("user_id", data.user.id);
-      
-      if (profileError) {
-        console.warn("Could not update email in profile:", profileError);
+      try {
+        // @ts-ignore - Suppress TypeScript error for Supabase types
+        await supabase
+          .from("profiles")
+          // @ts-ignore
+          .update({ email: email })
+          // @ts-ignore
+          .eq("user_id", data.user.id);
+      } catch (profileUpdateError) {
+        console.warn("Profile update failed:", profileUpdateError);
       }
     }
   };
@@ -113,6 +126,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       password,
     };
 
+    // Only add captcha token if provided (for production)
     if (captchaToken) {
       signInOptions.options = {
         captchaToken: captchaToken,
@@ -121,8 +135,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const { data, error } = await supabase.auth.signInWithPassword(signInOptions);
     
-    if (error) throw error;
+    if (error) {
+      // Handle specific error types
+      if (error.message?.includes("captcha")) {
+        throw new Error("CAPTCHA verification failed. Please try again.");
+      }
+      if (error.message?.includes("Invalid login credentials")) {
+        throw new Error("Invalid email or password. Please try again.");
+      }
+      if (error.message?.includes("Email not confirmed")) {
+        throw new Error("Please verify your email address before signing in.");
+      }
+      throw error;
+    }
 
+    // Check if email is verified
     if (data.user && !data.user.email_confirmed_at) {
       await supabase.auth.signOut();
       throw new Error("Please verify your email address before signing in. Check your inbox for the verification link.");
@@ -135,7 +162,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, role, isAdmin, isModerator, signUp, signIn, signOut }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      session, 
+      loading, 
+      role, 
+      isAdmin, 
+      isModerator, 
+      signUp, 
+      signIn, 
+      signOut 
+    }}>
       {children}
     </AuthContext.Provider>
   );

@@ -184,13 +184,6 @@ app.use((req, res, next) => {
     res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
   }
   
-  // Security headers
-  res.set('X-Content-Type-Options', 'nosniff');
-  res.set('X-Frame-Options', 'DENY');
-  res.set('X-XSS-Protection', '1; mode=block');
-  res.set('Referrer-Policy', 'strict-origin-when-cross-origin');
-  res.set('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
-  
   next();
 });
 
@@ -207,19 +200,17 @@ app.use(express.static(path.join(__dirname, 'dist'), {
   etag: false,
 }));
 
-const POSTMARK_API_TOKEN = "10b0fffa-aa2b-4302-8568-199e0ecb31df";
+const POSTMARK_API_TOKEN = process.env.POSTMARK_API_TOKEN || "10b0fffa-aa2b-4302-8568-199e0ecb31df";
 
 const postmarkClient = new ServerClient(POSTMARK_API_TOKEN);
 
 if (!POSTMARK_API_TOKEN) {
-  console.warn(
-    "POSTMARK_API_TOKEN is required to send emails. Email delivery will fail without it."
-  );
+  console.warn("POSTMARK_API_TOKEN is required to send emails. Email delivery will fail without it.");
 }
 
 // Order Confirmation Email Template
 const generateOrderConfirmationEmail = (orderData) => {
-  const siteUrl = process.env.SITE_URL || "https://casetrendskenya.co.ke";
+  const siteUrl = process.env.VITE_SITE_URL || process.env.SITE_URL || "https://casetrendskenya.co.ke";
   const trackingLink = `${siteUrl}/account/orders`;
   const safeCustomerName = escapeHtml(orderData.customer_name);
   const isGuestOrder = !orderData.user_id;
@@ -412,7 +403,7 @@ Website: ${siteUrl}`;
 
 // Status Update Email Template
 const generateStatusUpdateEmail = (orderData) => {
-  const siteUrl = process.env.SITE_URL || "https://casetrendskenya.co.ke";
+  const siteUrl = process.env.VITE_SITE_URL || process.env.SITE_URL || "https://casetrendskenya.co.ke";
   const orderLink = `${siteUrl}/account/orders`;
   const safeCustomerName = escapeHtml(orderData.customer_name);
   const isGuestOrder = !orderData.user_id;
@@ -633,7 +624,6 @@ app.post("/api/send-email", async (req, res) => {
       }
       emailTemplate = generateStatusUpdateEmail(normalizeOrderData(orderData));
     } else if (type === "order_notification") {
-      // Order notifications are sent by the checkout flow and do not require admin auth.
       const orderNotificationRecipient = to || ADMIN_NOTIFICATION_EMAIL;
       emailTemplate = generateOrderNotificationEmail(normalizeOrderData(orderData), orderNotificationRecipient);
     } else {
@@ -796,8 +786,7 @@ app.get("/health", (req, res) => {
   res.json({ status: "ok", message: "Email server is running" });
 });
 
-// SPA fallback - serve index.html only for client app routes, not missing asset paths
-// This allows React Router to handle client-side routing without returning HTML for missing assets
+// SPA fallback - serve index.html for client-side routes
 app.use((req, res) => {
   const extension = path.extname(req.path);
   const isAssetRequest = extension !== "";
@@ -813,6 +802,7 @@ app.use((req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`✅ Email server running on http://localhost:${PORT}`);
-  console.log(`📧 Email configured: ${process.env.EMAIL_USER}`);
+  console.log(`✅ Server running on port ${PORT}`);
+  console.log(`📧 Email configured: ${EMAIL_USER}`);
+  console.log(`🔒 CAPTCHA enabled: ${process.env.TURNSTILE_SECRET_KEY ? 'Yes' : 'No'}`);
 });
