@@ -107,28 +107,35 @@ const AuthPage = () => {
     }
   };
 
-  const handleForgotPassword = async () => {
-    if (!email.trim()) {
-      toast.error("Please enter your email address to reset your password.");
-      return;
-    }
+const handleForgotPassword = async () => {
+  if (!email.trim()) {
+    toast.error("Please enter your email address to reset your password.");
+    return;
+  }
 
-    try {
-      setLoading(true);
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
-      });
+  try {
+    setLoading(true);
+    console.log("Sending reset email to:", email);
+    console.log("Redirect to:", `${window.location.origin}/reset-password`);
+    
+    const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
 
-      if (error) throw error;
-
+    if (error) {
+      console.error("Full error:", error);
+      toast.error(error.message || "Failed to send password reset email.");
+    } else {
+      console.log("Reset email sent:", data);
       toast.success("Password reset email sent! Please check your inbox.");
-    } catch (err: any) {
-      console.error("Forgot password error:", err);
-      toast.error(err.message || "Failed to send password reset email.");
-    } finally {
-      setLoading(false);
     }
-  };
+  } catch (err: any) {
+    console.error("Forgot password error:", err);
+    toast.error(err.message || "Failed to send password reset email.");
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f4f6f9]">
