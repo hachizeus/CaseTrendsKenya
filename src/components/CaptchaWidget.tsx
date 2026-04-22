@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import Turnstile from "react-turnstile";
 import { toast } from "sonner";
 
@@ -10,6 +10,7 @@ interface CaptchaWidgetProps {
 
 const CaptchaWidget = ({ onVerify, className = "", reset = false }: CaptchaWidgetProps) => {
   const [captchaKey, setCaptchaKey] = useState(0);
+  const prevResetRef = useRef(reset);
   
   // Check if CAPTCHA should be enabled (only on production domains)
   const isProduction = () => {
@@ -23,16 +24,24 @@ const CaptchaWidget = ({ onVerify, className = "", reset = false }: CaptchaWidge
   const shouldUseCaptcha = isProduction();
   const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY || "0x4AAAAAADAszbwDj5ytZOc2";
 
-  // Reset CAPTCHA when reset prop changes
-  if (reset) {
-    setCaptchaKey(prev => prev + 1);
-  }
+  // Reset CAPTCHA when reset prop changes - use useEffect to avoid infinite loops
+  useEffect(() => {
+    if (reset && !prevResetRef.current) {
+      setCaptchaKey(prev => prev + 1);
+      onVerify(null);
+    }
+    prevResetRef.current = reset;
+  }, [reset, onVerify]);
+
+  // On localhost, automatically verify with a dummy token
+  useEffect(() => {
+    if (!shouldUseCaptcha && onVerify) {
+      const timer = setTimeout(() => onVerify("localhost-dev-token"), 100);
+      return () => clearTimeout(timer);
+    }
+  }, [shouldUseCaptcha, onVerify]);
 
   if (!shouldUseCaptcha) {
-    // On localhost, automatically verify with a dummy token
-    if (onVerify) {
-      setTimeout(() => onVerify("localhost-dev-token"), 100);
-    }
     return null;
   }
 

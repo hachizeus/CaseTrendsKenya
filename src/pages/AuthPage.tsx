@@ -52,68 +52,70 @@ const AuthPage = () => {
     setLoading(false);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (shouldUseCaptcha && !captchaToken) {
-      toast.error("Please complete the CAPTCHA verification");
-      return;
+ const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  
+  if (shouldUseCaptcha && !captchaToken) {
+    toast.error("Please complete the CAPTCHA verification");
+    return;
+  }
+  
+  if (!isLogin && !fullName.trim()) {
+    toast.error("Please enter your full name");
+    return;
+  }
+  
+  if (password.length < 6) {
+    toast.error("Password must be at least 6 characters");
+    return;
+  }
+  
+  setLoading(true);
+  
+  try {
+    if (isLogin) {
+      await signIn(email, password, shouldUseCaptcha ? captchaToken : null);
+      toast.success("Welcome back!");
+      navigate(from, { replace: true });
+    } else {
+      await signUp(email, password, fullName, shouldUseCaptcha ? captchaToken : null);
+      toast.success("Account created successfully! Please check your email to verify your account.", {
+        duration: 5000,
+      });
+      switchMode(true);
+      setEmail(email);
     }
+  } catch (err: any) {
+    console.error("Auth error:", err);
     
-    if (!isLogin && !fullName.trim()) {
-      toast.error("Please enter your full name");
-      return;
-    }
-    
-    if (password.length < 6) {
-      toast.error("Password must be at least 6 characters");
-      return;
-    }
-    
-    setLoading(true);
-    
-    try {
-      if (isLogin) {
-        await signIn(email, password, shouldUseCaptcha ? captchaToken : null);
-        toast.success("Welcome back!");
-        navigate(from, { replace: true });
-      } else {
-        await signUp(email, password, fullName, shouldUseCaptcha ? captchaToken : null);
-        toast.success("Account created successfully! Please check your email to verify your account.", {
-          duration: 5000,
-        });
-        switchMode(true);
-        setEmail(email);
-      }
-    } catch (err: any) {
-      console.error("Auth error:", err);
-      
+    // Reset CAPTCHA on error - wrap in setTimeout to avoid state updates during render
+    setTimeout(() => {
       setResetCaptcha(true);
       setTimeout(() => setResetCaptcha(false), 100);
-      
-      if (err.message?.includes("User already registered")) {
-        toast.error("An account with this email already exists. Please sign in instead.");
-        switchMode(true);
-        setEmail(email);
-      } else if (err.message?.includes("captcha") || err.message?.includes("CAPTCHA")) {
-        toast.error("CAPTCHA verification failed. Please try again.");
-      } else if (err.message?.includes("Invalid login credentials")) {
-        toast.error("Invalid email or password. Please try again.");
-      } else {
-        toast.error(err.message || "An error occurred during authentication");
-      }
-    } finally {
-      setLoading(false);
+      setCaptchaToken(null);
+    }, 0);
+    
+    if (err.message?.includes("User already registered")) {
+      toast.error("An account with this email already exists. Please sign in instead.");
+      switchMode(true);
+      setEmail(email);
+    } else if (err.message?.includes("captcha") || err.message?.includes("CAPTCHA")) {
+      toast.error("CAPTCHA verification failed. Please try again.");
+    } else if (err.message?.includes("Invalid login credentials")) {
+      toast.error("Invalid email or password. Please try again.");
+    } else {
+      toast.error(err.message || "An error occurred during authentication");
     }
-  };
-
+  } finally {
+    setLoading(false);
+  }
+};
 const handleForgotPassword = async () => {
   if (!email.trim()) {
     toast.error("Please enter your email address to reset your password.");
     return;
   }
 
-  // Require CAPTCHA on production
   if (shouldUseCaptcha && !captchaToken) {
     toast.error("Please complete the CAPTCHA verification.");
     return;
@@ -121,35 +123,32 @@ const handleForgotPassword = async () => {
 
   try {
     setLoading(true);
-    console.log("Sending reset email to:", email);
-    console.log("Redirect to:", `${window.location.origin}/reset-password`);
     
-    const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/reset-password`,
-      // PASS THE CAPTCHA TOKEN HERE!
       captchaToken: shouldUseCaptcha ? captchaToken : undefined,
     });
 
     if (error) {
-      console.error("Full error:", error);
-      
-      // Reset CAPTCHA on error
-      setResetCaptcha(true);
-      setTimeout(() => setResetCaptcha(false), 100);
-      setCaptchaToken(null);
+      // Reset CAPTCHA on error - wrap in setTimeout
+      setTimeout(() => {
+        setResetCaptcha(true);
+        setTimeout(() => setResetCaptcha(false), 100);
+        setCaptchaToken(null);
+      }, 0);
       
       toast.error(error.message || "Failed to send password reset email.");
     } else {
-      console.log("Reset email sent:", data);
       toast.success("Password reset email sent! Please check your inbox.");
     }
   } catch (err: any) {
     console.error("Forgot password error:", err);
     
-    // Reset CAPTCHA on error
-    setResetCaptcha(true);
-    setTimeout(() => setResetCaptcha(false), 100);
-    setCaptchaToken(null);
+    setTimeout(() => {
+      setResetCaptcha(true);
+      setTimeout(() => setResetCaptcha(false), 100);
+      setCaptchaToken(null);
+    }, 0);
     
     toast.error(err.message || "Failed to send password reset email.");
   } finally {
