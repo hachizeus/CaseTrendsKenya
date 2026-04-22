@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useCallback, useRef } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -23,7 +23,7 @@ const AdminProducts = () => {
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [isDeletingId, setIsDeletingId] = useState<string | null>(null);
-  const { refreshTrigger, triggerRefresh } = useRefreshTrigger();
+  const { refreshTrigger } = useRefreshTrigger();
   const [viewMode, setViewMode] = useState<"table" | "grid">("table");
   const [sortBy, setSortBy] = useState<"name" | "price" | "stock" | "newest">("newest");
   const [filterCategory, setFilterCategory] = useState<string>("all");
@@ -79,7 +79,6 @@ const AdminProducts = () => {
     if (!confirm("Delete this product and all its images?")) return;
     setIsDeletingId(id);
 
-    // Fix: Correct Supabase delete syntax
     const { error } = await supabase
       .from("products")
       .delete()
@@ -375,18 +374,15 @@ const AdminProducts = () => {
           <TableSkeleton rows={6} columns={4} />
         ) : (
           <>
-            {/* Table View */}
+            {/* Table View - Model column removed */}
             {viewMode === "table" && (
               <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
                 <div className="w-full overflow-x-auto">
-                  <table className="w-full min-w-[800px]">
+                  <table className="w-full min-w-[700px]">
                     <thead className="bg-gradient-to-r from-slate-50 to-white border-b border-slate-200">
                       <tr>
                         <th className="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wider text-slate-600">
                           Product Details
-                        </th>
-                        <th className="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wider text-slate-600">
-                          Model
                         </th>
                         <th className="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wider text-slate-600">
                           Price
@@ -420,7 +416,7 @@ const AdminProducts = () => {
                                 </div>
                                 <div className="min-w-0">
                                   <p className="font-semibold text-sm text-slate-800 truncate">{product.name}</p>
-                                  <p className="text-xs text-slate-500 truncate">{product.brand}</p>
+                                  <p className="text-xs text-slate-500 truncate">{product.brand || "—"}</p>
                                   <div className="flex gap-1 mt-1">
                                     {product.is_featured && (
                                       <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 text-[10px] font-medium">
@@ -434,12 +430,6 @@ const AdminProducts = () => {
                                     )}
                                   </div>
                                 </div>
-                              </div>
-                            </td>
-                            <td className="px-4 py-3">
-                              <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg bg-blue-50 text-blue-700 text-xs font-medium">
-                                <Smartphone className="w-3 h-3" />
-                                <span>{product.model || "—"}</span>
                               </div>
                             </td>
                             <td className="px-4 py-3">
@@ -499,7 +489,7 @@ const AdminProducts = () => {
               </div>
             )}
 
-            {/* Grid View */}
+            {/* Grid View - Model removed */}
             {viewMode === "grid" && (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {filteredAndSortedProducts.map((product) => {
@@ -546,17 +536,13 @@ const AdminProducts = () => {
                           <h3 className="font-bold text-sm text-slate-800 truncate group-hover:text-primary transition-colors">
                             {product.name}
                           </h3>
-                          <p className="text-xs text-slate-500 mt-0.5">{product.brand}</p>
+                          <p className="text-xs text-slate-500 mt-0.5">{product.brand || "—"}</p>
                         </div>
 
                         <div className="flex flex-wrap gap-1.5 mb-3">
-                          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-lg bg-blue-50 text-blue-700 text-[10px] font-medium">
-                            <Smartphone className="w-2.5 h-2.5" />
-                            {product.model || "N/A"}
-                          </span>
                           <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-lg bg-purple-50 text-purple-700 text-[10px] font-medium">
                             <Tag className="w-2.5 h-2.5" />
-                            {product.category}
+                            {product.category || "Uncategorized"}
                           </span>
                         </div>
 
