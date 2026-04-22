@@ -113,6 +113,12 @@ const handleForgotPassword = async () => {
     return;
   }
 
+  // Require CAPTCHA on production
+  if (shouldUseCaptcha && !captchaToken) {
+    toast.error("Please complete the CAPTCHA verification.");
+    return;
+  }
+
   try {
     setLoading(true);
     console.log("Sending reset email to:", email);
@@ -120,10 +126,18 @@ const handleForgotPassword = async () => {
     
     const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/reset-password`,
+      // PASS THE CAPTCHA TOKEN HERE!
+      captchaToken: shouldUseCaptcha ? captchaToken : undefined,
     });
 
     if (error) {
       console.error("Full error:", error);
+      
+      // Reset CAPTCHA on error
+      setResetCaptcha(true);
+      setTimeout(() => setResetCaptcha(false), 100);
+      setCaptchaToken(null);
+      
       toast.error(error.message || "Failed to send password reset email.");
     } else {
       console.log("Reset email sent:", data);
@@ -131,6 +145,12 @@ const handleForgotPassword = async () => {
     }
   } catch (err: any) {
     console.error("Forgot password error:", err);
+    
+    // Reset CAPTCHA on error
+    setResetCaptcha(true);
+    setTimeout(() => setResetCaptcha(false), 100);
+    setCaptchaToken(null);
+    
     toast.error(err.message || "Failed to send password reset email.");
   } finally {
     setLoading(false);
