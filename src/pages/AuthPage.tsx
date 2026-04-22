@@ -5,7 +5,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { Eye, EyeOff, Mail, Lock, User, ArrowRight, ShoppingBag, Shield, Truck, Star } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, User, ArrowRight, ShoppingBag, Shield, Star } from "lucide-react";
+import Turnstile from "react-turnstile";
 import TopBar from "@/components/TopBar";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -24,22 +25,42 @@ const AuthPage = () => {
   const [fullName, setFullName] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const { signIn, signUp } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const from = (location.state as any)?.from?.pathname || "/";
+
+  // Check if CAPTCHA should be enabled (only on production domains)
+  const isProduction = () => {
+    const hostname = window.location.hostname;
+    return hostname.includes('casetrendskenya.co.ke') || 
+           hostname.includes('onrender.com') ||
+           hostname.includes('casetrendskenya.onrender.com');
+  };
+
+  const shouldUseCaptcha = isProduction();
+  
+  // Your Turnstile Site Key
+  const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY || "0x4AAAAAADAszbwDj5ytZOc2";
 
   const switchMode = (login: boolean) => {
     setIsLogin(login);
     setEmail("");
     setPassword("");
     setFullName("");
-    // Clear any form errors when switching modes
+    setCaptchaToken(null);
     setLoading(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Only validate CAPTCHA on production
+    if (shouldUseCaptcha && !captchaToken) {
+      toast.error("Please complete the CAPTCHA verification");
+      return;
+    }
     
     // Basic validation
     if (!isLogin && !fullName.trim()) {
@@ -56,29 +77,33 @@ const AuthPage = () => {
     
     try {
       if (isLogin) {
-        await signIn(email, password);
+        // Pass captchaToken only on production
+        await signIn(email, password, shouldUseCaptcha ? captchaToken : undefined);
         toast.success("Welcome back!");
         navigate(from, { replace: true });
       } else {
-        await signUp(email, password, fullName);
+        // Pass captchaToken only on production
+        await signUp(email, password, fullName, shouldUseCaptcha ? captchaToken : undefined);
         toast.success("Account created successfully! Please check your email to verify your account.", {
           duration: 5000,
         });
-        // Switch to login mode after successful registration
         switchMode(true);
-        // Optional: Auto-fill the email field
         setEmail(email);
       }
     } catch (err: any) {
       console.error("Auth error:", err);
       
-      // Handle specific error messages
       if (err.message?.includes("User already registered")) {
         toast.error("An account with this email already exists. Please sign in instead.");
         switchMode(true);
         setEmail(email);
+      } else if (err.message?.includes("captcha")) {
+        toast.error("CAPTCHA verification failed. Please try again.");
+        setCaptchaToken(null);
       } else if (err.message?.includes("password")) {
         toast.error("Password must be at least 6 characters");
+      } else if (err.message?.includes("verify your email")) {
+        toast.error(err.message);
       } else {
         toast.error(err.message || "An error occurred during authentication");
       }
@@ -104,7 +129,7 @@ const AuthPage = () => {
       }
 
       toast.success("Password reset email sent! Please check your inbox.");
-    } catch (err) {
+    } catch (err: any) {
       console.error("Forgot password error:", err);
       toast.error(err.message || "Failed to send password reset email.");
     } finally {
@@ -279,10 +304,29 @@ const AuthPage = () => {
                   </div>
                 )}
 
+                {/* Turnstile CAPTCHA Widget - Only show on production */}
+                {shouldUseCaptcha && (
+                  <div className="flex justify-center py-2">
+                    <Turnstile
+                      sitekey={TURNSTILE_SITE_KEY}
+                      onVerify={(token) => setCaptchaToken(token)}
+                      onError={() => {
+                        toast.error("CAPTCHA error. Please refresh and try again.");
+                        setCaptchaToken(null);
+                      }}
+                      onExpire={() => {
+                        toast.error("CAPTCHA expired. Please verify again.");
+                        setCaptchaToken(null);
+                      }}
+                      theme="light"
+                    />
+                  </div>
+                )}
+
                 <Button
                   type="submit"
                   className="w-full gap-2 h-11 text-sm font-semibold"
-                  disabled={loading}
+                  disabled={loading || (shouldUseCaptcha && !captchaToken)}
                 >
                   {loading ? (
                     <span className="flex items-center gap-2">

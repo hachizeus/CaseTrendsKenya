@@ -9,8 +9,8 @@ interface AuthContextType {
   role: "admin" | "moderator" | "user" | null;
   isAdmin: boolean;
   isModerator: boolean;
-  signUp: (email: string, password: string, fullName: string) => Promise<void>;
-  signIn: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string, fullName: string, captchaToken?: string | null) => Promise<void>;
+  signIn: (email: string, password: string, captchaToken?: string | null) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -47,7 +47,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
-    // Initialize auth state from session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
@@ -61,7 +60,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     });
 
-    // Listen for auth changes (login/logout)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
@@ -78,18 +76,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => subscription.unsubscribe();
   }, []);
 
-  const signUp = async (email: string, password: string, fullName: string) => {
+  const signUp = async (email: string, password: string, fullName: string, captchaToken?: string | null) => {
+    const options: any = {
+      data: { full_name: fullName },
+      emailRedirectTo: import.meta.env.VITE_SITE_URL || window.location.origin,
+    };
+
+    if (captchaToken) {
+      options.captchaToken = captchaToken;
+    }
+
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { full_name: fullName }, emailRedirectTo: import.meta.env.VITE_SITE_URL || window.location.origin },
+      options,
     });
+    
     if (error) throw error;
 
-    // Store email in profiles table if signup was successful
     if (data.user?.id) {
-      const { error: profileError } = await supabase
-        .from("profiles")
+      // Fix TypeScript errors with 'as any'
+      const { error: profileError } = await (supabase
+        .from("profiles") as any)
         .update({ email })
         .eq("user_id", data.user.id);
       
@@ -99,13 +107,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const signIn = async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  const signIn = async (email: string, password: string, captchaToken?: string | null) => {
+    const signInOptions: any = {
+      email,
+      password,
+    };
+
+    if (captchaToken) {
+      signInOptions.options = {
+        captchaToken: captchaToken,
+      };
+    }
+
+    const { data, error } = await supabase.auth.signInWithPassword(signInOptions);
+    
     if (error) throw error;
 
-    // Check if email is verified
     if (data.user && !data.user.email_confirmed_at) {
-      // Sign out the user since they're not verified
       await supabase.auth.signOut();
       throw new Error("Please verify your email address before signing in. Check your inbox for the verification link.");
     }
