@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { Eye, EyeOff, Mail, Lock, User, ArrowRight, ShoppingBag, Shield, Star } from "lucide-react";
-import Turnstile from "react-turnstile";
+import CaptchaWidget from "@/components/CaptchaWidget";
 import TopBar from "@/components/TopBar";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -26,7 +26,7 @@ const AuthPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
-  const [captchaKey, setCaptchaKey] = useState(0); // Used to reset CAPTCHA
+  const [resetCaptcha, setResetCaptcha] = useState(false);
   const { signIn, signUp } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -35,14 +35,13 @@ const AuthPage = () => {
   // Check if CAPTCHA should be enabled (only on production domains)
   const isProduction = () => {
     const hostname = window.location.hostname;
-    return hostname.includes('casetrendskenya.co.ke') || 
-           hostname.includes('onrender.com');
+    if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname.includes('192.168.')) {
+      return false;
+    }
+    return hostname.includes('casetrendskenya.co.ke') || hostname.includes('onrender.com');
   };
 
   const shouldUseCaptcha = isProduction();
-  
-  // Your Turnstile Site Key
-  const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY || "0x4AAAAAADAszbwDj5ytZOc2";
 
   const switchMode = (login: boolean) => {
     setIsLogin(login);
@@ -53,21 +52,14 @@ const AuthPage = () => {
     setLoading(false);
   };
 
-  const resetCaptcha = () => {
-    setCaptchaToken(null);
-    setCaptchaKey(prev => prev + 1);
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Only validate CAPTCHA on production
     if (shouldUseCaptcha && !captchaToken) {
       toast.error("Please complete the CAPTCHA verification");
       return;
     }
     
-    // Basic validation
     if (!isLogin && !fullName.trim()) {
       toast.error("Please enter your full name");
       return;
@@ -82,11 +74,11 @@ const AuthPage = () => {
     
     try {
       if (isLogin) {
-        await signIn(email, password, shouldUseCaptcha ? captchaToken : undefined);
+        await signIn(email, password, shouldUseCaptcha ? captchaToken : null);
         toast.success("Welcome back!");
         navigate(from, { replace: true });
       } else {
-        await signUp(email, password, fullName, shouldUseCaptcha ? captchaToken : undefined);
+        await signUp(email, password, fullName, shouldUseCaptcha ? captchaToken : null);
         toast.success("Account created successfully! Please check your email to verify your account.", {
           duration: 5000,
         });
@@ -96,8 +88,8 @@ const AuthPage = () => {
     } catch (err: any) {
       console.error("Auth error:", err);
       
-      // Reset CAPTCHA on any auth error
-      resetCaptcha();
+      setResetCaptcha(true);
+      setTimeout(() => setResetCaptcha(false), 100);
       
       if (err.message?.includes("User already registered")) {
         toast.error("An account with this email already exists. Please sign in instead.");
@@ -107,12 +99,6 @@ const AuthPage = () => {
         toast.error("CAPTCHA verification failed. Please try again.");
       } else if (err.message?.includes("Invalid login credentials")) {
         toast.error("Invalid email or password. Please try again.");
-      } else if (err.message?.includes("Email not confirmed")) {
-        toast.error("Please verify your email address before signing in.");
-      } else if (err.message?.includes("password")) {
-        toast.error("Password must be at least 6 characters");
-      } else if (err.message?.includes("verify your email")) {
-        toast.error(err.message);
       } else {
         toast.error(err.message || "An error occurred during authentication");
       }
@@ -133,9 +119,7 @@ const AuthPage = () => {
         redirectTo: `${window.location.origin}/reset-password`,
       });
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
 
       toast.success("Password reset email sent! Please check your inbox.");
     } catch (err: any) {
@@ -194,12 +178,10 @@ const AuthPage = () => {
 
           {/* Right panel — form */}
           <div className="bg-white p-8 sm:p-10 flex flex-col justify-center">
-            {/* Mobile logo */}
             <Link to="/" className="flex justify-center mb-6 lg:hidden">
               <img src="/logo.png" alt="Case Trends Kenya" className="h-10 w-auto" />
             </Link>
 
-            {/* Tab switcher */}
             <div className="flex border-b border-border mb-8">
               {["Sign In", "Create Account"].map((label, i) => {
                 const active = i === 0 ? isLogin : !isLogin;
@@ -313,24 +295,10 @@ const AuthPage = () => {
                   </div>
                 )}
 
-                {/* Turnstile CAPTCHA Widget - Only show on production */}
-                {shouldUseCaptcha && (
-                  <div className="flex justify-center py-2" key={captchaKey}>
-                    <Turnstile
-                      sitekey={TURNSTILE_SITE_KEY}
-                      onVerify={(token) => setCaptchaToken(token)}
-                      onError={() => {
-                        toast.error("CAPTCHA error. Please refresh and try again.");
-                        setCaptchaToken(null);
-                      }}
-                      onExpire={() => {
-                        toast.error("CAPTCHA expired. Please verify again.");
-                        setCaptchaToken(null);
-                      }}
-                      theme="light"
-                    />
-                  </div>
-                )}
+                <CaptchaWidget 
+                  onVerify={setCaptchaToken} 
+                  reset={resetCaptcha}
+                />
 
                 <Button
                   type="submit"

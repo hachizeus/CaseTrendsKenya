@@ -11,6 +11,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ArrowLeft, MessageCircle, Truck, Search, MapPin } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import CaptchaWidget from "@/components/CaptchaWidget";
 import "leaflet/dist/leaflet.css";
 import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
 import markerIcon from "leaflet/dist/images/marker-icon.png";
@@ -40,9 +41,22 @@ const CheckoutPage = () => {
   const [paymentMethod, setPaymentMethod] = useState<"whatsapp" | "paystack">("whatsapp");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [whatsappOrderPlaced, setWhatsappOrderPlaced] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [resetCaptcha, setResetCaptcha] = useState(false);
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<any>(null);
   const markerRef = useRef<any>(null);
+
+  // Check if CAPTCHA should be enabled (only on production domains)
+  const isProduction = () => {
+    const hostname = window.location.hostname;
+    if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname.includes('192.168.')) {
+      return false;
+    }
+    return hostname.includes('casetrendskenya.co.ke') || hostname.includes('onrender.com');
+  };
+
+  const shouldUseCaptcha = isProduction();
 
   const finalTotal = useMemo(() => {
     return delivery === "delivery" ? totalPrice + deliveryFee : totalPrice;
@@ -253,6 +267,7 @@ const CheckoutPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
     if (items.length === 0) {
       toast.error("Cart is empty");
       return;
@@ -260,6 +275,11 @@ const CheckoutPage = () => {
 
     if (delivery === "delivery" && !coordinates) {
       toast.error("Please choose a delivery location on the map.");
+      return;
+    }
+
+    if (shouldUseCaptcha && !captchaToken) {
+      toast.error("Please complete the CAPTCHA verification.");
       return;
     }
 
@@ -289,6 +309,7 @@ const CheckoutPage = () => {
         status: "pending",
         payment_method: paymentMethod,
         guest_access_token: guestAccessToken,
+        captcha_token: shouldUseCaptcha ? captchaToken : null, // Include CAPTCHA token
       };
 
       if (paymentMethod === "whatsapp") {
@@ -350,6 +371,12 @@ const CheckoutPage = () => {
       navigate(`/order/${data.id}${data.guest_access_token ? `?token=${data.guest_access_token}` : ""}`);
     } catch (error) {
       console.error("Error creating order:", error);
+      
+      // Reset CAPTCHA on error
+      setResetCaptcha(true);
+      setTimeout(() => setResetCaptcha(false), 100);
+      setCaptchaToken(null);
+      
       toast.error("Failed to create order. Please try again.");
     } finally {
       setIsSubmitting(false);
@@ -420,26 +447,26 @@ const CheckoutPage = () => {
             <h2 className="font-semibold text-base sm:text-lg mb-2">Your Details</h2>
             <div>
               <Label htmlFor="name">Full Name</Label>
-              <Input id="name" value={name} onChange={e => setName(e.target.value)} required />
+              <Input id="name" value={name} onChange={e => setName(e.target.value)} required disabled={isSubmitting} />
             </div>
             <div>
               <Label htmlFor="phone">Phone Number</Label>
-              <Input id="phone" value={phone} onChange={e => setPhone(e.target.value)} required placeholder="+254..." />
+              <Input id="phone" value={phone} onChange={e => setPhone(e.target.value)} required placeholder="+254..." disabled={isSubmitting} />
             </div>
             <div>
               <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} required />
+              <Input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} required disabled={isSubmitting} />
             </div>
 
             <div>
               <Label>Delivery Method</Label>
               <RadioGroup value={delivery} onValueChange={setDelivery} className="mt-2">
                 <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="pickup" id="pickup" />
+                  <RadioGroupItem value="pickup" id="pickup" disabled={isSubmitting} />
                   <Label htmlFor="pickup">Pickup (Free)</Label>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="delivery" id="delivery" />
+                  <RadioGroupItem value="delivery" id="delivery" disabled={isSubmitting} />
                   <Label htmlFor="delivery">Delivery</Label>
                 </div>
               </RadioGroup>
@@ -450,11 +477,11 @@ const CheckoutPage = () => {
               <RadioGroup value={paymentMethod} onValueChange={(value) => setPaymentMethod(value as "whatsapp" | "paystack")} className="mt-2">
                 <div className="flex flex-col gap-2">
                   <label className="flex items-center gap-2 cursor-pointer">
-                    <RadioGroupItem value="whatsapp" id="payment-whatsapp" />
+                    <RadioGroupItem value="whatsapp" id="payment-whatsapp" disabled={isSubmitting} />
                     <span>WhatsApp Checkout</span>
                   </label>
                   <label className="flex items-center gap-2 cursor-pointer">
-                    <RadioGroupItem value="paystack" id="payment-paystack" />
+                    <RadioGroupItem value="paystack" id="payment-paystack" disabled={isSubmitting} />
                     <span>Card Payment</span>
                   </label>
                 </div>
@@ -470,8 +497,9 @@ const CheckoutPage = () => {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                    disabled={isSubmitting}
                   />
-                  <Button type="button" onClick={handleSearch} variant="secondary">
+                  <Button type="button" onClick={handleSearch} variant="secondary" disabled={isSubmitting}>
                     <Search size={18} />
                   </Button>
                 </div>
@@ -485,6 +513,7 @@ const CheckoutPage = () => {
                     onChange={(e) => setAddress(e.target.value)}
                     placeholder="Tap a location on the map and add landmark notes here"
                     className="bg-muted"
+                    disabled={isSubmitting}
                   />
                   <p className="text-[10px] text-muted-foreground flex items-center gap-1">
                     <MapPin size={10} /> Coordinates: {coordinates ? `${coordinates.lat.toFixed(4)}, ${coordinates.lng.toFixed(4)}` : "Not selected"}
@@ -495,7 +524,18 @@ const CheckoutPage = () => {
               </div>
             )}
 
-            <Button type="submit" className="w-full text-base sm:text-lg" size="lg" disabled={isSubmitting}>
+            {/* CAPTCHA Widget */}
+            <CaptchaWidget 
+              onVerify={setCaptchaToken} 
+              reset={resetCaptcha}
+            />
+
+            <Button 
+              type="submit" 
+              className="w-full text-base sm:text-lg" 
+              size="lg" 
+              disabled={isSubmitting || (shouldUseCaptcha && !captchaToken)}
+            >
               {isSubmitting ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
