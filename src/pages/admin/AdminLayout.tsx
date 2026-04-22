@@ -195,7 +195,7 @@ const AdminLayoutContent = () => {
       <aside className="hidden lg:flex w-64 bg-[#0f1117] text-white flex-col flex-shrink-0 border-r border-white/10 overflow-y-auto h-screen">
         {/* Logo */}
         <div className="px-5 py-5 border-b border-white/10 flex-shrink-0">
-          <img src="/public/logo.png" alt="Case Trends Kenya" className="h-9 w-auto" />
+          <img src="/logo.png" alt="Case Trends Kenya" className="h-9 w-auto" />
           <p className="text-[10px] text-white/40 mt-1 uppercase tracking-widest">Admin Panel</p>
         </div>
 
