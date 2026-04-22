@@ -97,26 +97,73 @@ async function fetchOrderWithGuestToken(orderId, token) {
 }
 
 function buildSecureHeaders(req, res, next) {
+  const cspDirectives = [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' " +
+      "https://www.googletagmanager.com " +
+      "https://*.googletagmanager.com " +
+      "https://www.google-analytics.com " +
+      "https://*.google-analytics.com " +
+      "https://challenges.cloudflare.com " +
+      "https://*.cloudflare.com " +
+      "https://*.paystack.co " +
+      "https://checkout.paystack.com " +
+      "https://js.paystack.co " +
+      "https://cdn.jsdelivr.net",
+    "script-src-elem 'self' 'unsafe-inline' " +
+      "https://www.googletagmanager.com " +
+      "https://*.googletagmanager.com " +
+      "https://www.google-analytics.com " +
+      "https://*.google-analytics.com " +
+      "https://challenges.cloudflare.com " +
+      "https://*.cloudflare.com " +
+      "https://*.paystack.co " +
+      "https://checkout.paystack.com " +
+      "https://js.paystack.co " +
+      "https://cdn.jsdelivr.net",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net",
+    "style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net",
+    "img-src 'self' data: blob: https: " +
+      "https://picsum.photos " +
+      "https://images.unsplash.com " +
+      "https://yrhczwzqvzqalyjpxdmi.supabase.co",
+    "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net data:",
+    "connect-src 'self' https: wss: " +
+      "https://yrhczwzqvzqalyjpxdmi.supabase.co " +
+      "wss://yrhczwzqvzqalyjpxdmi.supabase.co " +
+      "https://*.supabase.co " +
+      "https://api.paystack.co " +
+      "https://*.paystack.co " +
+      "https://www.google-analytics.com " +
+      "https://*.google-analytics.com " +
+      "https://api.maptiler.com " +
+      "http://localhost:3000 " +
+      "http://localhost:5173 " +
+      "https://casetrendskenya.co.ke " +
+      "https://*.onrender.com",
+    "frame-src 'self' " +
+      "https://challenges.cloudflare.com " +
+      "https://*.cloudflare.com " +
+      "https://checkout.paystack.com " +
+      "https://*.paystack.co",
+    "worker-src 'self' blob:",
+    "child-src 'self' blob: " +
+      "https://challenges.cloudflare.com " +
+      "https://checkout.paystack.com",
+    "frame-ancestors 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "upgrade-insecure-requests"
+  ];
+
   res.set('X-Content-Type-Options', 'nosniff');
   res.set('X-Frame-Options', 'DENY');
   res.set('X-XSS-Protection', '1; mode=block');
   res.set('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.set('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
   res.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
-  res.set(
-    'Content-Security-Policy',
-    "default-src 'self'; " +
-    "script-src 'self' https://*.paystack.co https://checkout.paystack.com; " +
-    "script-src-elem 'self' https://*.paystack.co https://checkout.paystack.com; " +
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
-    "style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
-    "img-src 'self' data: blob: https://picsum.photos https://images.unsplash.com https:; " +
-    "font-src 'self' https://fonts.gstatic.com; " +
-    "connect-src 'self' https: wss:; " +
-    "frame-src 'self' https://checkout.paystack.com; " +
-    "child-src 'self' https://checkout.paystack.com; " +
-    "frame-ancestors 'none'; base-uri 'self';"
-  );
+  res.set('Content-Security-Policy', cspDirectives.join('; '));
+  
   next();
 }
 
