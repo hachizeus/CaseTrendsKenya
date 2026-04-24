@@ -1,66 +1,124 @@
-import { useEffect, useRef } from 'react';
-import { X, Play } from 'lucide-react';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { useState } from 'react';
+import { useVideos } from '@/hooks/useVideos';
+import { useVideoCarousel } from '@/hooks/useVideoCarousel';
+import { VideoModal } from './VideoModal';
+import { Play } from 'lucide-react';
+import { Skeleton } from './ui/skeleton';
 
-interface VideoModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  videoUrl: string;
-  title?: string | null;
-}
+export const VideoSection = () => {
+  const { data: videos, isLoading, error } = useVideos(false);
+  const [selectedVideo, setSelectedVideo] = useState<{ url: string; title: string | null } | null>(null);
+  const { scrollRef, handlers } = useVideoCarousel({ autoplaySpeed: 3000, pauseOnHover: true });
 
-export const VideoModal = ({ isOpen, onClose, videoUrl, title }: VideoModalProps) => {
-  const iframeRef = useRef<HTMLIFrameElement>(null);
-  
-  // Extract YouTube video ID
-  const getYouTubeId = (url: string) => {
-    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
-    const match = url.match(regExp);
-    return (match && match[2].length === 11) ? match[2] : null;
+  // Helper to extract YouTube video ID for thumbnail
+  const getYouTubeThumbnail = (url: string) => {
+    const patterns = [
+      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&?#]+)/,
+      /youtube\.com\/watch\?.*v=([^&]+)/
+    ];
+    
+    for (const pattern of patterns) {
+      const match = url.match(pattern);
+      if (match && match[1]) {
+        return `https://img.youtube.com/vi/${match[1]}/mqdefault.jpg`;
+      }
+    }
+    return null;
   };
 
-  const videoId = getYouTubeId(videoUrl);
-  const embedUrl = videoId ? `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1` : '';
+  if (isLoading) {
+    return (
+      <section className="py-12 bg-gradient-to-b from-gray-50 to-white">
+        <div className="container px-4">
+          <h2 className="text-2xl md:text-3xl font-bold text-center mb-8">Featured Videos</h2>
+          <div className="flex gap-4 overflow-hidden">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="flex-shrink-0 w-72">
+                <Skeleton className="w-full h-40 rounded-xl" />
+                <Skeleton className="w-3/4 h-4 mt-3" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+    );
+  }
 
-  useEffect(() => {
-    if (!isOpen && iframeRef.current) {
-      // Reset iframe src when modal closes
-      const iframe = iframeRef.current;
-      const src = iframe.src;
-      iframe.src = '';
-      iframe.src = src;
-    }
-  }, [isOpen]);
+  if (error || !videos || videos.length === 0) {
+    return null;
+  }
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-4xl w-[90vw] p-0 bg-black/95 border-none rounded-2xl overflow-hidden">
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 z-50 p-2 rounded-full bg-black/50 text-white hover:bg-black/70 transition-all duration-200 hover:scale-110"
-        >
-          <X className="w-5 h-5" />
-        </button>
-        
-        {title && (
-          <div className="absolute top-4 left-4 z-50">
-            <h3 className="text-white text-lg font-semibold bg-black/50 px-3 py-1.5 rounded-full">
-              {title}
-            </h3>
+    <>
+      <section className="py-12 bg-gradient-to-b from-gray-50 to-white overflow-hidden">
+        <div className="container px-4">
+          <h2 className="text-2xl md:text-3xl font-bold text-center mb-8 bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
+            Watch Our Latest Videos
+          </h2>
+          
+          <div
+            ref={scrollRef}
+            {...handlers}
+            className="flex gap-0 overflow-x-auto scrollbar-hide cursor-grab active:cursor-grabbing"
+            style={{ scrollBehavior: 'smooth' }}
+          >
+            {videos.map((video) => {
+              const thumbnail = video.thumbnail_url || getYouTubeThumbnail(video.youtube_url);
+              
+              return (
+                <div
+                  key={video.id}
+                  className="flex-shrink-0 w-72 md:w-80 lg:w-96 group cursor-pointer"
+                  onClick={() => setSelectedVideo({
+                    url: video.youtube_url,
+                    title: video.title,
+                  })}
+                >
+                  <div className="relative overflow-hidden rounded-xl shadow-lg transition-all duration-300 group-hover:shadow-2xl group-hover:scale-105">
+                    <div className="relative pt-[56.25%] bg-gray-900">
+                      {thumbnail ? (
+                        <img
+                          src={thumbnail}
+                          alt={video.title || 'Video thumbnail'}
+                          className="absolute inset-0 w-full h-full object-cover"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div className="absolute inset-0 bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center">
+                          <Play className="w-12 h-12 text-white/30" />
+                        </div>
+                      )}
+                      
+                      {/* Overlay with play button */}
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                        <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center transform scale-90 group-hover:scale-100 transition-transform duration-300">
+                          <Play className="w-8 h-8 text-white ml-1" />
+                        </div>
+                      </div>
+                      
+                      {/* Gradient overlay for text */}
+                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                        {video.title && (
+                          <p className="text-white text-sm font-medium line-clamp-2">
+                            {video.title}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
-        )}
-        
-        <div className="relative pt-[56.25%]">
-          <iframe
-            ref={iframeRef}
-            src={embedUrl}
-            title={title || 'YouTube video player'}
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-            className="absolute top-0 left-0 w-full h-full"
-          />
         </div>
-      </DialogContent>
-    </Dialog>
+      </section>
+      
+      <VideoModal
+        isOpen={!!selectedVideo}
+        onClose={() => setSelectedVideo(null)}
+        videoUrl={selectedVideo?.url || ''}
+        title={selectedVideo?.title}
+      />
+    </>
   );
 };
