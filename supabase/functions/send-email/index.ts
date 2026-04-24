@@ -28,6 +28,40 @@ const CORS_HEADERS = {
   "Access-Control-Max-Age": "86400",
 };
 
+// Verify user role from JWT token
+async function verifyUserRole(authHeader: string | null): Promise<boolean> {
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    console.log("No valid auth header found");
+    return false;
+  }
+
+  const token = authHeader.split(' ')[1];
+  
+  try {
+    // Get Supabase JWT secret from environment
+    const supabaseJwtSecret = Deno.env.get("SUPABASE_JWT_SECRET");
+    if (!supabaseJwtSecret) {
+      console.error("SUPABASE_JWT_SECRET not set");
+      return false;
+    }
+
+    // Verify the JWT token
+    const { create, verify, getNumericDate } = await import("https://deno.land/x/djwt@v2.8/mod.ts");
+    
+    const { payload } = await verify(token, supabaseJwtSecret, { algorithms: ["HS256"] });
+    
+    // Check user role (allow both admin and moderator)
+    const userRole = payload?.user_role || payload?.role;
+    const isAllowed = userRole === "admin" || userRole === "moderator";
+    
+    console.log(`User role: ${userRole}, Allowed: ${isAllowed}`);
+    return isAllowed;
+  } catch (err) {
+    console.error("Token verification failed:", err);
+    return false;
+  }
+}
+
 // Generate order confirmation email template
 function generateOrderConfirmationEmail(orderData: any): EmailTemplate {
   const itemsHtml = orderData.items
@@ -41,7 +75,10 @@ function generateOrderConfirmationEmail(orderData: any): EmailTemplate {
     `)
     .join("");
 
-  const deliveryInfo = `<p><strong>Pickup Location:</strong> Case Trends Kenya Store</p>`;
+  const deliveryInfo = orderData.delivery_method === "delivery"
+    ? `<p><strong>Delivery Address:</strong> ${orderData.delivery_address || "Address not provided"}</p>
+       ${orderData.delivery_latitude && orderData.delivery_longitude ? `<p><strong>Location:</strong> ${orderData.delivery_latitude}, ${orderData.delivery_longitude}</p>` : ""}`
+    : `<p><strong>Pickup Location:</strong> Case Trends Kenya Store</p>`;
 
   const html = `
     <!DOCTYPE html>
@@ -66,7 +103,7 @@ function generateOrderConfirmationEmail(orderData: any): EmailTemplate {
             <p>Dear ${orderData.customer_name},</p>
             <p>Thank you for your order! Here are your order details:</p>
             
-            <h3>Order #${orderData.id}</h3>
+            <h3>Order #${orderData.id.slice(-8)}</h3>
             <p><strong>Date:</strong> ${new Date(orderData.created_at).toLocaleDateString()}</p>
             <p><strong>Name:</strong> ${orderData.customer_name}</p>
             <p><strong>Phone:</strong> ${orderData.customer_phone}</p>
@@ -80,7 +117,7 @@ function generateOrderConfirmationEmail(orderData: any): EmailTemplate {
                   <th style="padding: 10px; text-align: right;">Price</th>
                   <th style="padding: 10px; text-align: center;">Qty</th>
                   <th style="padding: 10px; text-align: right;">Total</th>
-                </tr>
+                 </tr>
               </thead>
               <tbody>
                 ${itemsHtml}
@@ -98,7 +135,7 @@ function generateOrderConfirmationEmail(orderData: any): EmailTemplate {
             <p>We will contact you shortly with updates on your order. If you have any questions, please don't hesitate to reach out.</p>
             
             <div class="footer">
-              <p>Case Trends Kenya | WhatsApp: +254 XXX XXX XXX | Email: support@casetrendskеnya.com</p>
+              <p>Case Trends Kenya | WhatsApp: +254 XXX XXX XXX | Email: support@casetrendskenya.com</p>
               <p>This is an automated message, please do not reply to this email.</p>
             </div>
           </div>
@@ -109,13 +146,24 @@ function generateOrderConfirmationEmail(orderData: any): EmailTemplate {
 
   return {
     to: orderData.customer_email,
-    subject: `Order Confirmation #${orderData.id}`,
+    subject: `Order Confirmation #${orderData.id.slice(-8)}`,
     html,
   };
 }
 
 // Generate status update email template
 function generateStatusUpdateEmail(orderData: any): EmailTemplate {
+  const statusColors: Record<string, string> = {
+    pending: "#f59e0b",
+    confirmed: "#0ea5e9",
+    processing: "#8b5cf6",
+    delivered: "#10b981",
+    cancelled: "#ef4444"
+  };
+
+  const statusColor = statusColors[orderData.status] || "#0ea5e9";
+  const statusLabel = orderData.status.charAt(0).toUpperCase() + orderData.status.slice(1);
+
   const html = `
     <!DOCTYPE html>
     <html>
@@ -125,7 +173,8 @@ function generateStatusUpdateEmail(orderData: any): EmailTemplate {
           .container { max-width: 600px; margin: 0 auto; padding: 20px; }
           .header { background-color: #0ea5e9; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0; }
           .content { background-color: #f9fafb; padding: 20px; border-radius: 0 0 5px 5px; }
-          .status-badge { display: inline-block; padding: 8px 12px; background-color: #10b981; color: white; border-radius: 4px; font-weight: bold; }
+          .status-badge { display: inline-block; padding: 8px 16px; background-color: ${statusColor}; color: white; border-radius: 4px; font-weight: bold; font-size: 16px; }
+          .order-details { background-color: white; padding: 15px; border-radius: 5px; margin: 15px 0; border: 1px solid #e5e7eb; }
           .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 12px; color: #666; }
         </style>
       </head>
@@ -136,15 +185,22 @@ function generateStatusUpdateEmail(orderData: any): EmailTemplate {
           </div>
           <div class="content">
             <p>Dear ${orderData.customer_name},</p>
-            <p>Your order status has been updated:</p>
+            <p>Your order status has been updated to:</p>
             
-            <p><strong>Order #${orderData.id}</strong></p>
-            <p>Status: <span class="status-badge">${orderData.status.toUpperCase()}</span></p>
+            <div style="text-align: center; margin: 30px 0;">
+              <span class="status-badge">${statusLabel}</span>
+            </div>
+            
+            <div class="order-details">
+              <p><strong>Order #${orderData.id.slice(-8)}</strong></p>
+              <p><strong>Order Total:</strong> KES ${Number(orderData.total_amount).toLocaleString()}</p>
+              <p><strong>Placed on:</strong> ${new Date(orderData.created_at).toLocaleDateString()}</p>
+            </div>
             
             <p>We'll keep you updated on your order. Thank you for your business!</p>
             
             <div class="footer">
-              <p>Case Trends Kenya | WhatsApp: +254 XXX XXX XXX | Email: support@casetrendskеnya.com</p>
+              <p>Case Trends Kenya | WhatsApp: +254 XXX XXX XXX | Email: support@casetrendskenya.com</p>
               <p>This is an automated message, please do not reply to this email.</p>
             </div>
           </div>
@@ -155,7 +211,7 @@ function generateStatusUpdateEmail(orderData: any): EmailTemplate {
 
   return {
     to: orderData.customer_email,
-    subject: `Order Status Update #${orderData.id}`,
+    subject: `Order Status Update #${orderData.id.slice(-8)} - ${statusLabel}`,
     html,
   };
 }
@@ -235,7 +291,7 @@ function generateOrderNotificationEmail(orderData: any, adminEmail: string): Ema
               <p>${orderDate}</p>
             </div>
             <div class="content">
-              <p><strong>Order ID:</strong> ${orderData.id}</p>
+              <p><strong>Order ID:</strong> ${orderData.id.slice(-8)}</p>
               <p><strong>Customer:</strong> ${orderData.customer_name}</p>
               <p><strong>Phone:</strong> ${orderData.customer_phone}</p>
               <p><strong>Email:</strong> ${orderData.customer_email || "N/A"}</p>
@@ -249,7 +305,7 @@ function generateOrderNotificationEmail(orderData: any, adminEmail: string): Ema
                     <th style="padding: 10px; text-align: right;">Price</th>
                     <th style="padding: 10px; text-align: center;">Qty</th>
                     <th style="padding: 10px; text-align: right;">Total</th>
-                  </tr>
+                   </tr>
                 </thead>
                 <tbody>
                   ${itemsHtml}
@@ -273,9 +329,36 @@ serve(async (req: Request) => {
   }
 
   try {
+    // Verify authorization for non-order_notification emails
+    const authHeader = req.headers.get("Authorization");
     const payload: EmailRequest = await req.json();
 
-    console.log("Email request received:", { to: payload.to, type: payload.type });
+    console.log("Email request received:", { 
+      to: payload.to, 
+      type: payload.type,
+      hasAuth: !!authHeader 
+    });
+
+    // Check if this is a status update or order confirmation (requires auth)
+    if (payload.type !== "order_notification") {
+      const isAuthorized = await verifyUserRole(authHeader);
+      
+      if (!isAuthorized) {
+        console.error("Unauthorized access attempt - User is not admin or moderator");
+        return new Response(
+          JSON.stringify({ 
+            error: "Unauthorized. Only admins and moderators can send status update emails." 
+          }),
+          {
+            status: 403,
+            headers: {
+              "Content-Type": "application/json",
+              ...CORS_HEADERS,
+            },
+          }
+        );
+      }
+    }
 
     if (!payload.to || !payload.type || !payload.data) {
       return new Response(
