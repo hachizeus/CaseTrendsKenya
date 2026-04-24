@@ -6,7 +6,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import fileupload from "express-fileupload";
 import { createClient } from "@supabase/supabase-js";
-import videoRoutes from "./src/api/videoRoutes.js"; // Ensure the correct path for the videoRoutes module
+import videoRoutes from "./src/api/videoRoutes.ts"; // Adjusted for dist directory
 
 dotenv.config({ path: ".env" });
 dotenv.config({ path: ".env.local" });
@@ -189,14 +189,14 @@ app.use((req, res, next) => {
 });
 
 // Serve static assets directly and avoid SPA fallback for asset paths
-app.use('/assets', express.static(path.join(__dirname, 'dist', 'assets'), {
+app.use('/assets', express.static(path.join(__dirname, 'assets'), {
   maxAge: '1y',
   etag: false,
   fallthrough: false,
 }));
 
 // Serve SPA static files and index.html fallback
-app.use(express.static(path.join(__dirname, 'dist'), {
+app.use(express.static(path.join(__dirname), {
   maxAge: '1y',
   etag: false,
 }));

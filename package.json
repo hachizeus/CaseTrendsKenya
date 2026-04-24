@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "server": "node dist/server.js",
-    "start": "node dist/server.js",
+    "server": "node server.js",
+    "start": "/server.js",
     "dev:all": "concurrently \"npm run dev\" \"npm run server\"",
     "build": "tsc",
     "build:dev": "vite build --mode development",

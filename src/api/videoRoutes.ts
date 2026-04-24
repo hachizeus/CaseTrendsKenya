@@ -1,4 +1,4 @@
-const express = require('express');
+import express from 'express';
 const router = express.Router();
 
 // Mock database for videos
@@ -71,4 +71,4 @@ router.delete('/videos/:id', (req, res) => {
   res.status(204).send();
 });
 
-module.exports = router;
+export default router;
