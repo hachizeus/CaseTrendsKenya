@@ -29,7 +29,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cors({
   origin: true,
-  methods: ["GET", "POST", "OPTIONS"],
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
   credentials: true,
 }));
@@ -109,7 +109,10 @@ function buildSecureHeaders(req, res, next) {
       "https://*.paystack.co " +
       "https://checkout.paystack.com " +
       "https://js.paystack.co " +
-      "https://cdn.jsdelivr.net",
+      "https://cdn.jsdelivr.net " +
+      "https://www.youtube.com " +
+      "https://*.youtube.com " +
+      "https://*.ytimg.com",
     "script-src-elem 'self' 'unsafe-inline' " +
       "https://www.googletagmanager.com " +
       "https://*.googletagmanager.com " +
@@ -120,13 +123,17 @@ function buildSecureHeaders(req, res, next) {
       "https://*.paystack.co " +
       "https://checkout.paystack.com " +
       "https://js.paystack.co " +
-      "https://cdn.jsdelivr.net",
+      "https://cdn.jsdelivr.net " +
+      "https://www.youtube.com " +
+      "https://*.youtube.com",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net",
     "style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net",
     "img-src 'self' data: blob: https: " +
       "https://picsum.photos " +
       "https://images.unsplash.com " +
-      "https://yrhczwzqvzqalyjpxdmi.supabase.co",
+      "https://yrhczwzqvzqalyjpxdmi.supabase.co " +
+      "https://img.youtube.com " +
+      "https://*.ytimg.com",
     "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net data:",
     "connect-src 'self' https: wss: " +
       "https://yrhczwzqvzqalyjpxdmi.supabase.co " +
@@ -145,11 +152,15 @@ function buildSecureHeaders(req, res, next) {
       "https://challenges.cloudflare.com " +
       "https://*.cloudflare.com " +
       "https://checkout.paystack.com " +
-      "https://*.paystack.co",
+      "https://*.paystack.co " +
+      "https://www.youtube.com " +
+      "https://*.youtube.com",
     "worker-src 'self' blob:",
     "child-src 'self' blob: " +
       "https://challenges.cloudflare.com " +
-      "https://checkout.paystack.com",
+      "https://checkout.paystack.com " +
+      "https://www.youtube.com " +
+      "https://*.youtube.com",
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",
@@ -781,6 +792,158 @@ app.post("/api/remove-bg", async (req, res) => {
   }
 });
 
+// ============ VIDEO ROUTES ============
+
+// Get all videos (admin view - includes hidden)
+app.get('/api/admin/videos', async (req, res) => {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('videos')
+      .select('*')
+      .order('display_order', { ascending: true });
+
+    if (error) throw error;
+    res.json(data || []);
+  } catch (error) {
+    console.error('Error fetching videos:', error);
+    res.status(500).json({ error: 'Failed to fetch videos' });
+  }
+});
+
+// Get visible videos for frontend
+app.get('/api/videos', async (req, res) => {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('videos')
+      .select('*')
+      .eq('visible', true)
+      .order('display_order', { ascending: true });
+
+    if (error) throw error;
+    res.json(data || []);
+  } catch (error) {
+    console.error('Error fetching visible videos:', error);
+    res.status(500).json({ error: 'Failed to fetch videos' });
+  }
+});
+
+// Add a new video
+app.post('/api/admin/videos', async (req, res) => {
+  try {
+    const { youtube_url, title, thumbnail_url, visible } = req.body;
+    
+    // Get current max display_order
+    const { data: maxOrderData } = await supabaseAdmin
+      .from('videos')
+      .select('display_order')
+      .order('display_order', { ascending: false })
+      .limit(1);
+    
+    const display_order = maxOrderData && maxOrderData.length > 0 
+      ? (maxOrderData[0].display_order + 1) 
+      : 0;
+
+    const { data, error } = await supabaseAdmin
+      .from('videos')
+      .insert({
+        youtube_url,
+        title,
+        thumbnail_url,
+        visible: visible ?? true,
+        display_order
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.status(201).json(data);
+  } catch (error) {
+    console.error('Error adding video:', error);
+    res.status(500).json({ error: 'Failed to add video' });
+  }
+});
+
+// Delete a video
+app.delete('/api/admin/videos/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { error } = await supabaseAdmin
+      .from('videos')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+    res.status(204).send();
+  } catch (error) {
+    console.error('Error deleting video:', error);
+    res.status(500).json({ error: 'Failed to delete video' });
+  }
+});
+
+// Update video visibility
+app.patch('/api/admin/videos/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { visible } = req.body;
+    const { data, error } = await supabaseAdmin
+      .from('videos')
+      .update({ visible })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.json(data);
+  } catch (error) {
+    console.error('Error updating video:', error);
+    res.status(500).json({ error: 'Failed to update video' });
+  }
+});
+
+// Update video (full update for edit)
+app.put('/api/admin/videos/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { youtube_url, title, thumbnail_url, visible } = req.body;
+    const { data, error } = await supabaseAdmin
+      .from('videos')
+      .update({ youtube_url, title, thumbnail_url, visible })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.json(data);
+  } catch (error) {
+    console.error('Error updating video:', error);
+    res.status(500).json({ error: 'Failed to update video' });
+  }
+});
+
+// Reorder videos
+app.post('/api/admin/videos/reorder', async (req, res) => {
+  try {
+    const { videos } = req.body;
+    
+    // Update each video's display_order individually
+    for (const video of videos) {
+      const { error } = await supabaseAdmin
+        .from('videos')
+        .update({ display_order: video.display_order })
+        .eq('id', video.id);
+      
+      if (error) throw error;
+    }
+    
+    res.status(200).json({ message: 'Videos reordered successfully' });
+  } catch (error) {
+    console.error('Error reordering videos:', error);
+    res.status(500).json({ error: 'Failed to reorder videos' });
+  }
+});
+
+// ============ END VIDEO ROUTES ============
+
 // Health check endpoint
 app.get("/health", (req, res) => {
   res.json({ status: "ok", message: "Email server is running" });
@@ -805,4 +968,5 @@ app.listen(PORT, () => {
   console.log(`✅ Server running on port ${PORT}`);
   console.log(`📧 Email configured: ${EMAIL_USER}`);
   console.log(`🔒 CAPTCHA enabled: ${process.env.TURNSTILE_SECRET_KEY ? 'Yes' : 'No'}`);
+  console.log(`🎬 Video routes enabled`);
 });
