@@ -6,8 +6,8 @@ import path from "path";
 import { fileURLToPath } from "url";
 import fileupload from "express-fileupload";
 import { createClient } from "@supabase/supabase-js";
-// Comment out video routes for now
-// import videoRoutes from "./src/api/videoRoutes.ts";
+import fs from "fs"; // Add this import at the top
+// import videoRoutes from "./src/api/videoRoutes.ts"; // Commented out
 
 dotenv.config({ path: ".env" });
 dotenv.config({ path: ".env.local" });
@@ -264,7 +264,7 @@ app.use(express.static(path.join(__dirname), {
   }
 }));
 
-const POSTMARK_API_TOKEN = process.env.POSTMARK_API_TOKEN || "10b0fffa-aa2b-4302-8568-199e0ecb31df";
+const POSTMARK_API_TOKEN = process.env.POSTMARK_API_TOKEN;
 
 const postmarkClient = new ServerClient(POSTMARK_API_TOKEN);
 
@@ -272,9 +272,8 @@ if (!POSTMARK_API_TOKEN) {
   console.warn("POSTMARK_API_TOKEN is required to send emails. Email delivery will fail without it.");
 }
 
-// Order Confirmation Email Template (keep your existing template)
+// Order Confirmation Email Template
 const generateOrderConfirmationEmail = (orderData) => {
-  // ... (your existing template code remains the same)
   const siteUrl = process.env.VITE_SITE_URL || process.env.SITE_URL || "https://casetrendskenya.co.ke";
   const trackingLink = `${siteUrl}/account/orders`;
   const safeCustomerName = escapeHtml(orderData.customer_name);
@@ -466,7 +465,7 @@ Website: ${siteUrl}`;
   };
 };
 
-// Status Update Email Template (keep your existing template)
+// Status Update Email Template
 const generateStatusUpdateEmail = (orderData) => {
   const siteUrl = process.env.VITE_SITE_URL || process.env.SITE_URL || "https://casetrendskenya.co.ke";
   const orderLink = `${siteUrl}/account/orders`;
@@ -864,7 +863,6 @@ app.use((req, res) => {
   ];
   
   let indexPath = null;
-  const fs = await import('fs');
   for (const p of possiblePaths) {
     if (fs.existsSync(p)) {
       indexPath = p;
