@@ -51,6 +51,59 @@ import { motion, AnimatePresence } from "framer-motion";
 import { debounce } from "lodash";
 import { cn } from "@/lib/utils";
 
+// Image optimization utility
+async function convertToWebP(file: File, quality: number = 80): Promise<File> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => {
+      const img = new Image();
+      img.src = reader.result as string;
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+        
+        // Calculate new dimensions (max 2000px width/height for performance)
+        let width = img.width;
+        let height = img.height;
+        const maxDimension = 2000;
+        
+        if (width > maxDimension || height > maxDimension) {
+          if (width > height) {
+            height = (height * maxDimension) / width;
+            width = maxDimension;
+          } else {
+            width = (width * maxDimension) / height;
+            height = maxDimension;
+          }
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        ctx?.drawImage(img, 0, 0, width, height);
+        
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) {
+              reject(new Error("Failed to convert image to WebP"));
+              return;
+            }
+            const webpFile = new File([blob], file.name.replace(/\.(jpg|jpeg|png|gif|bmp|tiff)$/i, ".webp"), {
+              type: "image/webp",
+              lastModified: Date.now(),
+            });
+            resolve(webpFile);
+          },
+          "image/webp",
+          quality / 100
+        );
+      };
+      img.onerror = () => reject(new Error("Failed to load image"));
+    };
+    reader.onerror = () => reject(new Error("Failed to read file"));
+  });
+}
+
 interface ProductFormData {
   name: string;
   description: string;
@@ -151,6 +204,7 @@ export default function ProductForm() {
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
+  const [convertingImages, setConvertingImages] = useState(false);
 
   // Calculate form completion progress
   useEffect(() => {
@@ -328,7 +382,7 @@ export default function ProductForm() {
     }
   };
 
-  const handleImageSelect = useCallback((files: FileList | null) => {
+  const handleImageSelect = useCallback(async (files: FileList | null) => {
     if (!files) return;
     
     const newFiles = Array.from(files);
@@ -339,10 +393,61 @@ export default function ProductForm() {
       return;
     }
 
-    const newPreviews = newFiles.map(file => URL.createObjectURL(file));
-    setImages(prev => [...prev, ...newFiles]);
-    setImagePreviews(prev => [...prev, ...newPreviews]);
-    setIsDirty(true);
+    // Show converting toast
+    const convertToastId = toast.loading(`Converting ${newFiles.length} image(s) to WebP...`, {
+      duration: 30000,
+    });
+
+    setConvertingImages(true);
+    
+    try {
+      // Convert all new images to WebP
+      const convertedFiles: File[] = [];
+      const convertedPreviews: string[] = [];
+      
+      for (const file of newFiles) {
+        // Skip if already WebP
+        if (file.type === "image/webp") {
+          convertedFiles.push(file);
+          convertedPreviews.push(URL.createObjectURL(file));
+          continue;
+        }
+        
+        try {
+          const webpFile = await convertToWebP(file, 80);
+          convertedFiles.push(webpFile);
+          convertedPreviews.push(URL.createObjectURL(webpFile));
+          
+          // Log size reduction
+          const originalSize = (file.size / 1024).toFixed(2);
+          const newSize = (webpFile.size / 1024).toFixed(2);
+          console.log(`🖼️ Converted: ${file.name} (${originalSize}KB) → WebP (${newSize}KB)`);
+        } catch (error) {
+          console.error(`Failed to convert ${file.name}, using original:`, error);
+          convertedFiles.push(file);
+          convertedPreviews.push(URL.createObjectURL(file));
+        }
+      }
+      
+      setImages(prev => [...prev, ...convertedFiles]);
+      setImagePreviews(prev => [...prev, ...convertedPreviews]);
+      
+      const totalOriginalSize = newFiles.reduce((sum, f) => sum + f.size, 0);
+      const totalNewSize = convertedFiles.reduce((sum, f) => sum + f.size, 0);
+      const savings = ((totalOriginalSize - totalNewSize) / totalOriginalSize * 100).toFixed(1);
+      
+      toast.success(`✨ ${convertedFiles.length} image(s) converted to WebP (${savings}% smaller)`, {
+        id: convertToastId,
+        duration: 4000,
+      });
+      
+      setIsDirty(true);
+    } catch (error) {
+      console.error("Error processing images:", error);
+      toast.error("Failed to process some images", { id: convertToastId });
+    } finally {
+      setConvertingImages(false);
+    }
   }, [existingImages.length, images.length]);
 
   const removeNewImage = useCallback((index: number) => {
@@ -483,13 +588,18 @@ export default function ProductForm() {
       const batch = images.slice(i, i + BATCH_SIZE);
       const batchPromises = batch.map(async (file, batchIndex) => {
         const index = i + batchIndex;
-        const ext = file.name.split(".").pop();
+        // Files are already WebP from handleImageSelect
+        const ext = "webp";
+        const fileName = file.name.replace(/\.\w+$/, ".webp");
         const path = `${productId}/${Date.now()}_${index}.${ext}`;
 
         try {
           const { error: uploadError } = await supabase.storage
             .from("product-images")
-            .upload(path, file);
+            .upload(path, file, {
+              contentType: "image/webp",
+              cacheControl: "3600",
+            });
 
           if (uploadError) {
             console.error(`Failed to upload ${file.name}:`, uploadError);
@@ -658,7 +768,7 @@ export default function ProductForm() {
       if (uploadResult && uploadResult.status === 'fulfilled' && typeof uploadResult.value === 'number') {
         const uploaded = uploadResult.value;
         if (uploaded > 0) {
-          toast.success(`${uploaded} image${uploaded !== 1 ? "s" : ""} uploaded`, {
+          toast.success(`${uploaded} WebP image${uploaded !== 1 ? "s" : ""} uploaded`, {
             icon: <ImageIcon className="w-4 h-4" />
           });
         }
@@ -925,8 +1035,7 @@ export default function ProductForm() {
                       <div className="grid grid-cols-2 gap-6">
                         <div>
                           <Label htmlFor="category" className="flex items-center gap-2">
-                            Category
-                            <span className="text-red-500">*</span>
+                            Category                            <span className="text-red-500">*</span>
                           </Label>
                           <Select
                             value={formData.category_id}
@@ -1158,7 +1267,7 @@ export default function ProductForm() {
                         </Badge>
                       </div>
                       <CardDescription>
-                        Upload up to {MAX_IMAGES} high-quality images. First image will be the primary.
+                        Upload up to {MAX_IMAGES} images. All images are automatically converted to WebP format for better performance.
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-8 pt-6">
@@ -1248,7 +1357,7 @@ export default function ProductForm() {
                             </div>
                             <div className="text-sm font-medium">Click to upload images</div>
                             <div className="text-xs text-muted-foreground mt-1">
-                              PNG, JPG, WebP up to 5MB
+                              PNG, JPG, WebP - Automatically converted to WebP for best performance
                             </div>
                           </div>
                           <input
@@ -1261,6 +1370,23 @@ export default function ProductForm() {
                         </motion.label>
                       </div>
 
+                      {/* Converting Indicator */}
+                      {convertingImages && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="p-3 bg-primary/10 rounded-lg border border-primary/20"
+                        >
+                          <div className="flex items-center gap-3">
+                            <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                            <div>
+                              <div className="font-medium text-sm">Converting images to WebP...</div>
+                              <div className="text-xs text-muted-foreground">This optimizes image size while maintaining quality</div>
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
+
                       {/* Upload Progress */}
                       {isUploading && (
                         <motion.div
@@ -1269,7 +1395,7 @@ export default function ProductForm() {
                           className="space-y-2"
                         >
                           <div className="flex justify-between text-sm">
-                            <span>Uploading images...</span>
+                            <span>Uploading WebP images...</span>
                             <span>{uploadProgress}%</span>
                           </div>
                           <Progress value={uploadProgress} className="h-2" />
@@ -1285,7 +1411,7 @@ export default function ProductForm() {
                             exit={{ opacity: 0, y: -10 }}
                           >
                             <Label className="text-sm font-medium mb-3 block">
-                              New Images ({imagePreviews.length})
+                              New Images ({imagePreviews.length}) - WebP format
                             </Label>
                             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                               {imagePreviews.map((preview, index) => (
@@ -1297,7 +1423,7 @@ export default function ProductForm() {
                                   transition={{ delay: index * 0.05 }}
                                   whileHover={{ scale: 1.05 }}
                                 >
-                                  <div className="relative aspect-square rounded-xl overflow-hidden border-2 border-dashed border-primary/30">
+                                  <div className="relative aspect-square rounded-xl overflow-hidden border-2 border-dashed border-green-500/30">
                                     <img
                                       src={preview}
                                       alt={`Preview ${index + 1}`}
@@ -1310,8 +1436,8 @@ export default function ProductForm() {
                                     >
                                       <X className="w-4 h-4" />
                                     </button>
-                                    <Badge className="absolute bottom-2 left-2 bg-primary/90">
-                                      New
+                                    <Badge className="absolute bottom-2 left-2 bg-green-600 text-white">
+                                      WebP
                                     </Badge>
                                   </div>
                                 </motion.div>

@@ -1,3 +1,4 @@
+// src/components/admin/AdminSlidesOverview.tsx
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useRefreshTrigger } from "@/contexts/RefreshContext";
@@ -14,6 +15,59 @@ import { Navigate } from "react-router-dom";
 import { toast } from "sonner";
 import { compressImage, formatFileSize, getImageDimensions, getOptimizedImageUrl } from "@/lib/imageOptimization";
 import type { CompressedImage } from "@/lib/imageOptimization";
+
+// WebP conversion utility for slides
+async function convertToWebP(file: File, quality: number = 85): Promise<File> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => {
+      const img = new Image();
+      img.src = reader.result as string;
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+        
+        // Slide dimensions: max 1920x800 for hero images
+        let width = img.width;
+        let height = img.height;
+        const maxWidth = 1920;
+        const maxHeight = 800;
+        
+        if (width > maxWidth) {
+          height = (height * maxWidth) / width;
+          width = maxWidth;
+        }
+        if (height > maxHeight) {
+          width = (width * maxHeight) / height;
+          height = maxHeight;
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        ctx?.drawImage(img, 0, 0, width, height);
+        
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) {
+              reject(new Error("Failed to convert image to WebP"));
+              return;
+            }
+            const webpFile = new File([blob], file.name.replace(/\.\w+$/, ".webp"), {
+              type: "image/webp",
+              lastModified: Date.now(),
+            });
+            resolve(webpFile);
+          },
+          "image/webp",
+          quality / 100
+        );
+      };
+      img.onerror = () => reject(new Error("Failed to load image"));
+    };
+    reader.onerror = () => reject(new Error("Failed to read file"));
+  });
+}
 
 export default function AdminSlidesOverview() {
   const { user, isAdmin, isModerator, loading: authLoading } = useAuth();
@@ -193,30 +247,39 @@ export default function AdminSlidesOverview() {
 
     setCompressing(true);
     try {
-      // Compress the image automatically
-      const compressed = await compressImage(file, {
-        maxWidth: 1400,
+      // Convert to WebP first (better compression than JPEG)
+      let webpFile: File;
+      
+      if (file.type === "image/webp") {
+        webpFile = file;
+      } else {
+        webpFile = await convertToWebP(file, 85);
+      }
+      
+      // Then apply additional optimization if needed
+      const compressed = await compressImage(webpFile, {
+        maxWidth: 1920,
         maxHeight: 800,
-        quality: 0.8,
-        mimeType: "image/webp", // WebP for better compression
+        quality: 0.85,
+        mimeType: "image/webp",
       });
 
       // Create a new File object from the compressed blob
-      const compressedFile = new File([compressed.blob], file.name.replace(/\.\w+$/, ".webp"), {
+      const finalFile = new File([compressed.blob], webpFile.name, {
         type: "image/webp",
       });
 
-      setImageFile(compressedFile);
+      setImageFile(finalFile);
       setCompressionStats(compressed);
       setPreview(URL.createObjectURL(compressed.blob));
 
       toast.success(
-        `✨ Image compressed! ${formatFileSize(file.size)} → ${formatFileSize(compressed.size)} (${compressed.compressionRatio}% smaller)`,
+        `✨ Image converted to WebP! ${formatFileSize(file.size)} → ${formatFileSize(compressed.size)} (${compressed.compressionRatio}% smaller)`,
         { duration: 5000 }
       );
     } catch (error) {
-      console.error("Error compressing image:", error);
-      toast.error("Failed to compress image. Using original.");
+      console.error("Error processing image:", error);
+      toast.error("Failed to optimize image. Using original.");
       setImageFile(file);
       setPreview(URL.createObjectURL(file));
     } finally {
@@ -233,20 +296,24 @@ export default function AdminSlidesOverview() {
     try {
       let imageUrl = editingSlide?.image_url || "";
       if (imageFile) {
-        // Upload compressed image
+        // Upload WebP image
         const path = `slides/${Date.now()}_${imageFile.name}`;
-        const { error } = await anySupabase.storage.from("product-images").upload(path, imageFile);
+        const { error } = await anySupabase.storage.from("product-images").upload(path, imageFile, {
+          contentType: "image/webp",
+          cacheControl: "31536000", // 1 year cache for hero images
+        });
         if (error) throw error;
         const { data } = anySupabase.storage.from("product-images").getPublicUrl(path);
         imageUrl = data.publicUrl;
         
         // Log compression stats
         if (compressionStats) {
-          console.log("✅ Image uploaded successfully", {
-            originalSize: compressionStats.size,
+          console.log("✅ WebP image uploaded successfully", {
+            originalSize: compressionStats.originalSize || compressionStats.size,
+            compressedSize: compressionStats.size,
             width: compressionStats.width,
             height: compressionStats.height,
-            format: compressionStats.mimeType,
+            format: "WebP",
             compressionRatio: compressionStats.compressionRatio,
           });
         }
@@ -274,14 +341,14 @@ export default function AdminSlidesOverview() {
           .update(payload)
           .eq("id", editingSlide.id) as any);
         if (error) throw error;
-        toast.success("Slide updated!");
+        toast.success("Slide updated with WebP image!");
         await logAuditAction({
           actor_id: user?.id ?? null,
           actor_email: user?.email ?? null,
           action_type: "slide_updated",
           entity: "hero_slides",
           entity_id: editingSlide.id,
-          details: { title: payload.title, section_id: payload.section_id, is_active: payload.is_active },
+          details: { title: payload.title, section_id: payload.section_id, is_active: payload.is_active, format: "webp" },
           user_id: null,
         });
       } else {
@@ -289,14 +356,14 @@ export default function AdminSlidesOverview() {
           .from("hero_slides" as any)
           .insert([payload]) as any);
         if (error) throw error;
-        toast.success("Slide created!");
+        toast.success("Slide created with WebP image!");
         await logAuditAction({
           actor_id: user?.id ?? null,
           actor_email: user?.email ?? null,
           action_type: "slide_created",
           entity: "hero_slides",
           entity_id: null,
-          details: { title: payload.title, section_id: payload.section_id, is_active: payload.is_active },
+          details: { title: payload.title, section_id: payload.section_id, is_active: payload.is_active, format: "webp" },
           user_id: null,
         });
       }
@@ -359,7 +426,7 @@ export default function AdminSlidesOverview() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-bold">Homepage Hero Sections</h2>
-          <p className="text-sm text-muted-foreground">Manage hero sections and their carousel slides</p>
+          <p className="text-sm text-muted-foreground">Manage hero sections and their carousel slides (WebP optimized)</p>
         </div>
       </div>
 
@@ -436,7 +503,7 @@ export default function AdminSlidesOverview() {
                             resize: "contain",
                           })} alt={slide.title} loading="lazy" decoding="async" className="w-full h-24 sm:h-28 object-cover" />
                           <span className="absolute top-1 left-1 bg-black/60 text-white text-[9px] px-1 py-0.5 font-mono rounded">
-                            Slide {idx + 1}
+                            {slide.image_url.includes(".webp") ? "WebP" : `Slide ${idx + 1}`}
                           </span>
                         </div>
                         <div className="flex-1 p-3 sm:p-4 flex items-center justify-between gap-4 min-w-0">
@@ -503,7 +570,7 @@ export default function AdminSlidesOverview() {
           </DialogHeader>
           <div className="space-y-4 pt-2">
             <div>
-              <Label>Slide Image *</Label>
+              <Label>Slide Image * (WebP format recommended)</Label>
               <label className="mt-1 flex flex-col items-center justify-center border-2 border-dashed border-border hover:border-primary transition-colors cursor-pointer overflow-hidden" style={{ minHeight: 120 }}>
                 {preview ? (
                   <img src={getOptimizedImageUrl(preview, {
@@ -515,7 +582,7 @@ export default function AdminSlidesOverview() {
                 ) : (
                   <div className="flex flex-col items-center gap-2 py-8 text-muted-foreground">
                     <Upload className="w-6 h-6" />
-                    <span className="text-xs">Click to upload image</span>
+                    <span className="text-xs">Click to upload image (will be converted to WebP)</span>
                   </div>
                 )}
                 <input
@@ -526,20 +593,20 @@ export default function AdminSlidesOverview() {
                 />
               </label>
               {imageFile && (
-                <div className="mt-3 p-3 bg-gray-100 border border-gray-300 rounded-lg space-y-2">
+                <div className="mt-3 p-3 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg space-y-2">
                   <div className="flex items-start gap-2">
-                    <Info className="w-4 h-4 text-gray-700 mt-0.5 flex-shrink-0" />
-                    <div className="text-xs text-gray-900 space-y-1 flex-1">
-                      <p className="font-semibold">✨ Image Optimized</p>
+                    <Info className="w-4 h-4 text-green-700 dark:text-green-400 mt-0.5 flex-shrink-0" />
+                    <div className="text-xs text-green-900 dark:text-green-300 space-y-1 flex-1">
+                      <p className="font-semibold">✨ WebP Optimized!</p>
                       {compressionStats && (
                         <>
                           <p>📦 Size: {formatFileSize(compressionStats.size)} ({compressionStats.compressionRatio}% smaller)</p>
                           <p>📏 Dimensions: {compressionStats.width}×{compressionStats.height}px</p>
-                          <p>🎨 Format: {compressionStats.mimeType === "image/webp" ? "WebP" : "Original"} (modern & efficient)</p>
+                          <p>🎨 Format: WebP (modern browser format)</p>
                         </>
                       )}
-                      <p className="text-[11px] text-gray-700 mt-2">
-                        Images are automatically compressed for faster loading and better performance. ✅
+                      <p className="text-[11px] text-green-800 dark:text-green-400 mt-2">
+                        Images are automatically converted to WebP format for faster loading and better user experience. ✅
                       </p>
                     </div>
                   </div>
@@ -597,7 +664,7 @@ export default function AdminSlidesOverview() {
               <Button onClick={handleSaveSlide} disabled={saving || compressing} className="gap-2">
                 {compressing && <Loader2 className="w-4 h-4 animate-spin" />}
                 {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-                {compressing ? "Compressing..." : saving ? "Uploading..." : editingSlide ? "Update Slide" : "Create Slide"}
+                {compressing ? "Converting to WebP..." : saving ? "Uploading..." : editingSlide ? "Update Slide" : "Create Slide"}
               </Button>
             </div>
           </div>
