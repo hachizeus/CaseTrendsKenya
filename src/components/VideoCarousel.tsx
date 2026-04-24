@@ -18,11 +18,8 @@ const VideoCarousel = () => {
         <div key={index} className="video-card">
           <img
             src={video.thumbnail || `https://img.youtube.com/vi/${video.url.split('v=')[1]}/0.jpg`}
-            srcset={video.srcset || `https://img.youtube.com/vi/${video.url.split('v=')[1]}/0.jpg`}
-            sizes={video.sizes || '100vw'}
             alt={video.title || 'Video thumbnail'}
-            loading="lazy"
-            className="responsive-image"
+            className="video-thumbnail"
           />
           <div className="play-icon">▶</div>
         </div>

@@ -40,7 +40,7 @@ const AdminLayoutContent = () => {
     const now = new Date().toISOString();
     const { data, error } = await supabase
       .from("order_notifications")
-      .select("id, is_read")
+      .select("id,is_read")
       .gt("expires_at", now);
 
     if (error) {
@@ -100,29 +100,6 @@ const AdminLayoutContent = () => {
     await markNotificationsRead();
     setUnreadNotificationCount(0);
     navigate("/admin/orders");
-  };
-
-  const handleUpdateOrderStatus = async (orderId: string, newStatus: string) => {
-    if (role !== "admin" && role !== "moderator") {
-      toast.error("You do not have permission to update order status.");
-      return;
-    }
-
-    try {
-      const { error } = await supabase
-        .from("orders")
-        .update({ status: newStatus })
-        .eq("id", orderId);
-
-      if (error) {
-        throw new Error(error.message);
-      }
-
-      toast.success("Order status updated successfully.");
-      triggerRefresh();
-    } catch (error) {
-      toast.error(`Failed to update order status: ${error.message}`);
-    }
   };
 
   useEffect(() => {

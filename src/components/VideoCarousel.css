@@ -35,20 +35,3 @@
   color: white;
   text-shadow: 0 0 10px rgba(0, 0, 0, 0.7);
 }
-
-/* Added responsive image styles */
-.responsive-image {
-  max-width: 100%;
-  height: auto;
-  display: block;
-}
-
-/* Lazy loading placeholder */
-img[loading="lazy"] {
-  filter: blur(10px);
-  transition: filter 0.3s ease;
-}
-
-img[loading="lazy"].loaded {
-  filter: none;
-}
