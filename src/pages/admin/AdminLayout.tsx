@@ -9,11 +9,27 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { usePullToRefresh } from "@/hooks/use-pull-to-refresh";
 import { PullToRefreshOverlay } from "@/components/PullToRefreshOverlay";
-import logo from "../../public/optimized/logo.png";
+import logo from "@/assets/logo.png";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import React, { useState, useEffect } from 'react';
-import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
-import axios from 'axios';
+
+// Define the OrderNotification type
+interface OrderNotification {
+  id: string;
+  order_id: string;
+  customer_name: string;
+  message: string;
+  is_read: boolean;
+  created_at: string;
+  payment_method: string;
+  total_amount: number;
+  expires_at: string;
+}
+
+// Define the simplified notification type for unread count
+interface SimpleOrderNotification {
+  id: string;
+  is_read: boolean;
+}
 
 const adminLinks = [
   { path: "/admin", label: "Dashboard", icon: LayoutDashboard },
@@ -34,7 +50,7 @@ const AdminLayoutContent = () => {
   const isAdmin = role === "admin";
   const navigate = useNavigate();
   const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
-  const [notifications, setNotifications] = useState<any[]>([]);
+  const [notifications, setNotifications] = useState<OrderNotification[]>([]);
   const locationRef = useRef(location.pathname);
 
   const refreshNotifications = useCallback(async () => {
@@ -49,7 +65,7 @@ const AdminLayoutContent = () => {
       return;
     }
 
-    const activeNotifications = data ?? [];
+    const activeNotifications = (data as SimpleOrderNotification[] | null) ?? [];
     setUnreadNotificationCount(activeNotifications.filter((notification) => !notification.is_read).length);
   }, []);
 
@@ -57,7 +73,7 @@ const AdminLayoutContent = () => {
     const now = new Date().toISOString();
     const { data, error } = await supabase
       .from("order_notifications")
-      .select("id,order_id,customer_name,message,is_read,created_at,payment_method,total_amount")
+      .select("id,order_id,customer_name,message,is_read,created_at,payment_method,total_amount,expires_at")
       .gt("expires_at", now)
       .order("created_at", { ascending: false });
 
@@ -67,15 +83,16 @@ const AdminLayoutContent = () => {
       return;
     }
 
-    setNotifications(data ?? []);
-    setUnreadNotificationCount((data ?? []).filter((notification) => !notification.is_read).length);
+    const notificationsData = (data as OrderNotification[] | null) ?? [];
+    setNotifications(notificationsData);
+    setUnreadNotificationCount(notificationsData.filter((notification) => !notification.is_read).length);
   }, []);
 
   const markNotificationsRead = useCallback(async () => {
     const now = new Date().toISOString();
     const { error } = await supabase
       .from("order_notifications")
-      .update({ is_read: true })
+      .update({ is_read: true } as Partial<OrderNotification>)
       .eq("is_read", false)
       .gt("expires_at", now);
 
@@ -198,7 +215,7 @@ const AdminLayoutContent = () => {
       <aside className="hidden lg:flex w-64 bg-[#0f1117] text-white flex-col flex-shrink-0 border-r border-white/10 overflow-y-auto h-screen">
         {/* Logo */}
         <div className="px-5 py-5 border-b border-white/10 flex-shrink-0">
-          <img src={logo} alt="Case Trends Kenya" className="h-9 w-auto" />
+          <img src="/logow.png" alt="Case Trends Kenya" className="h-9 w-auto" />
           <p className="text-[10px] text-white/40 mt-1 uppercase tracking-widest">Admin Panel</p>
         </div>
 
@@ -267,7 +284,7 @@ const AdminLayoutContent = () => {
                       <div className="flex items-start justify-between gap-3">
                         <p className="text-sm font-medium">{notification.customer_name}</p>
                         {!notification.is_read && (
-                          <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-amber-300">New</span>
+                          <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-amber-600">New</span>
                         )}
                       </div>
                       <p className="mt-1 text-xs text-slate-600 leading-5">
@@ -361,7 +378,7 @@ const AdminLayoutContent = () => {
                         <div className="flex items-start justify-between gap-3">
                           <p className="text-sm font-medium">{notification.customer_name}</p>
                           {!notification.is_read && (
-                            <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-amber-300">New</span>
+                            <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-amber-600">New</span>
                           )}
                         </div>
                         <p className="mt-1 text-xs text-slate-600 leading-5">
@@ -399,91 +416,3 @@ const AdminLayout = () => {
 };
 
 export default AdminLayout;
-
-const AdminVideoManager = () => {
-  const [videos, setVideos] = useState([]);
-  const [newVideo, setNewVideo] = useState({ url: '', title: '', thumbnail: '', visible: true });
-
-  useEffect(() => {
-    axios.get('/api/videos').then((response) => setVideos(response.data));
-  }, []);
-
-  const handleAddVideo = () => {
-    axios.post('/api/videos', newVideo).then((response) => {
-      setVideos([...videos, response.data]);
-      setNewVideo({ url: '', title: '', thumbnail: '', visible: true });
-    });
-  };
-
-  const handleDeleteVideo = (id) => {
-    axios.delete(`/api/videos/${id}`).then(() => {
-      setVideos(videos.filter((video) => video.id !== id));
-    });
-  };
-
-  const handleVisibilityToggle = (id) => {
-    const video = videos.find((v) => v.id === id);
-    axios.patch(`/api/videos/${id}`, { visible: !video.visible }).then((response) => {
-      setVideos(videos.map((v) => (v.id === id ? response.data : v)));
-    });
-  };
-
-  const handleDragEnd = (result) => {
-    if (!result.destination) return;
-    const reorderedVideos = Array.from(videos);
-    const [moved] = reorderedVideos.splice(result.source.index, 1);
-    reorderedVideos.splice(result.destination.index, 0, moved);
-    setVideos(reorderedVideos);
-    axios.post('/api/videos/reorder', reorderedVideos);
-  };
-
-  return (
-    <div>
-      <h2>Manage Videos</h2>
-      <input
-        type="text"
-        placeholder="Video URL"
-        value={newVideo.url}
-        onChange={(e) => setNewVideo({ ...newVideo, url: e.target.value })}
-      />
-      <input
-        type="text"
-        placeholder="Title (optional)"
-        value={newVideo.title}
-        onChange={(e) => setNewVideo({ ...newVideo, title: e.target.value })}
-      />
-      <input
-        type="text"
-        placeholder="Thumbnail URL (optional)"
-        value={newVideo.thumbnail}
-        onChange={(e) => setNewVideo({ ...newVideo, thumbnail: e.target.value })}
-      />
-      <button onClick={handleAddVideo}>Add Video</button>
-
-      <DragDropContext onDragEnd={handleDragEnd}>
-        <Droppable droppableId="videos">
-          {(provided) => (
-            <ul {...provided.droppableProps} ref={provided.innerRef}>
-              {videos.map((video, index) => (
-                <Draggable key={video.id} draggableId={video.id.toString()} index={index}>
-                  {(provided) => (
-                    <li ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps}>
-                      <span>{video.title || 'Untitled Video'}</span>
-                      <button onClick={() => handleVisibilityToggle(video.id)}>
-                        {video.visible ? 'Unpublish' : 'Publish'}
-                      </button>
-                      <button onClick={() => handleDeleteVideo(video.id)}>Delete</button>
-                    </li>
-                  )}
-                </Draggable>
-              ))}
-              {provided.placeholder}
-            </ul>
-          )}
-        </Droppable>
-      </DragDropContext>
-    </div>
-  );
-};
-
-export default AdminVideoManager;

@@ -399,7 +399,7 @@ const AdminProducts = () => {
                       {filteredAndSortedProducts.map((product) => {
                         const primaryImg = product.product_images?.find((i: any) => i.is_primary)?.image_url ||
                           product.product_images?.[0]?.image_url ||
-                          "/optimized/placeholder.svg";
+                          "/placeholder.svg";
                         const stockInfo = getStockInfo(product);
                         const StockIcon = stockInfo.icon;
 
@@ -495,7 +495,7 @@ const AdminProducts = () => {
                 {filteredAndSortedProducts.map((product) => {
                   const primaryImg = product.product_images?.find((i: any) => i.is_primary)?.image_url ||
                     product.product_images?.[0]?.image_url ||
-                    "/optimized/placeholder.svg";
+                    "/placeholder.svg";
                   const stockInfo = getStockInfo(product);
                   const StockIcon = stockInfo.icon;
 
