@@ -1,67 +1,26 @@
-const express = require('express');
+import express from 'express';
 const router = express.Router();
 
-// Mock database for videos
-let videos = [
-  {
-    id: 1,
-    url: 'https://www.youtube.com/watch?v=example1',
-    title: 'Sample Video 1',
-    thumbnail: '',
-    visibility: true,
-    order: 1,
-  },
-  {
-    id: 2,
-    url: 'https://www.youtube.com/watch?v=example2',
-    title: 'Sample Video 2',
-    thumbnail: '',
-    visibility: true,
-    order: 2,
-  },
-];
+// Mock database
+let videos = [];
 
 // Get all videos
 router.get('/videos', (req, res) => {
-  const visibleVideos = videos.filter((video) => video.visibility);
-  res.json(visibleVideos);
+  res.json(videos);
 });
 
 // Add a new video
 router.post('/videos', (req, res) => {
-  const { url, title, thumbnail, visibility, order } = req.body;
+  const { url, title, thumbnail, visible } = req.body;
   const newVideo = {
     id: videos.length + 1,
     url,
     title,
     thumbnail,
-    visibility,
-    order,
+    visible: visible ?? true,
   };
   videos.push(newVideo);
   res.status(201).json(newVideo);
-});
-
-// Update a video
-router.put('/videos/:id', (req, res) => {
-  const { id } = req.params;
-  const { url, title, thumbnail, visibility, order } = req.body;
-  const videoIndex = videos.findIndex((video) => video.id === parseInt(id));
-
-  if (videoIndex === -1) {
-    return res.status(404).json({ message: 'Video not found' });
-  }
-
-  videos[videoIndex] = {
-    ...videos[videoIndex],
-    url,
-    title,
-    thumbnail,
-    visibility,
-    order,
-  };
-
-  res.json(videos[videoIndex]);
 });
 
 // Delete a video
@@ -71,4 +30,24 @@ router.delete('/videos/:id', (req, res) => {
   res.status(204).send();
 });
 
-module.exports = router;
+// Update video visibility
+router.patch('/videos/:id', (req, res) => {
+  const { id } = req.params;
+  const { visible } = req.body;
+  const video = videos.find((v) => v.id === parseInt(id));
+  if (video) {
+    video.visible = visible;
+    res.json(video);
+  } else {
+    res.status(404).send('Video not found');
+  }
+});
+
+// Reorder videos
+router.post('/videos/reorder', (req, res) => {
+  const reorderedVideos = req.body;
+  videos = reorderedVideos;
+  res.status(200).send('Videos reordered successfully');
+});
+
+export default router;
