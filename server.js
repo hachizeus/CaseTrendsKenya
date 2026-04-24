@@ -6,7 +6,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import fileupload from "express-fileupload";
 import { createClient } from "@supabase/supabase-js";
-import videoRoutes from "./api/videoRoutes.js"; // Ensure the correct file extension is used
+import videoRoutes from "./src/api/videoRoutes.js"; // Ensure the correct path for the videoRoutes module
 
 dotenv.config({ path: ".env" });
 dotenv.config({ path: ".env.local" });

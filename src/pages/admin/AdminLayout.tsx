@@ -40,7 +40,7 @@ const AdminLayoutContent = () => {
     const now = new Date().toISOString();
     const { data, error } = await supabase
       .from("order_notifications")
-      .select("id,is_read")
+      .select("id, is_read")
       .gt("expires_at", now);
 
     if (error) {
