@@ -21,8 +21,6 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 
 const SHOP_LOCATION = { lat: -1.2833, lng: 36.8233 };
-const DELIVERY_FEE_PER_KM = 50;
-const BASE_DELIVERY_FEE = 100;
 
 const CheckoutPage = () => {
   const { items, totalPrice, clearCart } = useCart();
@@ -35,7 +33,6 @@ const CheckoutPage = () => {
   const [address, setAddress] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [coordinates, setCoordinates] = useState<{ lat: number; lng: number } | null>(null);
-  const [deliveryFee, setDeliveryFee] = useState(0);
   const [mapError, setMapError] = useState("");
   const [mapLoading, setMapLoading] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<"whatsapp" | "paystack">("whatsapp");
@@ -58,9 +55,7 @@ const CheckoutPage = () => {
 
   const shouldUseCaptcha = isProduction();
 
-  const finalTotal = useMemo(() => {
-    return delivery === "delivery" ? totalPrice + deliveryFee : totalPrice;
-  }, [totalPrice, deliveryFee, delivery]);
+  const finalTotal = useMemo(() => totalPrice, [totalPrice]);
 
   const buildWhatsAppLink = (orderId: string) => {
     const itemLines = items
@@ -69,11 +64,7 @@ const CheckoutPage = () => {
       )
       .join("\n");
 
-    const googleMapsLink = coordinates
-      ? `https://www.google.com/maps?q=${coordinates.lat},${coordinates.lng}`
-      : "No precise location pinned";
-
-    const message = `*New Order: ${orderId}*\n--------------------------\n${itemLines}\n\n*Subtotal:* KSh ${totalPrice.toLocaleString()}\n*Delivery Fee:* KSh ${deliveryFee.toLocaleString()}\n*Total Amount:* KSh ${finalTotal.toLocaleString()}\n\n*Customer Details:*\nName: ${name}\nPhone: ${phone}\nMethod: ${delivery.toUpperCase()}\n\n*Location:*\nAddress: ${address || "Not provided"}\n📍 Precise Pin: ${googleMapsLink}\n\n_Please confirm receipt of this order._`;
+    const message = `*New Order: ${orderId}*\n--------------------------\n${itemLines}\n\n*Subtotal:* KSh ${totalPrice.toLocaleString()}\n*Total Amount:* KSh ${finalTotal.toLocaleString()}\n\n*Customer Details:*\nName: ${name}\nPhone: ${phone}\nMethod: ${delivery.toUpperCase()}\n\n_Please confirm receipt of this order._`;
 
     return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
   };
@@ -208,10 +199,6 @@ const CheckoutPage = () => {
 
   const handleLocationUpdate = async (lat: number, lng: number, label?: string) => {
     setCoordinates({ lat, lng });
-
-    const distance = calculateDistance(SHOP_LOCATION.lat, SHOP_LOCATION.lng, lat, lng);
-    const fee = Math.max(BASE_DELIVERY_FEE, Math.round(distance * DELIVERY_FEE_PER_KM));
-    setDeliveryFee(fee);
 
     if (markerRef.current) markerRef.current.setLatLng([lat, lng]);
     if (mapRef.current) mapRef.current.flyTo([lat, lng], 15);
@@ -433,12 +420,6 @@ const CheckoutPage = () => {
                 <span className="font-medium flex-shrink-0">KSh {(item.price * item.quantity).toLocaleString()}</span>
               </div>
             ))}
-            {delivery === "delivery" && (
-              <div className="flex justify-between text-blue-600 text-sm mt-2">
-                <span className="flex items-center gap-1"><Truck size={16} /> Delivery Fee</span>
-                <span>KSh {deliveryFee.toLocaleString()}</span>
-              </div>
-            )}
             <div className="flex justify-between font-bold text-base sm:text-lg mt-4 pt-2 border-t">
               <span>Total</span>
               <span className="text-primary">KSh {finalTotal.toLocaleString()}</span>

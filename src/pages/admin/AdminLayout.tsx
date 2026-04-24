@@ -11,6 +11,8 @@ import { usePullToRefresh } from "@/hooks/use-pull-to-refresh";
 import { PullToRefreshOverlay } from "@/components/PullToRefreshOverlay";
 import logo from "@/assets/logo.png";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import React, { useState, useEffect } from 'react';
+import VideoCarousel from '../../components/VideoCarousel';
 
 const adminLinks = [
   { path: "/admin", label: "Dashboard", icon: LayoutDashboard },
@@ -98,6 +100,29 @@ const AdminLayoutContent = () => {
     await markNotificationsRead();
     setUnreadNotificationCount(0);
     navigate("/admin/orders");
+  };
+
+  const handleUpdateOrderStatus = async (orderId: string, newStatus: string) => {
+    if (role !== "admin" && role !== "moderator") {
+      toast.error("You do not have permission to update order status.");
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from("orders")
+        .update({ status: newStatus })
+        .eq("id", orderId);
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      toast.success("Order status updated successfully.");
+      triggerRefresh();
+    } catch (error) {
+      toast.error(`Failed to update order status: ${error.message}`);
+    }
   };
 
   useEffect(() => {

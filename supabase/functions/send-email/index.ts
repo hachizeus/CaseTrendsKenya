@@ -41,9 +41,7 @@ function generateOrderConfirmationEmail(orderData: any): EmailTemplate {
     `)
     .join("");
 
-  const deliveryInfo = orderData.delivery_method === "pickup"
-    ? `<p><strong>Pickup Location:</strong> Case Trends Kenya Store</p>`
-    : `<p><strong>Delivery Address:</strong> ${orderData.delivery_address || "Will be contacted for address"}</p>`;
+  const deliveryInfo = `<p><strong>Pickup Location:</strong> Case Trends Kenya Store</p>`;
 
   const html = `
     <!DOCTYPE html>
