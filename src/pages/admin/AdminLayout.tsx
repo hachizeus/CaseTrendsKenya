@@ -9,10 +9,11 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { usePullToRefresh } from "@/hooks/use-pull-to-refresh";
 import { PullToRefreshOverlay } from "@/components/PullToRefreshOverlay";
-import logo from "@/assets/logow.png";
+import logo from "../../public/optimized/logo.png";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import React, { useState, useEffect } from 'react';
-import VideoCarousel from '../../components/VideoCarousel';
+import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
+import axios from 'axios';
 
 const adminLinks = [
   { path: "/admin", label: "Dashboard", icon: LayoutDashboard },
@@ -197,7 +198,7 @@ const AdminLayoutContent = () => {
       <aside className="hidden lg:flex w-64 bg-[#0f1117] text-white flex-col flex-shrink-0 border-r border-white/10 overflow-y-auto h-screen">
         {/* Logo */}
         <div className="px-5 py-5 border-b border-white/10 flex-shrink-0">
-          <img src="/logow.png" alt="Case Trends Kenya" className="h-9 w-auto" />
+          <img src={logo} alt="Case Trends Kenya" className="h-9 w-auto" />
           <p className="text-[10px] text-white/40 mt-1 uppercase tracking-widest">Admin Panel</p>
         </div>
 
@@ -398,3 +399,91 @@ const AdminLayout = () => {
 };
 
 export default AdminLayout;
+
+const AdminVideoManager = () => {
+  const [videos, setVideos] = useState([]);
+  const [newVideo, setNewVideo] = useState({ url: '', title: '', thumbnail: '', visible: true });
+
+  useEffect(() => {
+    axios.get('/api/videos').then((response) => setVideos(response.data));
+  }, []);
+
+  const handleAddVideo = () => {
+    axios.post('/api/videos', newVideo).then((response) => {
+      setVideos([...videos, response.data]);
+      setNewVideo({ url: '', title: '', thumbnail: '', visible: true });
+    });
+  };
+
+  const handleDeleteVideo = (id) => {
+    axios.delete(`/api/videos/${id}`).then(() => {
+      setVideos(videos.filter((video) => video.id !== id));
+    });
+  };
+
+  const handleVisibilityToggle = (id) => {
+    const video = videos.find((v) => v.id === id);
+    axios.patch(`/api/videos/${id}`, { visible: !video.visible }).then((response) => {
+      setVideos(videos.map((v) => (v.id === id ? response.data : v)));
+    });
+  };
+
+  const handleDragEnd = (result) => {
+    if (!result.destination) return;
+    const reorderedVideos = Array.from(videos);
+    const [moved] = reorderedVideos.splice(result.source.index, 1);
+    reorderedVideos.splice(result.destination.index, 0, moved);
+    setVideos(reorderedVideos);
+    axios.post('/api/videos/reorder', reorderedVideos);
+  };
+
+  return (
+    <div>
+      <h2>Manage Videos</h2>
+      <input
+        type="text"
+        placeholder="Video URL"
+        value={newVideo.url}
+        onChange={(e) => setNewVideo({ ...newVideo, url: e.target.value })}
+      />
+      <input
+        type="text"
+        placeholder="Title (optional)"
+        value={newVideo.title}
+        onChange={(e) => setNewVideo({ ...newVideo, title: e.target.value })}
+      />
+      <input
+        type="text"
+        placeholder="Thumbnail URL (optional)"
+        value={newVideo.thumbnail}
+        onChange={(e) => setNewVideo({ ...newVideo, thumbnail: e.target.value })}
+      />
+      <button onClick={handleAddVideo}>Add Video</button>
+
+      <DragDropContext onDragEnd={handleDragEnd}>
+        <Droppable droppableId="videos">
+          {(provided) => (
+            <ul {...provided.droppableProps} ref={provided.innerRef}>
+              {videos.map((video, index) => (
+                <Draggable key={video.id} draggableId={video.id.toString()} index={index}>
+                  {(provided) => (
+                    <li ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps}>
+                      <span>{video.title || 'Untitled Video'}</span>
+                      <button onClick={() => handleVisibilityToggle(video.id)}>
+                        {video.visible ? 'Unpublish' : 'Publish'}
+                      </button>
+                      <button onClick={() => handleDeleteVideo(video.id)}>Delete</button>
+                    </li>
+                  )}
+                </Draggable>
+              ))}
+              {provided.placeholder}
+            </ul>
+          )}
+        </Droppable>
+      </DragDropContext>
+    </div>
+  );
+};
+
+export default AdminVideoManager;

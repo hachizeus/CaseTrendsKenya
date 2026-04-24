@@ -11,6 +11,20 @@ const MiniHeroBanner = lazy(() => import("@/components/MiniHeroBanner"));
 const HomeCategorySections = lazy(() => import("@/components/HomeCategorySections"));
 const FeatureStrip = lazy(() => import("@/components/FeatureStrip"));
 import Footer from "@/components/Footer";
+import VideoCarousel from "@/components/VideoCarousel";
+
+const videoData = [
+  {
+    thumbnail: "https://img.youtube.com/vi/sample1/0.jpg",
+    title: "Sample Video 1",
+    url: "https://www.youtube.com/watch?v=sample1",
+  },
+  {
+    thumbnail: "https://img.youtube.com/vi/sample2/0.jpg",
+    title: "Sample Video 2",
+    url: "https://www.youtube.com/watch?v=sample2",
+  },
+];
 
 const SectionFallback = () => (
   <div className="py-8 sm:py-10">
@@ -31,6 +45,10 @@ const Index = () => (
 
       <Suspense fallback={<SectionFallback />}>
         <CategoryCards />
+      </Suspense>
+
+      <Suspense fallback={<SectionFallback />}>
+        <VideoCarousel videos={videoData} />
       </Suspense>
 
       <Suspense fallback={<SectionFallback />}>
