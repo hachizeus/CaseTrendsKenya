@@ -5,106 +5,70 @@ interface UseVideoCarouselProps {
   pauseOnHover?: boolean;
 }
 
-export const useVideoCarousel = ({ 
-  autoplaySpeed = 3000, 
-  pauseOnHover = true 
+export const useVideoCarousel = ({
+  autoplaySpeed = 0.3, // pixels per frame (VERY smooth)
+  pauseOnHover = true
 }: UseVideoCarouselProps = {}) => {
   const scrollRef = useRef<HTMLDivElement>(null);
+
   const [isPaused, setIsPaused] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
-  const [startX, setStartX] = useState(0);
-  const [scrollLeft, setScrollLeft] = useState(0);
-  const animationRef = useRef<number>();
-  const isMounted = useRef(true);
-  const autoScrollInterval = useRef<NodeJS.Timeout>();
 
-  // Smooth auto-scroll using setInterval instead of requestAnimationFrame
-  const startAutoScroll = useCallback(() => {
-    if (autoScrollInterval.current) {
-      clearInterval(autoScrollInterval.current);
-    }
-    
-    autoScrollInterval.current = setInterval(() => {
-      if (!scrollRef.current || isPaused || isDragging) return;
-      
-      const { scrollWidth, clientWidth, scrollLeft: currentScroll } = scrollRef.current;
-      const maxScroll = scrollWidth - clientWidth;
-      
-      // Smooth scroll by 1 pixel
-      if (currentScroll >= maxScroll - 1) {
-        // Reset to start for infinite loop
-        scrollRef.current.scrollTo({
-          left: 0,
-          behavior: 'smooth'
-        });
-      } else {
-        scrollRef.current.scrollBy({
-          left: 1,
-          behavior: 'smooth'
-        });
+  const startX = useRef(0);
+  const scrollLeft = useRef(0);
+  const velocity = useRef(0);
+  const lastX = useRef(0);
+
+  const animationRef = useRef<number>();
+
+  // 🔥 Smooth RAF auto scroll (no jitter)
+  const autoScroll = useCallback(() => {
+    if (!scrollRef.current) return;
+
+    if (!isPaused && !isDragging) {
+      const el = scrollRef.current;
+
+      el.scrollLeft += autoplaySpeed;
+
+      // Infinite loop
+      if (el.scrollLeft >= el.scrollWidth - el.clientWidth) {
+        el.scrollLeft = 0;
       }
-    }, 16); // ~60fps
-  }, [isPaused, isDragging]);
+    }
+
+    animationRef.current = requestAnimationFrame(autoScroll);
+  }, [isPaused, isDragging, autoplaySpeed]);
 
   useEffect(() => {
-    isMounted.current = true;
-    startAutoScroll();
-    
+    animationRef.current = requestAnimationFrame(autoScroll);
+
     return () => {
-      isMounted.current = false;
-      if (autoScrollInterval.current) {
-        clearInterval(autoScrollInterval.current);
-      }
+      if (animationRef.current) cancelAnimationFrame(animationRef.current);
     };
-  }, [startAutoScroll]);
+  }, [autoScroll]);
 
-  const handleMouseEnter = () => {
-    if (pauseOnHover) setIsPaused(true);
-  };
-
-  const handleMouseLeave = () => {
-    if (pauseOnHover) setIsPaused(false);
-  };
-
-  // Touch events for mobile
-  const handleTouchStart = (e: React.TouchEvent) => {
-    setIsDragging(true);
-    setIsPaused(true);
-    setStartX(e.touches[0].pageX - (scrollRef.current?.offsetLeft || 0));
-    setScrollLeft(scrollRef.current?.scrollLeft || 0);
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (!isDragging) return;
-    e.preventDefault();
-    const x = e.touches[0].pageX - (scrollRef.current?.offsetLeft || 0);
-    const walk = (x - startX) * 1.5;
-    if (scrollRef.current) {
-      scrollRef.current.scrollLeft = scrollLeft - walk;
-    }
-  };
-
-  const handleTouchEnd = () => {
-    setIsDragging(false);
-    setIsPaused(false);
-  };
-
-  // Mouse events for desktop
+  // ------------------
+  // Desktop Drag
+  // ------------------
   const handleMouseDown = (e: React.MouseEvent) => {
+    if (!scrollRef.current) return;
+
     setIsDragging(true);
     setIsPaused(true);
-    setStartX(e.pageX - (scrollRef.current?.offsetLeft || 0));
-    setScrollLeft(scrollRef.current?.scrollLeft || 0);
+
+    startX.current = e.pageX;
+    scrollLeft.current = scrollRef.current.scrollLeft;
+    lastX.current = e.pageX;
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDragging) return;
-    e.preventDefault();
-    const x = e.pageX - (scrollRef.current?.offsetLeft || 0);
-    const walk = (x - startX) * 1.5;
-    if (scrollRef.current) {
-      scrollRef.current.scrollLeft = scrollLeft - walk;
-    }
+    if (!isDragging || !scrollRef.current) return;
+
+    const dx = e.pageX - startX.current;
+    scrollRef.current.scrollLeft = scrollLeft.current - dx;
+
+    velocity.current = e.pageX - lastX.current;
+    lastX.current = e.pageX;
   };
 
   const handleMouseUp = () => {
@@ -112,15 +76,49 @@ export const useVideoCarousel = ({
     setIsPaused(false);
   };
 
+  // ------------------
+  // Touch (FIXED)
+  // ------------------
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (!scrollRef.current) return;
+
+    setIsDragging(true);
+    setIsPaused(true);
+
+    startX.current = e.touches[0].pageX;
+    scrollLeft.current = scrollRef.current.scrollLeft;
+    lastX.current = e.touches[0].pageX;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isDragging || !scrollRef.current) return;
+
+    // ❌ DO NOT preventDefault → keeps native scrolling smooth
+
+    const x = e.touches[0].pageX;
+    const dx = x - startX.current;
+
+    scrollRef.current.scrollLeft = scrollLeft.current - dx;
+
+    velocity.current = x - lastX.current;
+    lastX.current = x;
+  };
+
+  const handleTouchEnd = () => {
+    setIsDragging(false);
+    setIsPaused(false);
+  };
+
   return {
     scrollRef,
-    isPaused,
     handlers: {
-      onMouseEnter: handleMouseEnter,
-      onMouseLeave: handleMouseLeave,
+      onMouseEnter: () => pauseOnHover && setIsPaused(true),
+      onMouseLeave: () => pauseOnHover && setIsPaused(false),
       onMouseDown: handleMouseDown,
       onMouseMove: handleMouseMove,
       onMouseUp: handleMouseUp,
+      onMouseLeaveCapture: handleMouseUp,
+
       onTouchStart: handleTouchStart,
       onTouchMove: handleTouchMove,
       onTouchEnd: handleTouchEnd,
