@@ -5,10 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "server": "node server.js",
-    "start": "node server.js",
+    "server": "node dist/server.js",
+    "start": "node dist/server.js",
     "dev:all": "concurrently \"npm run dev\" \"npm run server\"",
-    "build": "vite build",
+    "build": "tsc",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview",

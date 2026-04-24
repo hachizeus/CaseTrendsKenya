@@ -10,7 +10,11 @@
       ]
     },
     "skipLibCheck": true,
-    "strictNullChecks": false
+    "strictNullChecks": false,
+    "outDir": "./dist",
+    "module": "ESNext",
+    "target": "ES2020",
+    "strict": true
   },
   "exclude": [
     "node_modules",
