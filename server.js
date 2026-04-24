@@ -186,17 +186,6 @@ function buildSecureHeaders(req, res, next) {
   next();
 }
 
-  res.set('X-Content-Type-Options', 'nosniff');
-  res.set('X-Frame-Options', 'DENY');
-  res.set('X-XSS-Protection', '1; mode=block');
-  res.set('Referrer-Policy', 'strict-origin-when-cross-origin');
-  res.set('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
-  res.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
-  res.set('Content-Security-Policy', cspDirectives.join('; '));
-  
-  next();
-}
-
 app.use(buildSecureHeaders);
 
 // Cache middleware for static assets
