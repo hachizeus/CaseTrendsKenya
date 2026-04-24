@@ -281,6 +281,7 @@ serve(async (req: Request) => {
     console.log("Email request received:", { to: payload.to, type: payload.type, role: payload.role });
 
     if (!payload.to || !payload.type || !payload.data || !payload.role) {
+      console.error("Missing required fields in payload:", payload);
       return new Response(
         JSON.stringify({ error: "Missing required fields: to, type, data, role" }),
         {
@@ -294,17 +295,21 @@ serve(async (req: Request) => {
     }
 
     // Validate role for status_update emails
-    if (payload.type === "status_update" && !["admin", "moderator"].includes(payload.role)) {
-      return new Response(
-        JSON.stringify({ error: "Unauthorized role for status_update emails" }),
-        {
-          status: 403,
-          headers: {
-            "Content-Type": "application/json",
-            ...CORS_HEADERS,
-          },
-        }
-      );
+    if (payload.type === "status_update") {
+      console.log("Validating role for status_update:", payload.role);
+      if (!["admin", "moderator"].includes(payload.role)) {
+        console.error("Unauthorized role for status_update:", payload.role);
+        return new Response(
+          JSON.stringify({ error: "Unauthorized role for status_update emails" }),
+          {
+            status: 403,
+            headers: {
+              "Content-Type": "application/json",
+              ...CORS_HEADERS,
+            },
+          }
+        );
+      }
     }
 
     let emailTemplate: EmailTemplate;
@@ -317,6 +322,7 @@ serve(async (req: Request) => {
       const adminRecipient = payload.to || ADMIN_NOTIFICATION_EMAIL;
       emailTemplate = generateOrderNotificationEmail(payload.data, adminRecipient);
     } else {
+      console.error("Invalid email type received:", payload.type);
       return new Response(JSON.stringify({ error: "Invalid email type" }), {
         status: 400,
         headers: {
@@ -328,6 +334,7 @@ serve(async (req: Request) => {
 
     const result = await sendViaResend(emailTemplate);
 
+    console.log("Email sent successfully:", result);
     return new Response(JSON.stringify({ success: true, data: result }), {
       status: 200,
       headers: {
