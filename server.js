@@ -99,7 +99,6 @@ async function fetchOrderWithGuestToken(orderId, token) {
 function buildSecureHeaders(req, res, next) {
   const cspDirectives = [
     "default-src 'self'",
-
     "script-src 'self' 'unsafe-inline' 'unsafe-eval' " +
       "https://www.googletagmanager.com " +
       "https://*.googletagmanager.com " +
@@ -111,7 +110,6 @@ function buildSecureHeaders(req, res, next) {
       "https://checkout.paystack.com " +
       "https://js.paystack.co " +
       "https://cdn.jsdelivr.net",
-
     "script-src-elem 'self' 'unsafe-inline' " +
       "https://www.googletagmanager.com " +
       "https://*.googletagmanager.com " +
@@ -123,20 +121,18 @@ function buildSecureHeaders(req, res, next) {
       "https://checkout.paystack.com " +
       "https://js.paystack.co " +
       "https://cdn.jsdelivr.net",
-
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net",
     "style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net",
-
     "img-src 'self' data: blob: https: " +
       "https://picsum.photos " +
       "https://images.unsplash.com " +
       "https://yrhczwzqvzqalyjpxdmi.supabase.co " +
       "https://img.youtube.com " +
       "https://i.ytimg.com " +
-      "https://*.ytimg.com",
-
+      "https://*.ytimg.com " +
+      "https://maps.googleapis.com " +
+      "https://*.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net data:",
-
     "connect-src 'self' https: wss: " +
       "https://yrhczwzqvzqalyjpxdmi.supabase.co " +
       "wss://yrhczwzqvzqalyjpxdmi.supabase.co " +
@@ -146,12 +142,13 @@ function buildSecureHeaders(req, res, next) {
       "https://www.google-analytics.com " +
       "https://*.google-analytics.com " +
       "https://api.maptiler.com " +
+      "https://maps.googleapis.com " +
+      "https://*.googleapis.com " +
       "http://localhost:3000 " +
       "http://localhost:5173 " +
       "https://casetrendskenya.co.ke " +
       "https://*.onrender.com",
-
-    // 🔥 FIXED: Proper iframe support (YouTube embeds)
+    // Updated frame-src with Google domains
     "frame-src 'self' " +
       "https://challenges.cloudflare.com " +
       "https://*.cloudflare.com " +
@@ -160,36 +157,32 @@ function buildSecureHeaders(req, res, next) {
       "https://www.youtube.com " +
       "https://*.youtube.com " +
       "https://www.youtube-nocookie.com " +
-      "https://*.youtube-nocookie.com",
-
+      "https://*.youtube-nocookie.com " +
+      "https://www.google.com " +
+      "https://*.google.com " +
+      "https://maps.google.com " +
+      "https://*.googleapis.com",
     "frame-ancestors 'self'",
-
     "worker-src 'self' blob:",
-
     "child-src 'self' blob: " +
       "https://challenges.cloudflare.com " +
       "https://checkout.paystack.com " +
       "https://www.youtube.com " +
       "https://*.youtube.com " +
       "https://www.youtube-nocookie.com",
-
     "base-uri 'self'",
     "form-action 'self'",
     "upgrade-insecure-requests"
   ];
 
   res.set('X-Content-Type-Options', 'nosniff');
-
-  // ❌ Removed X-Frame-Options (can conflict with external iframes like YouTube)
-  // res.set('X-Frame-Options', 'SAMEORIGIN');
-
+  // X-Frame-Options removed to allow CSP to handle framing
   res.set('X-XSS-Protection', '1; mode=block');
   res.set('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.set('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
   res.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
-
   res.set('Content-Security-Policy', cspDirectives.join('; '));
-
+  
   next();
 }
 
