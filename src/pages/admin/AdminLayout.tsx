@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { usePullToRefresh } from "@/hooks/use-pull-to-refresh";
 import { PullToRefreshOverlay } from "@/components/PullToRefreshOverlay";
-import logo from "@/assets/logo.png";
+import logo from "@/assets/logow.png";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import React, { useState, useEffect } from 'react';
 import VideoCarousel from '../../components/VideoCarousel';

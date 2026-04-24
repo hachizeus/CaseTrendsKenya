@@ -30,6 +30,7 @@ import SearchDropdown from "./SearchDropdown";
 import { getDisplayCategoryName } from "@/lib/utils";
 import { MAIN_CATEGORIES, getSubcategoriesByCategory } from "@/lib/categoryData";
 import VideoCarousel from './VideoCarousel';
+import logo from "@/assets/logo.png";
 
 const headerCategoryOptions = MAIN_CATEGORIES.map((cat) => cat.slug);
 import {
