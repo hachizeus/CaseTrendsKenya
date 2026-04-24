@@ -141,7 +141,7 @@ const AuthPage = () => {
           {/* Left panel — branding */}
           <div className="hidden lg:flex flex-col justify-between bg-gradient-to-br from-[#0f1117] to-[#1a1f2e] text-white p-10">
             <div>
-              <img src="/logo.png" alt="Case Trends Kenya" className="h-10 w-auto mb-10 brightness-200" />
+              <img src="/logo.webp" alt="Case Trends Kenya" className="h-10 w-auto mb-10 brightness-200" />
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -179,7 +179,7 @@ const AuthPage = () => {
           {/* Right panel — form */}
           <div className="bg-white p-8 sm:p-10 flex flex-col justify-center">
             <Link to="/" className="flex justify-center mb-6 lg:hidden">
-              <img src="/logo.png" alt="Case Trends Kenya" className="h-10 w-auto" />
+              <img src="/logo.webp" alt="Case Trends Kenya" className="h-10 w-auto" />
             </Link>
 
             <div className="flex border-b border-border mb-8">

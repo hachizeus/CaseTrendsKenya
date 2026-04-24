@@ -312,7 +312,7 @@ Website: ${siteUrl}`;
         <div class="wrapper">
           <div class="container">
             <div class="header">
-              <img src="${siteUrl}/logo.png" alt="Case Trends Kenya" width="140" style="display:block; margin: 0 auto 20px; max-width: 100%; height: auto;" />
+              <img src="${siteUrl}/logo.webp" alt="Case Trends Kenya" width="140" style="display:block; margin: 0 auto 20px; max-width: 100%; height: auto;" />
               <h1>Order Confirmed!</h1>
               <p>Thank you for your purchase</p>
             </div>
@@ -478,7 +478,7 @@ visit: https://casetrendskenya.co.ke
         <div class="wrapper">
           <div class="container">
             <div class="header">
-              <img src="${siteUrl}/logo.png" alt="Case Trends Kenya" width="140" style="display:block; margin: 0 auto 20px; max-width: 100%; height: auto;" />
+              <img src="${siteUrl}/logo.webp" alt="Case Trends Kenya" width="140" style="display:block; margin: 0 auto 20px; max-width: 100%; height: auto;" />
               <h1>Order Update</h1>
               <p>Your Case Trends Kenya order status has changed</p>
             </div>

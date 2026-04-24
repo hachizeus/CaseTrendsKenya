@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { usePullToRefresh } from "@/hooks/use-pull-to-refresh";
 import { PullToRefreshOverlay } from "@/components/PullToRefreshOverlay";
-import logo from "@/assets/logo.png";
+import logo from "../../../public/logo.webp";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
 // Define the OrderNotification type
