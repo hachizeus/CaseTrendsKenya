@@ -11,12 +11,41 @@ interface CategoryProductSectionProps {
   bgClass?: string;
 }
 
-// Smart category matching function - same as in ProductsPage
+// Smart category matching function with proper exclusion logic
 const matchesCategorySmart = (product: any, categorySlug: string): boolean => {
   const productName = product.name?.toLowerCase() || "";
   const productDesc = product.description?.toLowerCase() || "";
   const productCategory = product.category?.toLowerCase() || "";
   const productBrand = product.brand?.toLowerCase() || "";
+  
+  // First, identify if this is an audio product to exclude from non-audio categories
+  const isAudioProduct = 
+    productName.includes("headphone") ||
+    productName.includes("earbud") ||
+    productName.includes("speaker") ||
+    productName.includes("airpods") ||
+    productDesc.includes("audio") ||
+    productCategory === "audio" ||
+    productBrand === "soundcore" ||
+    (productBrand === "anker" && (
+      productName.includes("soundcore") ||
+      productName.includes("earbud") ||
+      productName.includes("speaker")
+    ));
+  
+  // Identify if this is a smart watch product
+  const isSmartWatch = 
+    productName.includes("watch") ||
+    productName.includes("band") ||
+    productDesc.includes("smart watch") ||
+    productCategory === "smart-watch";
+  
+  // Identify if this is a power bank
+  const isPowerBank = 
+    productName.includes("power bank") ||
+    productName.includes("powerbank") ||
+    productName.includes("portable charger") ||
+    productCategory === "power-banks";
   
   // First try exact category match
   if (productMatchesCategoryFilter(product, categorySlug)) {
@@ -26,6 +55,9 @@ const matchesCategorySmart = (product: any, categorySlug: string): boolean => {
   // Smart matching based on category type
   switch (categorySlug) {
     case "phone-cases":
+      // EXCLUDE audio, smart watch, and power bank products
+      if (isAudioProduct || isSmartWatch || isPowerBank) return false;
+      
       return productName.includes("case") || 
              productName.includes("cover") ||
              productDesc.includes("case") ||
@@ -34,6 +66,9 @@ const matchesCategorySmart = (product: any, categorySlug: string): boolean => {
              productCategory === "phone cases";
              
     case "protectors":
+      // EXCLUDE audio, smart watch, and power bank products
+      if (isAudioProduct || isSmartWatch || isPowerBank) return false;
+      
       return productName.includes("protector") || 
              productName.includes("screen protector") ||
              productName.includes("lens protector") ||
@@ -41,10 +76,16 @@ const matchesCategorySmart = (product: any, categorySlug: string): boolean => {
              productCategory === "protectors";
              
     case "android-phones-protectors":
+      // EXCLUDE audio, smart watch, and power bank products
+      if (isAudioProduct || isSmartWatch || isPowerBank) return false;
+      
       return (productBrand !== "apple" || productName.includes("android")) &&
              (productName.includes("protector") || productDesc.includes("protector"));
              
     case "iphone-model-protectors":
+      // EXCLUDE audio, smart watch, and power bank products
+      if (isAudioProduct || isSmartWatch || isPowerBank) return false;
+      
       return (productBrand === "apple" || productName.includes("iphone")) &&
              (productName.includes("protector") || productDesc.includes("protector"));
              
@@ -54,15 +95,23 @@ const matchesCategorySmart = (product: any, categorySlug: string): boolean => {
              productName.includes("speaker") ||
              productName.includes("airpods") ||
              productDesc.includes("audio") ||
-             productCategory === "audio";
+             productCategory === "audio" ||
+             productBrand === "soundcore" ||
+             (productBrand === "anker" && productName.includes("soundcore"));
              
     case "smart-watch":
+      // EXCLUDE audio products
+      if (isAudioProduct) return false;
+      
       return productName.includes("watch") ||
              productName.includes("band") ||
              productDesc.includes("smart watch") ||
              productCategory === "smart-watch";
              
     case "charging-devices":
+      // EXCLUDE audio products
+      if (isAudioProduct) return false;
+      
       return productName.includes("charger") ||
              productName.includes("charging") ||
              productName.includes("cable") ||
@@ -70,6 +119,9 @@ const matchesCategorySmart = (product: any, categorySlug: string): boolean => {
              productCategory === "charging-devices";
              
     case "power-banks":
+      // EXCLUDE audio products
+      if (isAudioProduct) return false;
+      
       return productName.includes("power bank") ||
              productName.includes("powerbank") ||
              productName.includes("portable charger") ||
@@ -77,18 +129,27 @@ const matchesCategorySmart = (product: any, categorySlug: string): boolean => {
              productCategory === "power-banks";
              
     case "camera-lens-protectors":
+      // EXCLUDE audio, smart watch, and power bank products
+      if (isAudioProduct || isSmartWatch || isPowerBank) return false;
+      
       return productName.includes("camera lens") ||
              productName.includes("lens protector") ||
              productDesc.includes("camera lens") ||
              productCategory === "camera-lens-protectors";
              
     case "accessories":
+      // EXCLUDE audio products from accessories section
+      if (isAudioProduct) return false;
+      
       return productName.includes("accessory") ||
              productName.includes("holder") ||
              productName.includes("stand") ||
              productCategory === "accessories";
              
     case "phone-holders":
+      // EXCLUDE audio products
+      if (isAudioProduct) return false;
+      
       return productName.includes("holder") ||
              productName.includes("stand") ||
              productName.includes("mount") ||
@@ -101,12 +162,18 @@ const matchesCategorySmart = (product: any, categorySlug: string): boolean => {
              productCategory === "gaming";
              
     case "magsafe-cases":
+      // EXCLUDE audio, smart watch, and power bank products
+      if (isAudioProduct || isSmartWatch || isPowerBank) return false;
+      
       return productName.includes("magsafe") ||
              productName.includes("mag safe") ||
              productDesc.includes("magsafe") ||
              productCategory === "magsafe-cases";
              
     case "stickers":
+      // EXCLUDE audio products
+      if (isAudioProduct) return false;
+      
       return productName.includes("sticker") ||
              productName.includes("decal") ||
              productDesc.includes("sticker") ||
@@ -164,7 +231,7 @@ const CategoryProductSection = ({ category, bgClass = "bg-white" }: CategoryProd
             
             return matchesCategorySmart(product, category);
           })
-          .slice(0, 4);
+          .slice(0, 6); // Changed from 4 to 6
 
         setProducts(results);
       } catch (err) {
@@ -197,9 +264,9 @@ const CategoryProductSection = ({ category, bgClass = "bg-white" }: CategoryProd
         </div>
 
         {loading ? (
-          <div className="flex gap-3 sm:gap-4 overflow-x-auto scrollbar-hide pb-2">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="flex-shrink-0 w-[160px] sm:w-[200px] lg:w-[220px] bg-card border border-border animate-pulse">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="w-full bg-card border border-border animate-pulse">
                 <div className="aspect-square bg-secondary" />
                 <div className="p-3 space-y-2">
                   <div className="h-3 bg-secondary rounded w-1/2" />
@@ -214,7 +281,7 @@ const CategoryProductSection = ({ category, bgClass = "bg-white" }: CategoryProd
             No products available in this category yet.
           </div>
         ) : (
-          <div className="flex gap-3 sm:gap-4 overflow-x-auto scrollbar-hide pb-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
             {products.map((product, i) => (
               <motion.div
                 key={product.id}
@@ -222,7 +289,7 @@ const CategoryProductSection = ({ category, bgClass = "bg-white" }: CategoryProd
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.07, duration: 0.35 }}
-                className="flex-shrink-0 w-[160px] sm:w-[200px] lg:w-[220px]"
+                className="w-full"
               >
                 <ProductCard
                   id={product.id}
@@ -242,16 +309,6 @@ const CategoryProductSection = ({ category, bgClass = "bg-white" }: CategoryProd
           </div>
         )}
       </div>
-      
-      <style>{`
-        .scrollbar-hide::-webkit-scrollbar {
-          display: none;
-        }
-        .scrollbar-hide {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
-      `}</style>
     </section>
   );
 };
