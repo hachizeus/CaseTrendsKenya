@@ -112,7 +112,8 @@ function buildSecureHeaders(req, res, next) {
       "https://cdn.jsdelivr.net " +
       "https://www.youtube.com " +
       "https://*.youtube.com " +
-      "https://*.ytimg.com",
+      "https://*.ytimg.com " +
+      "https://youtube.com",
     "script-src-elem 'self' 'unsafe-inline' " +
       "https://www.googletagmanager.com " +
       "https://*.googletagmanager.com " +
@@ -125,7 +126,8 @@ function buildSecureHeaders(req, res, next) {
       "https://js.paystack.co " +
       "https://cdn.jsdelivr.net " +
       "https://www.youtube.com " +
-      "https://*.youtube.com",
+      "https://*.youtube.com " +
+      "https://*.ytimg.com",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net",
     "style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net",
     "img-src 'self' data: blob: https: " +
@@ -133,7 +135,8 @@ function buildSecureHeaders(req, res, next) {
       "https://images.unsplash.com " +
       "https://yrhczwzqvzqalyjpxdmi.supabase.co " +
       "https://img.youtube.com " +
-      "https://*.ytimg.com",
+      "https://*.ytimg.com " +
+      "https://i.ytimg.com",
     "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net data:",
     "connect-src 'self' https: wss: " +
       "https://yrhczwzqvzqalyjpxdmi.supabase.co " +
@@ -144,6 +147,9 @@ function buildSecureHeaders(req, res, next) {
       "https://www.google-analytics.com " +
       "https://*.google-analytics.com " +
       "https://api.maptiler.com " +
+      "https://www.youtube.com " +
+      "https://*.youtube.com " +
+      "https://youtube.com " +
       "http://localhost:3000 " +
       "http://localhost:5173 " +
       "https://casetrendskenya.co.ke " +
@@ -154,18 +160,31 @@ function buildSecureHeaders(req, res, next) {
       "https://checkout.paystack.com " +
       "https://*.paystack.co " +
       "https://www.youtube.com " +
-      "https://*.youtube.com",
+      "https://*.youtube.com " +
+      "https://youtube.com " +
+      "https://www.youtube-nocookie.com",
+    "frame-ancestors 'self'",
     "worker-src 'self' blob:",
     "child-src 'self' blob: " +
       "https://challenges.cloudflare.com " +
       "https://checkout.paystack.com " +
       "https://www.youtube.com " +
       "https://*.youtube.com",
-    "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",
     "upgrade-insecure-requests"
   ];
+
+  res.set('X-Content-Type-Options', 'nosniff');
+  res.set('X-Frame-Options', 'SAMEORIGIN');
+  res.set('X-XSS-Protection', '1; mode=block');
+  res.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.set('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
+  res.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+  res.set('Content-Security-Policy', cspDirectives.join('; '));
+  
+  next();
+}
 
   res.set('X-Content-Type-Options', 'nosniff');
   res.set('X-Frame-Options', 'DENY');
