@@ -3,6 +3,7 @@ import TopBar from "@/components/TopBar";
 import Header from "@/components/Header";
 import CategoryNav from "@/components/CategoryNav";
 import HeroBanner from "@/components/HeroBanner";
+import { VideoSection } from "@/components/VideoSection"; // Add this import
 const CategoryCards = lazy(() => import("@/components/CategoryCards"));
 const BrandFilter = lazy(() => import("@/components/BrandFilter"));
 const PromoBanners = lazy(() => import("@/components/PromoBanners"));
@@ -32,6 +33,9 @@ const Index = () => (
       <Suspense fallback={<SectionFallback />}>
         <CategoryCards />
       </Suspense>
+
+      {/* Video Section - Inserted between CategoryCards and BrandFilter */}
+      <VideoSection />
 
       <Suspense fallback={<SectionFallback />}>
         <BrandFilter />

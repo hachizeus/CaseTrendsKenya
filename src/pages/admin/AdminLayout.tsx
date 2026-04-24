@@ -1,7 +1,7 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { RefreshProvider, useRefreshTrigger } from "@/contexts/RefreshContext";
 import { Navigate, Outlet, Link, useLocation, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Package, Image, Users, FolderTree, Store, Star, ChevronRight, ShoppingBag, Menu, X, TrendingUp, Settings, Bell } from "lucide-react";
+import { LayoutDashboard, Package, Image, Users, FolderTree, Store, Star, ChevronRight, ShoppingBag, Menu, X, TrendingUp, Settings, Bell, Video } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -31,10 +31,12 @@ interface SimpleOrderNotification {
   is_read: boolean;
 }
 
+// Add this to the adminLinks array
 const adminLinks = [
   { path: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { path: "/admin/products", label: "Products", icon: Package },
   { path: "/admin/slides-overview", label: "Hero Slides", icon: Image },
+  { path: "/admin/videos", label: "Videos", icon: Video }, // Add this line
   { path: "/admin/orders", label: "Orders", icon: ShoppingBag },
   { path: "/admin/audit-logs", label: "Audit Logs", icon: Settings },
   { path: "/admin/reviews", label: "Reviews", icon: Star },

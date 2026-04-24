@@ -33,6 +33,7 @@ const AdminReviews = lazy(() => import("./pages/admin/AdminReviews.tsx"));
 const AdminOrders = lazy(() => import("./pages/admin/AdminOrders.tsx"));
 const AdminAuditLogs = lazy(() => import("./pages/admin/AdminAuditLogs.tsx"));
 const AdminFinancials = lazy(() => import("./pages/admin/AdminFinancials.tsx"));
+const AdminVideos = lazy(() => import("./pages/admin/AdminVideos.tsx"));
 const NotFound = lazy(() => import("./pages/NotFound.tsx"));
 const ThankYouPage = lazy(() => import("./pages/ThankYouPage.tsx"));
 
@@ -129,6 +130,7 @@ const AppContent = () => {
             <Route path="products/new" element={<AdminProductsForm />} />
             <Route path="products/:id" element={<AdminProductsForm />} />
             <Route path="slides" element={<AdminSlides />} />
+            <Route path="videos" element={<AdminVideos />} /> {/* MOVED THIS INSIDE ADMIN ROUTES */}
             <Route
               path="slides-overview"
               element={
