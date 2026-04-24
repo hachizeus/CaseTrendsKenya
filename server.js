@@ -6,7 +6,8 @@ import path from "path";
 import { fileURLToPath } from "url";
 import fileupload from "express-fileupload";
 import { createClient } from "@supabase/supabase-js";
-import videoRoutes from "./src/api/videoRoutes.ts"; // Adjusted for dist directory
+// Comment out video routes for now
+// import videoRoutes from "./src/api/videoRoutes.ts";
 
 dotenv.config({ path: ".env" });
 dotenv.config({ path: ".env.local" });
@@ -35,6 +36,49 @@ app.use(cors({
   credentials: true,
 }));
 app.use(fileupload());
+
+// ============================================
+// CRITICAL FIX: Force correct MIME types for all JavaScript/TypeScript files
+// ============================================
+app.use((req, res, next) => {
+  const ext = path.extname(req.path).toLowerCase();
+  
+  // Map file extensions to correct MIME types
+  const mimeTypes = {
+    '.js': 'application/javascript',
+    '.mjs': 'application/javascript',
+    '.ts': 'application/javascript',     // TypeScript files
+    '.tsx': 'application/javascript',    // TSX files (React components)
+    '.jsx': 'application/javascript',    // JSX files
+    '.css': 'text/css',
+    '.json': 'application/json',
+    '.html': 'text/html',
+    '.png': 'image/png',
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.gif': 'image/gif',
+    '.svg': 'image/svg+xml',
+    '.ico': 'image/x-icon',
+    '.woff': 'font/woff',
+    '.woff2': 'font/woff2',
+    '.ttf': 'font/ttf',
+    '.eot': 'application/vnd.ms-fontobject'
+  };
+  
+  if (mimeTypes[ext]) {
+    res.setHeader('Content-Type', mimeTypes[ext]);
+  }
+  
+  // Special handling for .ts and .tsx files without extension in path
+  if (req.path.includes('.ts') || req.path.includes('.tsx')) {
+    res.setHeader('Content-Type', 'application/javascript');
+  }
+  
+  // Prevent MIME type sniffing
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  
+  next();
+});
 
 function escapeHtml(value) {
   if (value === null || value === undefined) return "";
@@ -173,7 +217,7 @@ app.use(buildSecureHeaders);
 // Cache middleware for static assets
 app.use((req, res, next) => {
   // Cache static assets for 1 year
-  if (req.path.match(/\.(js|css|png|jpg|jpeg|gif|svg|woff|woff2|ttf|eot)$/i)) {
+  if (req.path.match(/\.(js|css|ts|tsx|jsx|png|jpg|jpeg|gif|svg|woff|woff2|ttf|eot)$/i)) {
     res.set('Cache-Control', 'public, max-age=31536000, immutable');
   }
   // Cache HTML for 1 hour
@@ -188,17 +232,36 @@ app.use((req, res, next) => {
   next();
 });
 
-// Serve static assets directly and avoid SPA fallback for asset paths
+// Serve static assets with correct MIME types
 app.use('/assets', express.static(path.join(__dirname, 'assets'), {
   maxAge: '1y',
   etag: false,
   fallthrough: false,
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.js') || filePath.endsWith('.ts') || filePath.endsWith('.tsx')) {
+      res.setHeader('Content-Type', 'application/javascript');
+    } else if (filePath.endsWith('.css')) {
+      res.setHeader('Content-Type', 'text/css');
+    }
+  }
 }));
 
-// Serve SPA static files and index.html fallback
+// IMPORTANT: Serve root directory with correct MIME types for all files
 app.use(express.static(path.join(__dirname), {
   maxAge: '1y',
   etag: false,
+  setHeaders: (res, filePath) => {
+    const ext = path.extname(filePath).toLowerCase();
+    if (ext === '.js' || ext === '.ts' || ext === '.tsx' || ext === '.jsx') {
+      res.setHeader('Content-Type', 'application/javascript');
+    } else if (ext === '.css') {
+      res.setHeader('Content-Type', 'text/css');
+    } else if (ext === '.json') {
+      res.setHeader('Content-Type', 'application/json');
+    }
+    // Ensure browsers don't sniff MIME types
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+  }
 }));
 
 const POSTMARK_API_TOKEN = process.env.POSTMARK_API_TOKEN || "10b0fffa-aa2b-4302-8568-199e0ecb31df";
@@ -209,8 +272,9 @@ if (!POSTMARK_API_TOKEN) {
   console.warn("POSTMARK_API_TOKEN is required to send emails. Email delivery will fail without it.");
 }
 
-// Order Confirmation Email Template
+// Order Confirmation Email Template (keep your existing template)
 const generateOrderConfirmationEmail = (orderData) => {
+  // ... (your existing template code remains the same)
   const siteUrl = process.env.VITE_SITE_URL || process.env.SITE_URL || "https://casetrendskenya.co.ke";
   const trackingLink = `${siteUrl}/account/orders`;
   const safeCustomerName = escapeHtml(orderData.customer_name);
@@ -402,7 +466,7 @@ Website: ${siteUrl}`;
   };
 };
 
-// Status Update Email Template
+// Status Update Email Template (keep your existing template)
 const generateStatusUpdateEmail = (orderData) => {
   const siteUrl = process.env.VITE_SITE_URL || process.env.SITE_URL || "https://casetrendskenya.co.ke";
   const orderLink = `${siteUrl}/account/orders`;
@@ -792,8 +856,24 @@ app.use((req, res) => {
   const extension = path.extname(req.path);
   const isAssetRequest = extension !== "";
 
-  if (!req.path.startsWith('/api/') && !req.path.startsWith('/health') && !isAssetRequest) {
-    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+  // Check multiple possible locations for index.html
+  const possiblePaths = [
+    path.join(__dirname, 'dist', 'index.html'),
+    path.join(__dirname, 'index.html'),
+    path.join(__dirname, 'public', 'index.html')
+  ];
+  
+  let indexPath = null;
+  const fs = await import('fs');
+  for (const p of possiblePaths) {
+    if (fs.existsSync(p)) {
+      indexPath = p;
+      break;
+    }
+  }
+
+  if (!req.path.startsWith('/api/') && !req.path.startsWith('/health') && !isAssetRequest && indexPath) {
+    res.sendFile(indexPath);
   } else if (req.path.startsWith('/api/') || req.path.startsWith('/health')) {
     res.status(404).json({ error: "Not found" });
   } else {
