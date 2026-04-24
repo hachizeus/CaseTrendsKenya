@@ -112,8 +112,7 @@ function buildSecureHeaders(req, res, next) {
       "https://cdn.jsdelivr.net " +
       "https://www.youtube.com " +
       "https://*.youtube.com " +
-      "https://*.ytimg.com " +
-      "https://youtube.com",
+      "https://*.ytimg.com",
     "script-src-elem 'self' 'unsafe-inline' " +
       "https://www.googletagmanager.com " +
       "https://*.googletagmanager.com " +
@@ -150,6 +149,7 @@ function buildSecureHeaders(req, res, next) {
       "https://www.youtube.com " +
       "https://*.youtube.com " +
       "https://youtube.com " +
+      "https://www.youtube-nocookie.com " +
       "http://localhost:3000 " +
       "http://localhost:5173 " +
       "https://casetrendskenya.co.ke " +
@@ -160,16 +160,19 @@ function buildSecureHeaders(req, res, next) {
       "https://checkout.paystack.com " +
       "https://*.paystack.co " +
       "https://www.youtube.com " +
-      "https://*.youtube.com " +
       "https://youtube.com " +
-      "https://www.youtube-nocookie.com",
+      "https://*.youtube.com " +
+      "https://www.youtube-nocookie.com " +
+      "https://*.youtube-nocookie.com",
     "frame-ancestors 'self'",
     "worker-src 'self' blob:",
     "child-src 'self' blob: " +
       "https://challenges.cloudflare.com " +
       "https://checkout.paystack.com " +
       "https://www.youtube.com " +
-      "https://*.youtube.com",
+      "https://youtube.com " +
+      "https://*.youtube.com " +
+      "https://www.youtube-nocookie.com",
     "base-uri 'self'",
     "form-action 'self'",
     "upgrade-insecure-requests"
