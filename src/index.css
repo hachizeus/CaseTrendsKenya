@@ -133,3 +133,37 @@ input[type="button"],
 input[type="submit"] {
   touch-action: manipulation;
 }
+/* Smooth scrolling for video carousel */
+.video-carousel {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+
+/* Custom scrollbar styling */
+.video-carousel::-webkit-scrollbar {
+  height: 6px;
+}
+
+.video-carousel::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.video-carousel::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 3px;
+}
+
+.video-carousel::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* Snap scrolling for better mobile experience */
+.video-snap {
+  scroll-snap-type: x mandatory;
+}
+
+.video-snap > * {
+  scroll-snap-align: start;
+}
