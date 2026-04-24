@@ -34,8 +34,7 @@ const Index = () => (
         <CategoryCards />
       </Suspense>
 
-      {/* Video Section - Inserted between CategoryCards and BrandFilter */}
-      <VideoSection />
+      
 
       <Suspense fallback={<SectionFallback />}>
         <BrandFilter />
@@ -44,7 +43,8 @@ const Index = () => (
       <Suspense fallback={<SectionFallback />}>
         <PromoBanners />
       </Suspense>
-
+{/* Video Section - Inserted between CategoryCards and BrandFilter */}
+      <VideoSection />
       <Suspense fallback={<SectionFallback />}>
         <ProductGrid />
       </Suspense>

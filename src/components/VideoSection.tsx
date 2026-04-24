@@ -18,7 +18,7 @@ export const VideoSection = () => {
           <div className="flex gap-4 overflow-hidden">
             {[1, 2, 3, 4].map((i) => (
               <div key={i} className="flex-shrink-0 w-72">
-                <Skeleton className="w-full h-40 rounded-xl" />
+                <Skeleton className="w-full h-40" />
                 <Skeleton className="w-3/4 h-4 mt-3" />
               </div>
             ))}
@@ -49,7 +49,7 @@ export const VideoSection = () => {
           <div
             ref={scrollRef}
             {...handlers}
-            className="flex gap-0 overflow-x-auto scrollbar-hide cursor-grab active:cursor-grabbing"
+            className="flex gap-4 overflow-x-auto scrollbar-hide cursor-grab active:cursor-grabbing"
             style={{ scrollBehavior: 'smooth' }}
           >
             {videos.map((video) => {
@@ -64,7 +64,8 @@ export const VideoSection = () => {
                     title: video.title,
                   })}
                 >
-                  <div className="relative overflow-hidden rounded-xl shadow-lg transition-all duration-300 group-hover:shadow-2xl group-hover:scale-105">
+                  {/* Removed transform scale on hover to prevent shaking */}
+                  <div className="relative overflow-hidden shadow-lg transition-all duration-300 group-hover:shadow-2xl">
                     <div className="relative pt-[56.25%] bg-gray-900">
                       {thumbnail ? (
                         <img
@@ -79,9 +80,9 @@ export const VideoSection = () => {
                         </div>
                       )}
                       
-                      {/* Overlay with play button */}
+                      {/* Overlay with play button - removed scale transform */}
                       <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                        <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center transform scale-90 group-hover:scale-100 transition-transform duration-300">
+                        <div className="w-16 h-16 bg-white/20 backdrop-blur-sm flex items-center justify-center">
                           <Play className="w-8 h-8 text-white ml-1" />
                         </div>
                       </div>
