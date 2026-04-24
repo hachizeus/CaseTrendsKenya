@@ -44,6 +44,20 @@ const paymentConfig: Record<string, { label: string; icon: any; color: string }>
   paystack: { label: "Paystack", icon: CreditCard, color: "bg-emerald-50 text-emerald-700 border-emerald-200" },
 };
 
+// Define allowed state transitions
+const allowedTransitions: Record<string, string[]> = {
+  pending: ["confirmed", "cancelled"],
+  confirmed: ["processing", "cancelled"],
+  processing: ["delivered", "cancelled"],
+  delivered: [], // Once delivered, cannot change
+  cancelled: [], // Once cancelled, cannot change
+};
+
+// Helper function to check if a status transition is allowed
+const isStatusTransitionAllowed = (currentStatus: string, newStatus: string): boolean => {
+  return allowedTransitions[currentStatus]?.includes(newStatus) || false;
+};
+
 const AdminOrders = () => {
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -89,7 +103,7 @@ const AdminOrders = () => {
       if (isManual) {
         toast.error("No email address on file for this order");
       }
-      return;
+      return false;
     }
 
     if (isManual) setSendingEmail(true);
@@ -101,10 +115,21 @@ const AdminOrders = () => {
         data: order,
       };
       
-      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      const headers: Record<string, string> = { 
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+      };
+      
       if (session?.access_token) {
         headers.Authorization = `Bearer ${session.access_token}`;
       }
+
+      console.log("Sending email with headers:", { 
+        hasAuth: !!headers.Authorization, 
+        role, 
+        orderId: order.id,
+        status: order.status 
+      });
 
       const response = await fetch(`${API_URL}/api/send-email`, {
         method: "POST",
@@ -117,9 +142,11 @@ const AdminOrders = () => {
       if (!response.ok) {
         console.error("Email send failed:", responseData);
         if (isManual) toast.error(`Email failed: ${responseData.error || "Unknown error"}`);
-        throw new Error(responseData.error || "Failed to send email");
+        return false;
       }
 
+      console.log("Email sent successfully:", responseData);
+      
       if (isManual) {
         toast.success(`Status update email sent to ${order.customer_email}`);
         await logAuditAction({
@@ -128,53 +155,110 @@ const AdminOrders = () => {
           action_type: "status_update_email_sent",
           entity: "orders",
           entity_id: order.id,
-          details: { customer_email: order.customer_email, status: order.status },
+          details: { 
+            customer_email: order.customer_email, 
+            status: order.status,
+            actor_role: role 
+          },
           user_id: order.user_id ?? null,
         });
       }
+      return true;
     } catch (err) {
       console.error("Error sending email:", err);
       if (isManual) toast.error(`Failed to send email: ${err instanceof Error ? err.message : "Unknown error"}`);
+      return false;
     } finally {
       if (isManual) setSendingEmail(false);
     }
   };
 
-  const updateStatus = async (id: string, status: string) => {
+  const updateStatus = async (id: string, newStatus: string) => {
     try {
+      const order = orders.find(o => o.id === id);
+      if (!order) {
+        toast.error("Order not found");
+        return;
+      }
+
+      const currentStatus = order.status;
+      
+      // Check if the transition is allowed
+      if (!isStatusTransitionAllowed(currentStatus, newStatus)) {
+        const currentStatusLabel = statusConfig[currentStatus]?.label || currentStatus;
+        const targetStatusLabel = statusConfig[newStatus]?.label || newStatus;
+        const allowedStates = allowedTransitions[currentStatus]?.map(s => statusConfig[s]?.label || s) || ["none"];
+        
+        toast.error(`Cannot change order from "${currentStatusLabel}" to "${targetStatusLabel}". Allowed transitions: ${allowedStates.join(", ")}`);
+        return;
+      }
+
+      // Add confirmation for destructive changes
+      if (newStatus === "cancelled") {
+        const confirmed = window.confirm(`Are you sure you want to cancel this order for ${order.customer_name}? This action cannot be undone.`);
+        if (!confirmed) return;
+      }
+
+      // Confirm delivery
+      if (newStatus === "delivered" && currentStatus !== "delivered") {
+        const confirmed = window.confirm(`Mark order #${id.slice(-8)} as delivered? This action cannot be reversed.`);
+        if (!confirmed) return;
+      }
+
+      // Update the order status
       const { error } = await (supabase as any)
         .from("orders")
-        .update({ status })
+        .update({ status: newStatus })
         .eq("id", id);
-      if (error) { toast.error(error.message); return; }
       
-      const order = orders.find(o => o.id === id);
-      if (order) {
-        setOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o));
-        if (selected?.id === id) setSelected((s: any) => ({ ...s, status }));
-
-        const updatedOrder = { ...order, status };
-        if (order.customer_email) {
-          try {
-            await sendStatusUpdateEmail(updatedOrder, false);
-            toast.success(`Order ${status} and customer notified.`);
-          } catch (emailErr) {
-            toast.warning(`Order ${status}, but notification email failed to send.`);
-          }
-        } else {
-          toast.success(`Order ${status} (no email on file).`);
-        }
-
-        await logAuditAction({
-          actor_id: user?.id ?? null,
-          actor_email: user?.email ?? null,
-          action_type: `order_status_${status}`,
-          entity: "orders",
-          entity_id: id,
-          details: { old_status: order.status, new_status: status },
-          user_id: order.user_id ?? null,
-        });
+      if (error) { 
+        toast.error(error.message); 
+        return; 
       }
+      
+      // Update local state
+      const updatedOrders = orders.map(o => o.id === id ? { ...o, status: newStatus } : o);
+      setOrders(updatedOrders);
+      if (selected?.id === id) setSelected((s: any) => ({ ...s, status: newStatus }));
+
+      const updatedOrder = { ...order, status: newStatus };
+      
+      // Send email notification (automatic for all status changes, regardless of role)
+      let emailSent = false;
+      if (updatedOrder.customer_email) {
+        try {
+          // Always try to send email, don't pass isManual=true so it doesn't show loading state
+          emailSent = await sendStatusUpdateEmail(updatedOrder, false);
+          if (emailSent) {
+            toast.success(`Order ${newStatus} and customer notified.`);
+          } else {
+            toast.warning(`Order ${newStatus}, but notification email failed to send.`);
+          }
+        } catch (emailErr) {
+          console.error("Email sending error:", emailErr);
+          toast.warning(`Order ${newStatus}, but notification email failed to send.`);
+        }
+      } else {
+        toast.success(`Order ${newStatus} (no email on file).`);
+      }
+
+      // Log the action with role information
+      await logAuditAction({
+        actor_id: user?.id ?? null,
+        actor_email: user?.email ?? null,
+        action_type: `order_status_${newStatus}`,
+        entity: "orders",
+        entity_id: id,
+        details: { 
+          old_status: currentStatus, 
+          new_status: newStatus,
+          actor_role: role,
+          email_sent: emailSent,
+          customer_email: updatedOrder.customer_email
+        },
+        user_id: order.user_id ?? null,
+      });
+      
     } catch (err) {
       console.error("Error updating order:", err);
       toast.error("Failed to update order");
@@ -527,7 +611,14 @@ const AdminOrders = () => {
                         className={`text-[10px] font-semibold px-2 py-1 rounded-lg border-0 outline-none cursor-pointer ${statusConfig[o.status]?.color || statusConfig.pending.color}`}
                       >
                         {STATUS_OPTIONS.map(s => (
-                          <option key={s} value={s} className="bg-white text-foreground capitalize">{s}</option>
+                          <option 
+                            key={s} 
+                            value={s} 
+                            disabled={!isStatusTransitionAllowed(o.status, s)}
+                            className="bg-white text-foreground capitalize"
+                          >
+                            {s}
+                          </option>
                         ))}
                       </select>
                     </td>
@@ -577,7 +668,14 @@ const AdminOrders = () => {
                       className={`w-full text-sm font-semibold px-3 py-2 rounded-lg border outline-none cursor-pointer ${statusConfig[selected.status]?.color || statusConfig.pending.color}`}
                     >
                       {STATUS_OPTIONS.map(s => (
-                        <option key={s} value={s} className="bg-white text-foreground capitalize">{s}</option>
+                        <option 
+                          key={s} 
+                          value={s} 
+                          disabled={!isStatusTransitionAllowed(selected.status, s)}
+                          className="bg-white text-foreground capitalize"
+                        >
+                          {s}
+                        </option>
                       ))}
                     </select>
                   </div>
