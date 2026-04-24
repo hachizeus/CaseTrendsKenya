@@ -6,7 +6,6 @@ import path from "path";
 import { fileURLToPath } from "url";
 import fileupload from "express-fileupload";
 import { createClient } from "@supabase/supabase-js";
-import videoRoutes from "./api/videoRoutes";
 
 dotenv.config({ path: ".env" });
 dotenv.config({ path: ".env.local" });
