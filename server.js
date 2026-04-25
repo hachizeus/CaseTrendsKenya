@@ -99,7 +99,8 @@ async function fetchOrderWithGuestToken(orderId, token) {
 function buildSecureHeaders(req, res, next) {
   const cspDirectives = [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval' " +
+    // Add 'data:' to script-src
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' data: " +
       "https://www.googletagmanager.com " +
       "https://*.googletagmanager.com " +
       "https://www.google-analytics.com " +
@@ -110,7 +111,8 @@ function buildSecureHeaders(req, res, next) {
       "https://checkout.paystack.com " +
       "https://js.paystack.co " +
       "https://cdn.jsdelivr.net",
-    "script-src-elem 'self' 'unsafe-inline' " +
+    // Add 'data:' to script-src-elem (THIS IS THE CRITICAL FIX)
+    "script-src-elem 'self' 'unsafe-inline' data: " +
       "https://www.googletagmanager.com " +
       "https://*.googletagmanager.com " +
       "https://www.google-analytics.com " +
@@ -148,7 +150,6 @@ function buildSecureHeaders(req, res, next) {
       "http://localhost:5173 " +
       "https://casetrendskenya.co.ke " +
       "https://*.onrender.com",
-    // Updated frame-src with Google domains
     "frame-src 'self' " +
       "https://challenges.cloudflare.com " +
       "https://*.cloudflare.com " +
@@ -174,6 +175,7 @@ function buildSecureHeaders(req, res, next) {
     "form-action 'self'",
     "upgrade-insecure-requests"
   ];
+
 
   res.set('X-Content-Type-Options', 'nosniff');
   // X-Frame-Options removed to allow CSP to handle framing
