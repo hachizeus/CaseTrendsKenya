@@ -1,99 +1,109 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { useVideos } from '@/hooks/useVideos';
-import { VideoModal } from './VideoModal';
-import { Play, ChevronLeft, ChevronRight } from 'lucide-react';
-import { Skeleton } from './ui/skeleton';
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useVideos } from "@/hooks/useVideos";
+import { VideoModal } from "./VideoModal";
+import { Play, ChevronLeft, ChevronRight } from "lucide-react";
+import { Skeleton } from "./ui/skeleton";
 
 export const VideoSection = () => {
   const { data: videos, isLoading, error } = useVideos(false);
+
   const [selectedVideo, setSelectedVideo] = useState<{
     url: string;
     title: string | null;
   } | null>(null);
-  
+
   const scrollRef = useRef<HTMLDivElement>(null);
   const rafRef = useRef<number>();
-  const [isPaused, setIsPaused] = useState(false);
-  const isInteracting = useRef(false);
+  const isDragging = useRef(false);
   const startX = useRef(0);
   const startScrollLeft = useRef(0);
   const moved = useRef(false);
-  const autoplaySpeed = 0.4;
+
+  const [isPaused, setIsPaused] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
-  // Detect mobile
+  const autoplaySpeed = isMobile ? 0.45 : 0.6;
+
   useEffect(() => {
-    setIsMobile(/Android|iPhone|iPad|iPod|webOS/i.test(navigator.userAgent));
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
   const getYouTubeThumbnail = (url: string) => {
-    const id = url.match(/(?:youtube.com\/watch\?v=|youtu.be\/)([^&?#]+)/)?.[1];
+    const id = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&?#]+)/)?.[1];
     return id ? `https://img.youtube.com/vi/${id}/hqdefault.jpg` : null;
   };
+
+  // duplicate for seamless infinite loop
+  const loopVideos = useMemo(() => {
+    if (!videos?.length) return [];
+    return [...videos, ...videos];
+  }, [videos]);
 
   const autoScroll = useCallback(() => {
     const el = scrollRef.current;
     if (!el) return;
 
-    if (!isPaused && !isInteracting.current) {
+    if (!isPaused && !isDragging.current) {
       el.scrollLeft += autoplaySpeed;
 
-      // Reset to beginning when reaching the end
-      if (el.scrollLeft >= el.scrollWidth - el.clientWidth) {
+      // seamless reset at midpoint
+      if (el.scrollLeft >= el.scrollWidth / 2) {
         el.scrollLeft = 0;
       }
     }
 
     rafRef.current = requestAnimationFrame(autoScroll);
-  }, [autoplaySpeed, isPaused]);
+  }, [isPaused, autoplaySpeed]);
 
   useEffect(() => {
-    if (videos && videos.length > 0) {
+    if (loopVideos.length) {
       rafRef.current = requestAnimationFrame(autoScroll);
     }
+
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-  }, [autoScroll, videos]);
+  }, [autoScroll, loopVideos]);
 
   const onPointerDown = (e: React.PointerEvent) => {
     if (!scrollRef.current) return;
-    
-    e.preventDefault();
-    
-    isInteracting.current = true;
+
+    isDragging.current = true;
     moved.current = false;
     startX.current = e.clientX;
     startScrollLeft.current = scrollRef.current.scrollLeft;
-    scrollRef.current.style.scrollBehavior = 'auto';
+    scrollRef.current.style.scrollBehavior = "auto";
   };
 
   const onPointerMove = (e: React.PointerEvent) => {
-    if (!isInteracting.current || !scrollRef.current) return;
-    
-    e.preventDefault();
-    
+    if (!isDragging.current || !scrollRef.current) return;
+
     const delta = e.clientX - startX.current;
-    if (Math.abs(delta) > 5) {
+
+    if (Math.abs(delta) > 4) {
       moved.current = true;
       scrollRef.current.scrollLeft = startScrollLeft.current - delta;
     }
   };
 
   const onPointerUp = () => {
-    isInteracting.current = false;
+    isDragging.current = false;
     if (scrollRef.current) {
-      scrollRef.current.style.scrollBehavior = 'smooth';
+      scrollRef.current.style.scrollBehavior = "smooth";
     }
   };
 
-  const wasDragged = () => moved.current;
-
-  const scrollTo = (direction: 'left' | 'right') => {
+  const scrollTo = (direction: "left" | "right") => {
     if (!scrollRef.current) return;
-    const scrollAmount = 300;
-    const newScrollLeft = scrollRef.current.scrollLeft + (direction === 'left' ? -scrollAmount : scrollAmount);
-    scrollRef.current.scrollTo({ left: newScrollLeft, behavior: 'smooth' });
+
+    const amount = isMobile ? 240 : 360;
+    scrollRef.current.scrollTo({
+      left: scrollRef.current.scrollLeft + (direction === "left" ? -amount : amount),
+      behavior: "smooth",
+    });
   };
 
   if (isLoading) {
@@ -103,9 +113,12 @@ export const VideoSection = () => {
           <h2 className="text-xl md:text-2xl font-bold text-white mb-6 px-4">
             Watch Our Latest Videos
           </h2>
-          <div className="flex gap-3 md:gap-4 overflow-x-auto pb-6 px-4 no-scrollbar">
+          <div className="flex gap-3 md:gap-4 overflow-x-auto pb-4 px-4 no-scrollbar">
             {[...Array(4)].map((_, i) => (
-              <Skeleton key={i} className="h-[160px] md:h-[200px] w-[220px] sm:w-[260px] md:w-[320px] rounded-xl bg-[hsl(240,10%,8%)] border border-white/5 flex-shrink-0" />
+              <Skeleton
+                key={i}
+                className="h-[160px] md:h-[200px] w-[220px] sm:w-[260px] md:w-[320px] rounded-2xl bg-[hsl(240,10%,8%)] border border-white/5 flex-shrink-0"
+              />
             ))}
           </div>
         </div>
@@ -117,63 +130,57 @@ export const VideoSection = () => {
 
   return (
     <>
-      <section className="py-8 md:py-10 bg-gradient-to-b from-[hsl(240,10%,3.9%)] to-[hsl(240,10%,4.5%)]">
+      <section className="py-8 md:py-10 bg-gradient-to-b from-[hsl(240,10%,3.9%)] to-[hsl(240,10%,4.5%)] overflow-hidden">
         <div className="w-full">
           <div className="flex items-center justify-between mb-6 px-4">
             <h2 className="text-xl md:text-2xl font-bold bg-gradient-to-r from-white to-primary bg-clip-text text-transparent">
               Watch Our Latest Videos
             </h2>
+
             <div className="hidden md:flex gap-2">
               <button
-                onClick={() => scrollTo('left')}
-                className="p-2 rounded-lg bg-white/5 border border-white/10 text-white/60 hover:bg-white/10 hover:text-white transition-colors"
+                onClick={() => scrollTo("left")}
+                className="p-2 rounded-xl bg-white/5 border border-white/10 text-white/60 hover:bg-white/10 hover:text-white transition-colors"
                 aria-label="Scroll left"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
               <button
-                onClick={() => scrollTo('right')}
-                className="p-2 rounded-lg bg-white/5 border border-white/10 text-white/60 hover:bg-white/10 hover:text-white transition-colors"
+                onClick={() => scrollTo("right")}
+                className="p-2 rounded-xl bg-white/5 border border-white/10 text-white/60 hover:bg-white/10 hover:text-white transition-colors"
                 aria-label="Scroll right"
               >
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
           </div>
-          
-          {/* Auto-scrolling container */}
-          <div 
-            className="relative overflow-x-hidden pb-4 px-4"
-            style={{ 
-              WebkitOverflowScrolling: 'touch',
-            }}
-          >
-            <div 
+
+          <div className="relative w-full">
+            <div
               ref={scrollRef}
-              onMouseEnter={() => setIsPaused(true)}
-              onMouseLeave={() => setIsPaused(false)}
+              onMouseEnter={() => !isMobile && setIsPaused(true)}
+              onMouseLeave={() => !isMobile && setIsPaused(false)}
               onPointerDown={onPointerDown}
               onPointerMove={onPointerMove}
               onPointerUp={onPointerUp}
               onPointerCancel={onPointerUp}
-              className="flex gap-3 md:gap-4 overflow-x-hidden cursor-grab active:cursor-grabbing"
+              className="flex gap-3 md:gap-4 overflow-x-auto px-4 pb-4 no-scrollbar cursor-grab active:cursor-grabbing"
               style={{
-                scrollbarWidth: 'none',
-                msOverflowStyle: 'none',
+                scrollbarWidth: "none",
+                msOverflowStyle: "none",
+                WebkitOverflowScrolling: "touch",
+                touchAction: "pan-x",
               }}
             >
-              <style dangerouslySetInnerHTML={{ __html: `
-                .no-scrollbar::-webkit-scrollbar { display: none !important; }
-              ` }} />
-              
-              {videos.map((video, index) => {
+              {loopVideos.map((video, index) => {
                 const thumb = video.thumbnail_url || getYouTubeThumbnail(video.youtube_url);
+
                 return (
                   <div
-                    key={video.id}
+                    key={`${video.id}-${index}`}
                     className="flex-shrink-0 w-[220px] sm:w-[260px] md:w-[320px]"
                     onClick={() => {
-                      if (wasDragged()) return;
+                      if (moved.current) return;
                       setSelectedVideo({
                         url: video.youtube_url,
                         title: video.title,
@@ -181,26 +188,23 @@ export const VideoSection = () => {
                     }}
                   >
                     <div className="relative group cursor-pointer">
-                      {/* Video thumbnail container */}
-                      <div className="relative rounded-xl overflow-hidden bg-gradient-to-br from-[hsl(240,10%,8%)] to-[hsl(240,10%,6%)] border border-white/10 hover:border-primary/50 transition-all duration-300 group-hover:shadow-xl group-hover:shadow-primary/5" style={{ height: '160px' }}>
+                      <div className="relative h-[160px] sm:h-[180px] md:h-[200px] rounded-2xl overflow-hidden bg-gradient-to-br from-[hsl(240,10%,8%)] to-[hsl(240,10%,6%)] border border-white/10 hover:border-primary/50 transition-all duration-300 group-hover:shadow-xl group-hover:shadow-primary/10">
                         {thumb && (
                           <img
                             src={thumb}
-                            alt={video.title || 'Video'}
-                            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                            alt={video.title || "Video"}
+                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                             draggable={false}
                             loading="lazy"
                           />
                         )}
-                        
-                        {/* Play button overlay */}
+
                         <div className="absolute inset-0 flex items-center justify-center">
-                          <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-black/60 flex items-center justify-center backdrop-blur-sm group-hover:bg-primary/90 transition-all duration-300 group-hover:scale-110">
-                            <Play className="text-white fill-current ml-0.5 w-5 h-5 md:w-5 md:h-5" />
+                          <div className="w-11 h-11 md:w-14 md:h-14 rounded-full bg-black/60 backdrop-blur-sm flex items-center justify-center group-hover:bg-primary/90 group-hover:scale-110 transition-all duration-300">
+                            <Play className="w-5 h-5 md:w-6 md:h-6 text-white fill-current ml-0.5" />
                           </div>
                         </div>
-                        
-                        {/* Video title overlay on bottom left */}
+
                         {video.title && (
                           <div className="absolute bottom-0 left-0 right-0 p-2 md:p-3 bg-gradient-to-t from-black/90 via-black/50 to-transparent">
                             <h3 className="text-white text-xs md:text-sm font-medium line-clamp-2 leading-tight">
@@ -214,18 +218,22 @@ export const VideoSection = () => {
                 );
               })}
             </div>
+
+            {/* edge fades */}
+            <div className="pointer-events-none absolute inset-y-0 left-0 w-10 sm:w-16 bg-gradient-to-r from-[hsl(240,10%,3.9%)] to-transparent z-10" />
+            <div className="pointer-events-none absolute inset-y-0 right-0 w-10 sm:w-16 bg-gradient-to-l from-[hsl(240,10%,3.9%)] to-transparent z-10" />
           </div>
-          
-          {/* Scroll hint */}
+
           <p className="text-white/40 text-xs mt-3 text-center md:hidden px-4">
-            Drag left or right to explore → 
+            ← Swipe to explore more videos →
           </p>
         </div>
       </section>
+
       <VideoModal
         isOpen={!!selectedVideo}
         onClose={() => setSelectedVideo(null)}
-        videoUrl={selectedVideo?.url || ''}
+        videoUrl={selectedVideo?.url || ""}
         title={selectedVideo?.title}
       />
     </>
