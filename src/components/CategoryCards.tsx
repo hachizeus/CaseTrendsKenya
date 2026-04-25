@@ -52,10 +52,23 @@ const CategoryCards = () => {
   const startX = useRef(0);
   const startScrollLeft = useRef(0);
   const moved = useRef(false);
-  const autoplaySpeed = 0.5;
+  const [isMobile, setIsMobile] = useState(false);
+  
+  // Different speed for mobile vs desktop
+  const autoplaySpeed = isMobile ? 0.8 : 0.5;
 
-  // Duplicating the array to ensure seamless loop
-  const scrollItems = [...MAIN_CATEGORIES, ...MAIN_CATEGORIES];
+  // Duplicating the array to ensure seamless loop (only once for performance)
+  const scrollItems = MAIN_CATEGORIES;
+
+  // Detect mobile device
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const autoScroll = useCallback(() => {
     const el = scrollRef.current;
@@ -65,7 +78,7 @@ const CategoryCards = () => {
       el.scrollLeft += autoplaySpeed;
 
       // Reset to beginning when reaching the end
-      if (el.scrollLeft >= el.scrollWidth / 2 - el.clientWidth) {
+      if (el.scrollLeft >= el.scrollWidth - el.clientWidth - 1) {
         el.scrollLeft = 0;
       }
     }
@@ -83,7 +96,10 @@ const CategoryCards = () => {
   const onPointerDown = (e: React.PointerEvent) => {
     if (!scrollRef.current) return;
     
-    e.preventDefault();
+    // Don't prevent default on mobile to allow native scrolling
+    if (!isMobile) {
+      e.preventDefault();
+    }
     
     isInteracting.current = true;
     moved.current = false;
@@ -94,8 +110,6 @@ const CategoryCards = () => {
 
   const onPointerMove = (e: React.PointerEvent) => {
     if (!isInteracting.current || !scrollRef.current) return;
-    
-    e.preventDefault();
     
     const delta = e.clientX - startX.current;
     if (Math.abs(delta) > 5) {
@@ -114,15 +128,15 @@ const CategoryCards = () => {
   const wasDragged = () => moved.current;
 
   return (
-    <section className="py-8 sm:py-10 border-b border-white/5 bg-gradient-to-b from-[hsl(240,10%,3.9%)] to-[hsl(240,10%,4.5%)] overflow-hidden">
+    <section className="py-6 sm:py-10 border-b border-white/5 bg-gradient-to-b from-[hsl(240,10%,3.9%)] to-[hsl(240,10%,4.5%)] overflow-hidden">
       <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between mb-8">
-          <h2 className="text-xl sm:text-2xl font-bold tracking-tight bg-gradient-to-r from-white to-primary bg-clip-text text-transparent">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-6 sm:mb-8">
+          <h2 className="text-lg sm:text-xl md:text-2xl font-bold tracking-tight bg-gradient-to-r from-white to-primary bg-clip-text text-transparent">
             Shop by Category
           </h2>
           <Link 
             to="/products" 
-            className="text-sm font-semibold text-primary hover:text-primary/80 transition-all duration-300 hover:gap-2 flex items-center gap-1 group"
+            className="text-xs sm:text-sm font-semibold text-primary hover:text-primary/80 transition-all duration-300 hover:gap-2 flex items-center gap-1 group"
           >
             View All Categories 
             <span className="group-hover:translate-x-1 transition-transform duration-300">→</span>
@@ -134,25 +148,27 @@ const CategoryCards = () => {
       <div className="relative w-full">
         <div 
           ref={scrollRef}
-          onMouseEnter={() => setIsPaused(true)}
-          onMouseLeave={() => setIsPaused(false)}
-          onPointerDown={onPointerDown}
-          onPointerMove={onPointerMove}
-          onPointerUp={onPointerUp}
-          onPointerCancel={onPointerUp}
-          className="overflow-x-hidden whitespace-nowrap relative cursor-grab active:cursor-grabbing"
+          onMouseEnter={() => !isMobile && setIsPaused(true)}
+          onMouseLeave={() => !isMobile && setIsPaused(false)}
+          onTouchStart={onPointerDown}
+          onTouchMove={onPointerMove}
+          onTouchEnd={onPointerUp}
+          onPointerDown={!isMobile ? onPointerDown : undefined}
+          onPointerMove={!isMobile ? onPointerMove : undefined}
+          onPointerUp={!isMobile ? onPointerUp : undefined}
+          className={`overflow-x-auto whitespace-nowrap relative ${!isMobile ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'}`}
           style={{ 
             scrollbarWidth: 'none',
             msOverflowStyle: 'none',
             WebkitOverflowScrolling: 'touch',
           }}
         >
-          <div className="inline-flex gap-6 sm:gap-10 px-4">
+          <div className="inline-flex gap-3 sm:gap-6 md:gap-10 px-4">
             {scrollItems.map((cat, i) => (
               <Link
                 key={`${cat.slug}-${i}`}
                 to={`/products?category=${encodeURIComponent(cat.slug)}`}
-                className="flex flex-col items-center gap-3 flex-shrink-0 w-28 sm:w-36 group/card"
+                className="flex flex-col items-center gap-2 sm:gap-3 flex-shrink-0 w-20 xs:w-24 sm:w-28 md:w-36 group/card"
                 onClick={(e) => {
                   if (wasDragged()) {
                     e.preventDefault();
@@ -160,7 +176,7 @@ const CategoryCards = () => {
                 }}
               >
                 <motion.div 
-                  className="w-24 h-24 sm:w-32 sm:h-32 bg-gradient-to-br from-[hsl(240,10%,8%)] to-[hsl(240,10%,6%)] overflow-hidden rounded-2xl border border-white/10 group-hover/card:border-primary/50 transition-all duration-300 shadow-lg shadow-black/20 group-hover/card:shadow-primary/10 group-hover/card:-translate-y-1"
+                  className="w-16 h-16 xs:w-20 xs:h-20 sm:w-24 sm:h-24 md:w-32 md:h-32 bg-gradient-to-br from-[hsl(240,10%,8%)] to-[hsl(240,10%,6%)] overflow-hidden rounded-xl sm:rounded-2xl border border-white/10 group-hover/card:border-primary/50 transition-all duration-300 shadow-lg shadow-black/20 group-hover/card:shadow-primary/10 group-hover/card:-translate-y-1"
                   whileHover={{ scale: 1.05 }}
                   transition={{ duration: 0.3 }}
                 >
@@ -172,8 +188,8 @@ const CategoryCards = () => {
                     draggable={false}
                   />
                 </motion.div>
-                <div className="text-center px-2">
-                  <p className="text-[11px] sm:text-xs font-semibold text-white/80 uppercase tracking-wider leading-tight group-hover/card:text-primary transition-colors">
+                <div className="text-center px-1 sm:px-2">
+                  <p className="text-[9px] xs:text-[10px] sm:text-[11px] md:text-xs font-semibold text-white/80 uppercase tracking-wider leading-tight group-hover/card:text-primary transition-colors break-words max-w-[80px] xs:max-w-[90px] sm:max-w-[100px] md:max-w-none">
                     {cat.name}
                   </p>
                 </div>
@@ -183,13 +199,13 @@ const CategoryCards = () => {
         </div>
 
         {/* Gradient Fades */}
-        <div className="pointer-events-none absolute inset-y-0 left-0 w-20 bg-gradient-to-r from-[hsl(240,10%,3.9%)] to-transparent z-10" />
-        <div className="pointer-events-none absolute inset-y-0 right-0 w-20 bg-gradient-to-l from-[hsl(240,10%,3.9%)] to-transparent z-10" />
+        <div className="pointer-events-none absolute inset-y-0 left-0 w-16 sm:w-20 bg-gradient-to-r from-[hsl(240,10%,3.9%)] to-transparent z-10" />
+        <div className="pointer-events-none absolute inset-y-0 right-0 w-16 sm:w-20 bg-gradient-to-l from-[hsl(240,10%,3.9%)] to-transparent z-10" />
       </div>
       
       {/* Mobile hint text */}
-      <p className="text-white/40 text-xs text-center mt-4 md:hidden px-4">
-        Drag to explore more categories →
+      <p className="text-white/40 text-[10px] xs:text-xs text-center mt-3 md:hidden px-4">
+        ← Drag to explore more categories →
       </p>
     </section>
   );

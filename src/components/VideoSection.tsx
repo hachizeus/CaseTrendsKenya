@@ -1,8 +1,7 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useVideos } from '@/hooks/useVideos';
-import { useVideoCarousel } from '@/hooks/useVideoCarousel';
 import { VideoModal } from './VideoModal';
-import { Play } from 'lucide-react';
+import { Play, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Skeleton } from './ui/skeleton';
 
 export const VideoSection = () => {
@@ -11,13 +10,90 @@ export const VideoSection = () => {
     url: string;
     title: string | null;
   } | null>(null);
-  const { scrollRef, handlers, wasDragged } = useVideoCarousel({
-    autoplaySpeed: 0.7,
-  });
+  
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const rafRef = useRef<number>();
+  const [isPaused, setIsPaused] = useState(false);
+  const isInteracting = useRef(false);
+  const startX = useRef(0);
+  const startScrollLeft = useRef(0);
+  const moved = useRef(false);
+  const autoplaySpeed = 0.4;
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Detect mobile
+  useEffect(() => {
+    setIsMobile(/Android|iPhone|iPad|iPod|webOS/i.test(navigator.userAgent));
+  }, []);
 
   const getYouTubeThumbnail = (url: string) => {
     const id = url.match(/(?:youtube.com\/watch\?v=|youtu.be\/)([^&?#]+)/)?.[1];
     return id ? `https://img.youtube.com/vi/${id}/hqdefault.jpg` : null;
+  };
+
+  const autoScroll = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+
+    if (!isPaused && !isInteracting.current) {
+      el.scrollLeft += autoplaySpeed;
+
+      // Reset to beginning when reaching the end
+      if (el.scrollLeft >= el.scrollWidth - el.clientWidth) {
+        el.scrollLeft = 0;
+      }
+    }
+
+    rafRef.current = requestAnimationFrame(autoScroll);
+  }, [autoplaySpeed, isPaused]);
+
+  useEffect(() => {
+    if (videos && videos.length > 0) {
+      rafRef.current = requestAnimationFrame(autoScroll);
+    }
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
+  }, [autoScroll, videos]);
+
+  const onPointerDown = (e: React.PointerEvent) => {
+    if (!scrollRef.current) return;
+    
+    e.preventDefault();
+    
+    isInteracting.current = true;
+    moved.current = false;
+    startX.current = e.clientX;
+    startScrollLeft.current = scrollRef.current.scrollLeft;
+    scrollRef.current.style.scrollBehavior = 'auto';
+  };
+
+  const onPointerMove = (e: React.PointerEvent) => {
+    if (!isInteracting.current || !scrollRef.current) return;
+    
+    e.preventDefault();
+    
+    const delta = e.clientX - startX.current;
+    if (Math.abs(delta) > 5) {
+      moved.current = true;
+      scrollRef.current.scrollLeft = startScrollLeft.current - delta;
+    }
+  };
+
+  const onPointerUp = () => {
+    isInteracting.current = false;
+    if (scrollRef.current) {
+      scrollRef.current.style.scrollBehavior = 'smooth';
+    }
+  };
+
+  const wasDragged = () => moved.current;
+
+  const scrollTo = (direction: 'left' | 'right') => {
+    if (!scrollRef.current) return;
+    const scrollAmount = 300;
+    const newScrollLeft = scrollRef.current.scrollLeft + (direction === 'left' ? -scrollAmount : scrollAmount);
+    scrollRef.current.scrollTo({ left: newScrollLeft, behavior: 'smooth' });
   };
 
   if (isLoading) {
@@ -47,20 +123,50 @@ export const VideoSection = () => {
             <h2 className="text-xl md:text-2xl font-bold bg-gradient-to-r from-white to-primary bg-clip-text text-transparent">
               Watch Our Latest Videos
             </h2>
-            <div className="hidden md:flex gap-1 text-white/40 text-xs">
-              <span>←</span>
-              <span>Drag to scroll →</span>
+            <div className="hidden md:flex gap-2">
+              <button
+                onClick={() => scrollTo('left')}
+                className="p-2 rounded-lg bg-white/5 border border-white/10 text-white/60 hover:bg-white/10 hover:text-white transition-colors"
+                aria-label="Scroll left"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => scrollTo('right')}
+                className="p-2 rounded-lg bg-white/5 border border-white/10 text-white/60 hover:bg-white/10 hover:text-white transition-colors"
+                aria-label="Scroll right"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
             </div>
           </div>
           
-          {/* Fixed horizontal scroll container */}
-          <div className="relative overflow-x-auto overflow-y-hidden pb-4 px-4 no-scrollbar" style={{ 
-            WebkitOverflowScrolling: 'touch',
-            scrollbarWidth: 'none',
-            msOverflowStyle: 'none'
-          }}>
-            <div className="flex gap-3 md:gap-4 w-max">
-              {videos.map((video) => {
+          {/* Auto-scrolling container */}
+          <div 
+            className="relative overflow-x-hidden pb-4 px-4"
+            style={{ 
+              WebkitOverflowScrolling: 'touch',
+            }}
+          >
+            <div 
+              ref={scrollRef}
+              onMouseEnter={() => setIsPaused(true)}
+              onMouseLeave={() => setIsPaused(false)}
+              onPointerDown={onPointerDown}
+              onPointerMove={onPointerMove}
+              onPointerUp={onPointerUp}
+              onPointerCancel={onPointerUp}
+              className="flex gap-3 md:gap-4 overflow-x-hidden cursor-grab active:cursor-grabbing"
+              style={{
+                scrollbarWidth: 'none',
+                msOverflowStyle: 'none',
+              }}
+            >
+              <style dangerouslySetInnerHTML={{ __html: `
+                .no-scrollbar::-webkit-scrollbar { display: none !important; }
+              ` }} />
+              
+              {videos.map((video, index) => {
                 const thumb = video.thumbnail_url || getYouTubeThumbnail(video.youtube_url);
                 return (
                   <div
@@ -110,8 +216,9 @@ export const VideoSection = () => {
             </div>
           </div>
           
+          {/* Scroll hint */}
           <p className="text-white/40 text-xs mt-3 text-center md:hidden px-4">
-            Swipe left or right to explore
+            Drag left or right to explore → 
           </p>
         </div>
       </section>
