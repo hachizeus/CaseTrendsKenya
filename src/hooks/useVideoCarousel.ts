@@ -11,7 +11,6 @@ export const useVideoCarousel = ({
 }: UseVideoCarouselProps = {}) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const rafRef = useRef<number>();
-
   const [isPaused, setIsPaused] = useState(false);
   
   // Using refs for interaction prevents unnecessary re-renders that kill the animation loop
@@ -33,6 +32,7 @@ export const useVideoCarousel = ({
         el.scrollLeft = 0;
       }
     }
+
     rafRef.current = requestAnimationFrame(autoScroll);
   }, [autoplaySpeed, isPaused]);
 
@@ -46,17 +46,23 @@ export const useVideoCarousel = ({
   const onPointerDown = (e: React.PointerEvent) => {
     if (!scrollRef.current) return;
     
+    // Prevent default to avoid text selection and other browser behaviors
+    e.preventDefault();
+    
     isInteracting.current = true;
     moved.current = false;
     startX.current = e.clientX;
     startScrollLeft.current = scrollRef.current.scrollLeft;
-    
+
     // Stop any smooth scrolling immediately
     scrollRef.current.style.scrollBehavior = 'auto';
   };
 
   const onPointerMove = (e: React.PointerEvent) => {
     if (!isInteracting.current || !scrollRef.current) return;
+
+    // Prevent default for smoother dragging
+    e.preventDefault();
 
     const delta = e.clientX - startX.current;
     if (Math.abs(delta) > 5) {
