@@ -18,13 +18,19 @@ export const useVideoCarousel = ({
   const startX = useRef(0);
   const startScrollLeft = useRef(0);
   const moved = useRef(false);
+  const isMobile = useRef(false);
+
+  // Detect if device is mobile
+  useEffect(() => {
+    isMobile.current = /Android|iPhone|iPad|iPod|webOS/i.test(navigator.userAgent);
+  }, []);
 
   const autoScroll = useCallback(() => {
     const el = scrollRef.current;
     if (!el) return;
 
-    // Only scroll if the user is NOT touching or hovering
-    if (!isPaused && !isInteracting.current) {
+    // Only auto-scroll on desktop (not mobile)
+    if (!isMobile.current && !isPaused && !isInteracting.current) {
       el.scrollLeft += autoplaySpeed;
 
       // Loop back to start
@@ -83,8 +89,8 @@ export const useVideoCarousel = ({
     scrollRef,
     wasDragged: () => moved.current,
     handlers: {
-      onMouseEnter: () => pauseOnHover && setIsPaused(true),
-      onMouseLeave: () => pauseOnHover && setIsPaused(false),
+      onMouseEnter: () => !isMobile.current && pauseOnHover && setIsPaused(true),
+      onMouseLeave: () => !isMobile.current && pauseOnHover && setIsPaused(false),
       onPointerDown,
       onPointerMove,
       onPointerUp,
