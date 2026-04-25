@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
-import { lazy, Suspense, useEffect } from "react";
+import { lazy, Suspense, useEffect, useRef } from "react";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -43,10 +43,10 @@ const LazyAdminSlideManager = lazy(() => import("./pages/admin/AdminSlideManager
 
 // Loading skeleton for lazy-loaded routes
 const LoadingPlaceholder = () => (
-  <div className="w-full h-screen flex items-center justify-center bg-background">
+  <div className="w-full h-screen flex items-center justify-center bg-gradient-to-b from-[hsl(240,10%,3.9%)] to-[hsl(240,10%,4.5%)]">
     <div className="text-center">
-      <div className="w-12 h-12 border-4 border-muted border-t-primary rounded-full animate-spin mx-auto mb-4"></div>
-      <p className="text-muted-foreground">Loading...</p>
+      <div className="w-12 h-12 border-4 border-white/10 border-t-primary rounded-full animate-spin mx-auto mb-4"></div>
+      <p className="text-white/50">Loading...</p>
     </div>
   </div>
 );
@@ -63,12 +63,33 @@ const queryClient = new QueryClient({
   },
 });
 
-// Scroll to top on route change
+// Improved ScrollToTop component with smooth behavior
 function ScrollToTop() {
-  const { pathname } = useLocation();
+  const { pathname, search, hash } = useLocation();
+  const previousPathname = useRef(pathname);
+  
   useEffect(() => {
-    window.scrollTo(0, 0);
-  }, [pathname]);
+    // Only scroll to top if the pathname actually changed (not just hash or search)
+    if (previousPathname.current !== pathname) {
+      previousPathname.current = pathname;
+      
+      // Use requestAnimationFrame for smoother scrolling
+      requestAnimationFrame(() => {
+        window.scrollTo({
+          top: 0,
+          left: 0,
+          behavior: 'instant' // Use 'instant' instead of 'smooth' for faster response
+        });
+      });
+    } else if (hash) {
+      // If there's a hash (like #section), scroll to that element instead
+      const element = document.querySelector(hash);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+  }, [pathname, search, hash]);
+  
   return null;
 }
 
@@ -130,7 +151,7 @@ const AppContent = () => {
             <Route path="products/new" element={<AdminProductsForm />} />
             <Route path="products/:id" element={<AdminProductsForm />} />
             <Route path="slides" element={<AdminSlides />} />
-            <Route path="videos" element={<AdminVideos />} /> {/* MOVED THIS INSIDE ADMIN ROUTES */}
+            <Route path="videos" element={<AdminVideos />} />
             <Route
               path="slides-overview"
               element={

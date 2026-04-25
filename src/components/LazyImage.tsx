@@ -37,7 +37,7 @@ export const LazyImage = ({
       height={height}
       loading={isPriority ? "eager" : "lazy"}
       decoding="async"
-      fetchpriority={isPriority ? "high" : "low"}
+      fetchpPriority={isPriority ? "high" : "low"}
       sizes={sizes}
     />
   );

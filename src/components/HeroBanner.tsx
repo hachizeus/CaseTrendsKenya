@@ -54,12 +54,9 @@ const HeroBanner = memo(() => {
     );
   }
 
-  // Determine if on mobile for responsive adjustments
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
-
   return (
     <section className="relative w-full overflow-hidden bg-[hsl(240,10%,3.9%)]">
-      {/* Fixed aspect ratio container - maintains same proportions on all devices */}
+      {/* Fixed aspect ratio container */}
       <div className="relative w-full aspect-[21/9] md:aspect-[21/8] lg:aspect-[21/7]">
         
         {/* Background Image Container */}
@@ -78,24 +75,24 @@ const HeroBanner = memo(() => {
               alt={slide.title || "Hero slide"}
               className="w-full h-full object-contain object-center md:object-cover"
               loading="eager"
-              fetchPriority="high"
+              // Spread with 'as any' bypasses the TS2322 error while using lowercase to avoid React warnings
+              {...({ fetchpriority: "high" } as any)}
             />
           </picture>
         </div>
         
-        {/* Dark overlay - more opaque on mobile for readability */}
+        {/* Dark overlay */}
         <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/50 to-black/70 md:via-black/40 md:to-black/60" />
         
         {/* Hot pink glow effect */}
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_70%_50%,rgba(236,72,153,0.15),transparent_70%)]" />
 
-        {/* Content Layer - Same structure on all devices */}
+        {/* Content Layer */}
         <div className="absolute inset-0 flex flex-col justify-center">
           <div className="container mx-auto px-4 sm:px-6 lg:px-12 xl:px-20">
-            {/* Responsive max-width that scales proportionally */}
             <div className="max-w-full sm:max-w-md md:max-w-lg lg:max-w-2xl">
               
-              {/* Title - Scales proportionally */}
+              {/* Title */}
               <h1 className="text-2xl xs:text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-white leading-[1.2] sm:leading-[1.1] mb-2 sm:mb-3 md:mb-4 tracking-tight">
                 {slide.title ? (
                   <span dangerouslySetInnerHTML={{ __html: slide.title }} />
@@ -108,12 +105,12 @@ const HeroBanner = memo(() => {
                 )}
               </h1>
               
-              {/* Description - Proportional scaling */}
+              {/* Description */}
               <p className="text-xs xs:text-sm sm:text-base md:text-lg text-white/80 mb-3 sm:mb-4 md:mb-5 lg:mb-6 max-w-full sm:max-w-md leading-relaxed">
                 {slide.description || "Premium phone accessories crafted for style, quality and durability."}
               </p>
               
-              {/* CTA Button - Proportional sizing */}
+              {/* CTA Button */}
               <Link
                 to={slide.cta_link || "/products"}
                 className="group inline-flex items-center gap-1.5 xs:gap-2 sm:gap-3 bg-[#ec4899] hover:bg-[#db2777] text-white px-4 xs:px-5 sm:px-6 md:px-8 py-2 xs:py-2.5 sm:py-3 md:py-4 rounded-xl font-bold text-xs xs:text-sm sm:text-base transition-all duration-300 shadow-lg shadow-[#ec4899]/20"
@@ -122,7 +119,7 @@ const HeroBanner = memo(() => {
                 <ArrowRight className="w-3.5 h-3.5 xs:w-4 xs:h-4 sm:w-5 sm:h-5 transition-transform group-hover:translate-x-1" />
               </Link>
 
-              {/* Feature Icons - Same structure, responsive text */}
+              {/* Feature Icons */}
               <div className="flex flex-wrap mt-4 xs:mt-5 sm:mt-6 md:mt-8 lg:mt-10 pt-3 xs:pt-4 sm:pt-5 md:pt-6 border-t border-white/10 gap-3 xs:gap-4 sm:gap-6 md:gap-8">
                 <div className="flex items-center gap-1.5 xs:gap-2 sm:gap-3">
                   <Award className="w-4 h-4 xs:w-5 xs:h-5 sm:w-6 sm:h-6 text-[#ec4899]" />
@@ -150,7 +147,7 @@ const HeroBanner = memo(() => {
           </div>
         </div>
 
-        {/* Slide Indicators - Consistent positioning */}
+        {/* Slide Indicators */}
         {slides.length > 1 && (
           <div className="absolute bottom-3 xs:bottom-4 sm:bottom-6 md:bottom-8 right-3 xs:right-4 sm:right-6 md:right-8 lg:right-12 flex gap-1.5 sm:gap-2 z-20">
             {slides.map((_, idx) => (

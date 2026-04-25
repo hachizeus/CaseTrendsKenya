@@ -157,3 +157,14 @@ img[src*="logo.webp"] {
   padding: clamp(0.5rem, 1.5vw, 1rem) clamp(1rem, 3vw, 2rem);
   font-size: clamp(0.75rem, 1.5vw, 1rem);
 }
+/* Smooth scrolling for the whole page */
+html {
+  scroll-behavior: smooth;
+}
+
+/* But disable smooth scrolling for users who prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
