@@ -6,10 +6,11 @@ interface UseVideoCarouselProps {
 }
 
 export const useVideoCarousel = ({
-  autoplaySpeed = 0.35,
+  autoplaySpeed = 0.4,
   pauseOnHover = true,
 }: UseVideoCarouselProps = {}) => {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const rafRef = useRef<number>();
 
   const [isPaused, setIsPaused] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -18,7 +19,10 @@ export const useVideoCarousel = ({
   const startX = useRef(0);
   const startScrollLeft = useRef(0);
   const moved = useRef(false);
-  const rafRef = useRef<number>();
+
+  const isTouchDevice = () =>
+    typeof window !== 'undefined' &&
+    ('ontouchstart' in window || navigator.maxTouchPoints > 0);
 
   // Smooth autoplay
   const autoScroll = useCallback(() => {
@@ -28,7 +32,7 @@ export const useVideoCarousel = ({
     if (!isPaused && !isDragging) {
       el.scrollLeft += autoplaySpeed;
 
-      if (el.scrollLeft >= el.scrollWidth - el.clientWidth) {
+      if (el.scrollLeft >= el.scrollWidth - el.clientWidth - 1) {
         el.scrollLeft = 0;
       }
     }
@@ -38,12 +42,16 @@ export const useVideoCarousel = ({
 
   useEffect(() => {
     rafRef.current = requestAnimationFrame(autoScroll);
+
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
   }, [autoScroll]);
 
+  // Touch-only drag
   const onPointerDown = (e: React.PointerEvent) => {
+    if (!isTouchDevice()) return;
+
     const el = scrollRef.current;
     if (!el) return;
 
@@ -54,13 +62,11 @@ export const useVideoCarousel = ({
 
     startX.current = e.clientX;
     startScrollLeft.current = el.scrollLeft;
-
-    el.setPointerCapture(e.pointerId);
   };
 
   const onPointerMove = (e: React.PointerEvent) => {
-    const el = scrollRef.current;
-    if (!el || !pointerDown.current) return;
+    if (!isTouchDevice()) return;
+    if (!pointerDown.current || !scrollRef.current) return;
 
     const delta = e.clientX - startX.current;
 
@@ -70,26 +76,20 @@ export const useVideoCarousel = ({
     }
 
     if (moved.current) {
-      el.scrollLeft = startScrollLeft.current - delta;
+      scrollRef.current.scrollLeft = startScrollLeft.current - delta;
     }
   };
 
-  const onPointerUp = (e: React.PointerEvent) => {
-    const el = scrollRef.current;
-    if (!el) return;
+  const onPointerUp = () => {
+    if (!isTouchDevice()) return;
 
     pointerDown.current = false;
     setIsDragging(false);
     setIsPaused(false);
-
-    try {
-      el.releasePointerCapture(e.pointerId);
-    } catch {}
   };
 
   return {
     scrollRef,
-    isDragging,
     wasDragged: () => moved.current,
     handlers: {
       onMouseEnter: () => pauseOnHover && setIsPaused(true),

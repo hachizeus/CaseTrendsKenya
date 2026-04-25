@@ -14,7 +14,7 @@ export const VideoSection = () => {
   } | null>(null);
 
   const { scrollRef, handlers, wasDragged } = useVideoCarousel({
-    autoplaySpeed: 0.35,
+    autoplaySpeed: 0.4,
   });
 
   const getYouTubeThumbnail = (url: string) => {
@@ -26,7 +26,7 @@ export const VideoSection = () => {
     if (!scrollRef.current) return;
 
     scrollRef.current.scrollBy({
-      left: dir === 'left' ? -360 : 360,
+      left: dir === 'left' ? -380 : 380,
       behavior: 'smooth',
     });
   };
@@ -52,33 +52,34 @@ export const VideoSection = () => {
   return (
     <>
       <section className="py-12 relative overflow-hidden bg-gradient-to-b from-gray-50 to-white">
-        <div className="container px-4">
+        <div className="container px-4 relative">
           <h2 className="text-3xl font-bold text-center mb-10 bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
             Watch Our Latest Videos
           </h2>
 
-          {/* Arrows */}
-          <div className="hidden md:block">
-            <button
-              onClick={() => scroll('left')}
-              className="absolute left-3 top-1/2 -translate-y-1/2 z-20 p-3 rounded-full bg-black/60 text-white hover:scale-110 transition"
-            >
-              <ChevronLeft className="w-5 h-5" />
-            </button>
+          {/* Desktop arrows */}
+          <button
+            onClick={() => scroll('left')}
+            className="hidden md:flex absolute left-0 top-1/2 -translate-y-1/2 z-30 p-3 rounded-full bg-black/60 text-white hover:scale-110 transition items-center justify-center"
+          >
+            <ChevronLeft className="w-5 h-5" />
+          </button>
 
-            <button
-              onClick={() => scroll('right')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 z-20 p-3 rounded-full bg-black/60 text-white hover:scale-110 transition"
-            >
-              <ChevronRight className="w-5 h-5" />
-            </button>
-          </div>
+          <button
+            onClick={() => scroll('right')}
+            className="hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 z-30 p-3 rounded-full bg-black/60 text-white hover:scale-110 transition items-center justify-center"
+          >
+            <ChevronRight className="w-5 h-5" />
+          </button>
 
-          {/* Carousel */}
           <div
             ref={scrollRef}
             {...handlers}
-            className="flex gap-5 overflow-x-auto pb-4 snap-x snap-mandatory cursor-grab active:cursor-grabbing select-none"
+            onWheel={(e) => {
+              if (!scrollRef.current) return;
+              scrollRef.current.scrollLeft += e.deltaY;
+            }}
+            className="flex gap-5 overflow-x-auto pb-4 snap-x snap-mandatory select-none"
             style={{
               scrollBehavior: 'smooth',
               WebkitOverflowScrolling: 'touch',
@@ -105,7 +106,6 @@ export const VideoSection = () => {
                   className="min-w-[260px] sm:min-w-[300px] md:min-w-[340px] snap-start group"
                   onClick={() => {
                     if (wasDragged()) return;
-
                     setSelectedVideo({
                       url: video.youtube_url,
                       title: video.title,
@@ -114,7 +114,7 @@ export const VideoSection = () => {
                 >
                   <div className="rounded-2xl overflow-hidden bg-white shadow-md hover:shadow-2xl transition-all duration-300 cursor-pointer">
                     <div className="relative aspect-video bg-gray-900">
-                      {thumb ? (
+                      {thumb && (
                         <img
                           src={thumb}
                           alt={video.title || 'Video thumbnail'}
@@ -122,19 +122,16 @@ export const VideoSection = () => {
                           loading="lazy"
                           draggable={false}
                         />
-                      ) : null}
+                      )}
 
-                      {/* dark overlay */}
                       <div className="absolute inset-0 bg-black/20 group-hover:bg-black/35 transition-colors duration-300" />
 
-                      {/* play button */}
                       <div className="absolute inset-0 flex items-center justify-center">
                         <div className="w-14 h-14 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
                           <Play className="text-white ml-1 w-6 h-6" />
                         </div>
                       </div>
 
-                      {/* title bottom-left INSIDE video */}
                       {video.title && (
                         <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 via-black/30 to-transparent">
                           <p className="text-white text-sm font-medium line-clamp-2 max-w-[85%]">
