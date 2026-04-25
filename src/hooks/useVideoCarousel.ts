@@ -13,8 +13,9 @@ export const useVideoCarousel = ({
   const rafRef = useRef<number>();
 
   const [isPaused, setIsPaused] = useState(false);
-  const isDragging = useRef(false);
-  const pointerDown = useRef(false);
+  
+  // Using refs for interaction prevents unnecessary re-renders that kill the animation loop
+  const isInteracting = useRef(false);
   const startX = useRef(0);
   const startScrollLeft = useRef(0);
   const moved = useRef(false);
@@ -23,11 +24,11 @@ export const useVideoCarousel = ({
     const el = scrollRef.current;
     if (!el) return;
 
-    // Only auto-scroll if the user isn't interacting
-    if (!isPaused && !pointerDown.current) {
+    // Only scroll if the user is NOT touching or hovering
+    if (!isPaused && !isInteracting.current) {
       el.scrollLeft += autoplaySpeed;
 
-      // Infinite loop reset
+      // Loop back to start
       if (el.scrollLeft >= el.scrollWidth - el.clientWidth - 1) {
         el.scrollLeft = 0;
       }
@@ -43,37 +44,33 @@ export const useVideoCarousel = ({
   }, [autoScroll]);
 
   const onPointerDown = (e: React.PointerEvent) => {
-    const el = scrollRef.current;
-    if (!el) return;
-
-    pointerDown.current = true;
+    if (!scrollRef.current) return;
+    
+    isInteracting.current = true;
     moved.current = false;
     startX.current = e.clientX;
-    startScrollLeft.current = el.scrollLeft;
+    startScrollLeft.current = scrollRef.current.scrollLeft;
     
-    // Stop auto-scroll immediately on touch
-    setIsPaused(true);
+    // Stop any smooth scrolling immediately
+    scrollRef.current.style.scrollBehavior = 'auto';
   };
 
   const onPointerMove = (e: React.PointerEvent) => {
-    if (!pointerDown.current || !scrollRef.current) return;
+    if (!isInteracting.current || !scrollRef.current) return;
 
     const delta = e.clientX - startX.current;
     if (Math.abs(delta) > 5) {
-      isDragging.current = true;
       moved.current = true;
-      // Manual scroll follow
       scrollRef.current.scrollLeft = startScrollLeft.current - delta;
     }
   };
 
   const onPointerUp = () => {
-    pointerDown.current = false;
-    // Resume auto-scroll after a short delay
-    setTimeout(() => {
-      isDragging.current = false;
-      setIsPaused(false);
-    }, 50);
+    isInteracting.current = false;
+    if (scrollRef.current) {
+      // Re-enable smooth behavior for manual arrow/wheel scrolls if needed
+      scrollRef.current.style.scrollBehavior = 'smooth';
+    }
   };
 
   return {
@@ -81,7 +78,7 @@ export const useVideoCarousel = ({
     wasDragged: () => moved.current,
     handlers: {
       onMouseEnter: () => pauseOnHover && setIsPaused(true),
-      onMouseLeave: () => !pointerDown.current && pauseOnHover && setIsPaused(false),
+      onMouseLeave: () => pauseOnHover && setIsPaused(false),
       onPointerDown,
       onPointerMove,
       onPointerUp,
