@@ -13,68 +13,113 @@ export interface Video {
   updated_at: string;
 }
 
-const fetchVideos = async (adminView: boolean = false): Promise<Video[]> => {
-  const endpoint = adminView ? '/api/admin/videos' : '/api/videos';
-  const response = await fetch(endpoint);
-  if (!response.ok) throw new Error('Failed to fetch videos');
-  return response.json();
+// Fetch videos directly from Supabase (no API endpoint needed)
+const fetchVideosFromSupabase = async (adminView: boolean = false): Promise<Video[]> => {
+  let query = supabase
+    .from('videos')
+    .select('*')
+    .order('display_order', { ascending: true });
+  
+  // If not admin view, only fetch visible videos
+  if (!adminView) {
+    query = query.eq('visible', true);
+  }
+  
+  const { data, error } = await query;
+  
+  if (error) {
+    console.error('Error fetching videos from Supabase:', error);
+    throw new Error('Failed to fetch videos');
+  }
+  
+  return data || [];
 };
 
-const addVideo = async (video: Omit<Video, 'id' | 'created_at' | 'updated_at' | 'display_order'>) => {
-  const response = await fetch('/api/admin/videos', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(video),
-  });
-  if (!response.ok) throw new Error('Failed to add video');
-  return response.json();
+// Add video to Supabase
+const addVideoToSupabase = async (video: Omit<Video, 'id' | 'created_at' | 'updated_at' | 'display_order'>) => {
+  // Get current max display_order
+  const { data: existingVideos } = await supabase
+    .from('videos')
+    .select('display_order')
+    .order('display_order', { ascending: false })
+    .limit(1);
+  
+  const nextOrder = (existingVideos?.[0]?.display_order ?? -1) + 1;
+  
+  const { data, error } = await supabase
+    .from('videos')
+    .insert([{
+      youtube_url: video.youtube_url,
+      title: video.title,
+      thumbnail_url: video.thumbnail_url,
+      visible: video.visible ?? true,
+      display_order: nextOrder,
+    }])
+    .select()
+    .single();
+  
+  if (error) throw new Error(error.message);
+  return data;
 };
 
-const updateVideo = async ({ id, ...updates }: Partial<Video> & { id: string }) => {
-  const response = await fetch(`/api/admin/videos/${id}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(updates),
-  });
-  if (!response.ok) throw new Error('Failed to update video');
-  return response.json();
+// Update video in Supabase
+const updateVideoInSupabase = async ({ id, ...updates }: Partial<Video> & { id: string }) => {
+  const { data, error } = await supabase
+    .from('videos')
+    .update(updates)
+    .eq('id', id)
+    .select()
+    .single();
+  
+  if (error) throw new Error(error.message);
+  return data;
 };
 
-const deleteVideo = async (id: string) => {
-  const response = await fetch(`/api/admin/videos/${id}`, {
-    method: 'DELETE',
-  });
-  if (!response.ok) throw new Error('Failed to delete video');
+// Delete video from Supabase
+const deleteVideoFromSupabase = async (id: string) => {
+  const { error } = await supabase
+    .from('videos')
+    .delete()
+    .eq('id', id);
+  
+  if (error) throw new Error(error.message);
 };
 
-const updateVideoVisibility = async ({ id, visible }: { id: string; visible: boolean }) => {
-  const response = await fetch(`/api/admin/videos/${id}`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ visible }),
-  });
-  if (!response.ok) throw new Error('Failed to update visibility');
-  return response.json();
+// Update video visibility
+const updateVideoVisibilityInSupabase = async ({ id, visible }: { id: string; visible: boolean }) => {
+  const { data, error } = await supabase
+    .from('videos')
+    .update({ visible })
+    .eq('id', id)
+    .select()
+    .single();
+  
+  if (error) throw new Error(error.message);
+  return data;
 };
 
-const reorderVideos = async (videos: Video[]) => {
-  const reorderedData = videos.map((video, index) => ({
+// Reorder videos
+const reorderVideosInSupabase = async (videos: Video[]) => {
+  const updates = videos.map((video, index) => ({
     id: video.id,
     display_order: index,
   }));
   
-  const response = await fetch('/api/admin/videos/reorder', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ videos: reorderedData }),
-  });
-  if (!response.ok) throw new Error('Failed to reorder videos');
+  // Update each video with new display_order
+  for (const update of updates) {
+    const { error } = await supabase
+      .from('videos')
+      .update({ display_order: update.display_order })
+      .eq('id', update.id);
+    
+    if (error) throw new Error(error.message);
+  }
 };
 
 export const useVideos = (adminView: boolean = false) => {
   return useQuery({
     queryKey: ['videos', adminView],
-    queryFn: () => fetchVideos(adminView),
+    queryFn: () => fetchVideosFromSupabase(adminView),
     staleTime: 5 * 60 * 1000,
   });
 };
@@ -82,13 +127,13 @@ export const useVideos = (adminView: boolean = false) => {
 export const useAddVideo = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: addVideo,
+    mutationFn: addVideoToSupabase,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['videos'] });
       toast.success('Video added successfully');
     },
-    onError: () => {
-      toast.error('Failed to add video');
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to add video');
     },
   });
 };
@@ -96,13 +141,13 @@ export const useAddVideo = () => {
 export const useUpdateVideo = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: updateVideo,
+    mutationFn: updateVideoInSupabase,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['videos'] });
       toast.success('Video updated successfully');
     },
-    onError: () => {
-      toast.error('Failed to update video');
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to update video');
     },
   });
 };
@@ -110,13 +155,13 @@ export const useUpdateVideo = () => {
 export const useDeleteVideo = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: deleteVideo,
+    mutationFn: deleteVideoFromSupabase,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['videos'] });
       toast.success('Video deleted successfully');
     },
-    onError: () => {
-      toast.error('Failed to delete video');
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to delete video');
     },
   });
 };
@@ -124,7 +169,7 @@ export const useDeleteVideo = () => {
 export const useUpdateVideoVisibility = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: updateVideoVisibility,
+    mutationFn: updateVideoVisibilityInSupabase,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['videos'] });
     },
@@ -134,13 +179,13 @@ export const useUpdateVideoVisibility = () => {
 export const useReorderVideos = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: reorderVideos,
+    mutationFn: reorderVideosInSupabase,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['videos'] });
       toast.success('Videos reordered successfully');
     },
-    onError: () => {
-      toast.error('Failed to reorder videos');
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to reorder videos');
     },
   });
 };
