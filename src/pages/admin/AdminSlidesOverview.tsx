@@ -142,7 +142,7 @@ export default function AdminSlidesOverview() {
             .from("hero_slides" as any)
             .select("*")
             .eq("section_id", section.id)
-            .order("display_order") as any);
+            .order("display_order") as any;
           
           if (slidesError) {
             console.error(`Error loading slides for section ${section.id}:`, slidesError);
@@ -175,7 +175,7 @@ export default function AdminSlidesOverview() {
         const { error } = await (anySupabase
           .from("hero_sections" as any)
           .insert([section])
-          .select() as any);
+          .select() as any;
 
         if (error && !error.message.includes("duplicate key")) {
           throw error;
@@ -287,116 +287,44 @@ export default function AdminSlidesOverview() {
     }
   };
 
-  const handleSaveSlide = async () => {
-    if (!slideForm.title.trim()) {
-      toast.error("Title is required");
-      return;
-    }
-    setSaving(true);
+  const saveSlide = async () => {
     try {
-      let imageUrl = editingSlide?.image_url || "";
-      if (imageFile) {
-        // Upload WebP image
-        const path = `slides/${Date.now()}_${imageFile.name}`;
-        const { error } = await anySupabase.storage.from("product-images").upload(path, imageFile, {
-          contentType: "image/webp",
-          cacheControl: "31536000", // 1 year cache for hero images
-        });
-        if (error) throw error;
-        const { data } = anySupabase.storage.from("product-images").getPublicUrl(path);
-        imageUrl = data.publicUrl;
-        
-        // Log compression stats
-        if (compressionStats) {
-          console.log("✅ WebP image uploaded successfully", {
-            originalSize: compressionStats.originalSize || compressionStats.size,
-            compressedSize: compressionStats.size,
-            width: compressionStats.width,
-            height: compressionStats.height,
-            format: "WebP",
-            compressionRatio: compressionStats.compressionRatio,
-          });
-        }
-      }
-      if (!imageUrl) {
-        toast.error("Please upload an image");
-        setSaving(false);
-        return;
-      }
-
-      const payload: any = {
+      const payload = {
         title: slideForm.title,
         subtitle: slideForm.subtitle || null,
-        image_url: imageUrl,
+        image_url: preview || "",
         cta_text: slideForm.cta_text || null,
-        cta_link: slideForm.cta_link || null,
+        cta_link: normalizeLink(slideForm.cta_link || ""),
         is_active: slideForm.is_active,
         section_id: selectedSectionId,
         display_order: editingSlide?.display_order ?? (slides[selectedSectionId]?.length ?? 0),
       };
 
       if (editingSlide) {
-        const { error } = await (anySupabase
-          .from("hero_slides" as any)
+        const { error } = await anySupabase
+          .from("hero_slides")
           .update(payload)
-          .eq("id", editingSlide.id) as any);
+          .eq("id", editingSlide.id);
         if (error) throw error;
-        toast.success("Slide updated with WebP image!");
-        await logAuditAction({
-          actor_id: user?.id ?? null,
-          actor_email: user?.email ?? null,
-          action_type: "slide_updated",
-          entity: "hero_slides",
-          entity_id: editingSlide.id,
-          details: { title: payload.title, section_id: payload.section_id, is_active: payload.is_active, format: "webp" },
-          user_id: null,
-        });
       } else {
-        const { error } = await (anySupabase
-          .from("hero_slides" as any)
-          .insert([payload]) as any);
+        const { error } = await anySupabase
+          .from("hero_slides")
+          .insert([payload]);
         if (error) throw error;
-        toast.success("Slide created with WebP image!");
-        await logAuditAction({
-          actor_id: user?.id ?? null,
-          actor_email: user?.email ?? null,
-          action_type: "slide_created",
-          entity: "hero_slides",
-          entity_id: null,
-          details: { title: payload.title, section_id: payload.section_id, is_active: payload.is_active, format: "webp" },
-          user_id: null,
-        });
       }
 
-      setSlideDialogOpen(false);
+      toast.success("Slide saved successfully!");
       await loadSections();
-    } catch (err: any) {
-      console.error("Error saving slide:", err);
-      toast.error(err.message);
-    } finally {
-      setSaving(false);
+    } catch (error) {
+      console.error("Error saving slide:", error);
+      toast.error("Failed to save slide");
     }
   };
 
-  const deleteSlide = async (slideId: string) => {
+  const deleteSlide = async (slideId: string, imageUrl: string) => {
     if (!confirm("Delete this slide?")) return;
-    try {
-      const { error } = await (anySupabase.from("hero_slides" as any).delete().eq("id", slideId) as any);
-      if (error) throw error;
-      toast.success("Slide deleted!");
-      await logAuditAction({
-        actor_id: user?.id ?? null,
-        actor_email: user?.email ?? null,
-        action_type: "slide_deleted",
-        entity: "hero_slides",
-        entity_id: slideId,
-        details: null,
-        user_id: null,
-      });
-      await loadSections();
-    } catch (err: any) {
-      toast.error(err.message);
-    }
+    await deleteImage(slideId, imageUrl, "hero_slides", "product-images");
+    await loadSections();
   };
 
   const toggleSlideActive = async (sectionId: string, slide: any) => {
@@ -404,7 +332,7 @@ export default function AdminSlidesOverview() {
       const { error } = await (anySupabase
         .from("hero_slides" as any)
         .update({ is_active: !slide.is_active })
-        .eq("id", slide.id) as any);
+        .eq("id", slide.id) as any;
       if (error) throw error;
       await logAuditAction({
         actor_id: user?.id ?? null,
@@ -545,7 +473,7 @@ export default function AdminSlidesOverview() {
                               <Pencil className="w-4 h-4" />
                             </button>
                             <button
-                              onClick={() => deleteSlide(slide.id)}
+                              onClick={() => deleteSlide(slide.id, slide.image_url)}
                               className="p-1.5 hover:bg-red-50 hover:text-red-600 border border-transparent hover:border-red-200 transition-colors rounded"
                             >
                               <Trash2 className="w-4 h-4" />
@@ -661,7 +589,7 @@ export default function AdminSlidesOverview() {
               <Button variant="outline" onClick={() => setSlideDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleSaveSlide} disabled={saving || compressing} className="gap-2">
+              <Button onClick={saveSlide} disabled={saving || compressing} className="gap-2">
                 {compressing && <Loader2 className="w-4 h-4 animate-spin" />}
                 {saving && <Loader2 className="w-4 h-4 animate-spin" />}
                 {compressing ? "Converting to WebP..." : saving ? "Uploading..." : editingSlide ? "Update Slide" : "Create Slide"}

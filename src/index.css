@@ -4,59 +4,63 @@
 
 @layer base {
   :root {
-    --background: 0 0% 95%;
-    --foreground: 0 0% 0%;
+    /* Deep Dark Backgrounds */
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 0%;
+    /* Glassmorphism Cards */
+    --card: 240 10% 6%;
+    --card-foreground: 0 0% 98%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 0%;
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 0 0% 98%;
 
-    --primary: 0 0% 0%;
+    /* Hot Pink Brand Colors */
+    --primary: 330 100% 54%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 0 0% 95%;
-    --secondary-foreground: 0 0% 0%;
+    /* Secondary/Muted - Dark Greys */
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
 
-    --muted: 0 0% 90%;
-    --muted-foreground: 0 0% 40%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
 
-    --accent: 0 0% 20%;
+    /* Accents & Borders */
+    --accent: 330 100% 54%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
 
-    --border: 0 0% 90%;
-    --input: 0 0% 95%;
-    --ring: 0 0% 0%;
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 330 100% 54%;
 
-    --radius: 0rem;
+    /* Modern Border Radius */
+    --radius: 0.75rem;
 
-    --topbar: 0 0% 20%;
+    /* Theme Specifics */
+    --topbar: 330 100% 54%;
     --topbar-foreground: 0 0% 100%;
 
-    --nav: 0 0% 100%;
-    --nav-foreground: 0 0% 0%;
-    --nav-hover: 0 0% 10%;
+    --nav: 240 10% 3.9%;
+    --nav-foreground: 0 0% 98%;
+    --nav-hover: 330 100% 54%;
 
-    --badge-sale: 0 84% 55%;
-    --badge-new: 145 65% 42%;
+    --badge-sale: 330 100% 54%;
+    --badge-new: 270 70% 60%;
 
-    --hero-gradient: linear-gradient(135deg, hsl(0, 0%, 0%), hsl(0, 0%, 10%), hsl(0, 0%, 20%));
+    --hero-gradient: radial-gradient(circle at 50% 50%, hsl(330 100% 54% / 0.15) 0%, hsl(240 10% 3.9%) 70%);
 
-    --shadow-card: 0 2px 12px -2px hsl(0 0% 0% / 0.12);
-    --shadow-card-hover: 0 8px 30px -4px hsl(0 0% 0% / 0.2);
-
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 0 0% 15%;
-    --sidebar-primary: 0 0% 0%;
+    --sidebar-background: 240 10% 3.9%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 330 100% 54%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 0 0% 90%;
-    --sidebar-accent-foreground: 0 0% 0%;
-    --sidebar-border: 0 0% 85%;
-    --sidebar-ring: 0 0% 0%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 330 100% 54%;
   }
 }
 
@@ -83,30 +87,30 @@
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
-  .leaflet-map-wrapper {
-    position: relative;
-    min-height: 18rem;
-  }
-  .leaflet-map-wrapper .leaflet-container {
-    height: 100%;
-    width: 100%;
-  }
-  .horizontal-marquee,
-  .mobile-marquee {
-    animation: marquee 22s linear infinite;
-  }
-  .horizontal-marquee:hover,
-  .mobile-marquee:hover {
-    animation-play-state: paused;
+}
+
+/* Only keep essential animations - remove marquee for mobile */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
 
-@keyframes marquee {
-  0% {
-    transform: translateX(0);
+/* Optimized marquee - only on desktop */
+@media (min-width: 768px) {
+  .horizontal-marquee {
+    animation: marquee 30s linear infinite;
   }
-  100% {
-    transform: translateX(-50%);
+  
+  .horizontal-marquee:hover {
+    animation-play-state: paused;
+  }
+  
+  @keyframes marquee {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
   }
 }
 
@@ -119,17 +123,37 @@
 }
 
 /* Prevent text selection zoom on mobile */
-input, 
-select, 
-textarea,
-button {
+input, select, textarea, button {
   -webkit-touch-callout: none;
+  touch-action: manipulation;
+}
+/* Smooth image transitions */
+img {
+  transition: opacity 0.3s ease-in-out;
+  background-color: hsl(240, 10%, 6%);
 }
 
-/* Prevent double-tap zoom on buttons and interactive elements */
-button, 
-a, 
-input[type="button"], 
-input[type="submit"] {
-  touch-action: manipulation;
+/* Prevent layout shift */
+.aspect-ratio-box {
+  contain: strict;
+}
+/* Remove any background from logo images */
+img[src*="logo.webp"] {
+  background: transparent !important;
+  background-color: transparent !important;
+  mix-blend-mode: normal;
+}
+/* Responsive typography for hero section */
+.hero-title {
+  font-size: clamp(1.5rem, 5vw, 4rem);
+  line-height: clamp(1.2, 1.1, 1.1);
+}
+
+.hero-description {
+  font-size: clamp(0.75rem, 2vw, 1.125rem);
+}
+
+.hero-button {
+  padding: clamp(0.5rem, 1.5vw, 1rem) clamp(1rem, 3vw, 2rem);
+  font-size: clamp(0.75rem, 1.5vw, 1rem);
 }

@@ -22,14 +22,14 @@ export const VideoSection = () => {
 
   if (isLoading) {
     return (
-      <section className="py-12 md:py-16">
+      <section className="py-8 md:py-10 bg-gradient-to-b from-[hsl(240,10%,3.9%)] to-[hsl(240,10%,4.5%)]">
         <div className="w-full">
-          <h2 className="text-3xl font-bold text-white mb-8 px-4">
+          <h2 className="text-xl md:text-2xl font-bold text-white mb-6 px-4">
             Watch Our Latest Videos
           </h2>
-          <div className="flex gap-3 md:gap-4 overflow-x-auto pb-10 px-4 no-scrollbar">
+          <div className="flex gap-3 md:gap-4 overflow-x-auto pb-6 px-4 no-scrollbar">
             {[...Array(4)].map((_, i) => (
-              <Skeleton key={i} className="h-[calc(12rem-20px)] md:h-[calc(14rem-20px)] min-w-[calc(280px-20px)] sm:min-w-[calc(340px-20px)] md:min-w-[calc(400px-20px)] rounded-2xl" />
+              <Skeleton key={i} className="h-[180px] md:h-[200px] min-w-[240px] sm:min-w-[280px] md:min-w-[320px] rounded-xl bg-[hsl(240,10%,8%)] border border-white/5" />
             ))}
           </div>
         </div>
@@ -41,15 +41,22 @@ export const VideoSection = () => {
 
   return (
     <>
-      <section className="py-12 md:py-16">
+      <section className="py-8 md:py-10 bg-gradient-to-b from-[hsl(240,10%,3.9%)] to-[hsl(240,10%,4.5%)]">
         <div className="w-full">
-          <h2 className="text-3xl font-bold text-white mb-8 px-4">
-            Watch Our Latest Videos
-          </h2>
+          <div className="flex items-center justify-between mb-6 px-4">
+            <h2 className="text-xl md:text-2xl font-bold bg-gradient-to-r from-white to-primary bg-clip-text text-transparent">
+              Watch Our Latest Videos
+            </h2>
+            <div className="hidden md:flex gap-1 text-white/40 text-xs">
+              <span>←</span>
+              <span>Drag to scroll →</span>
+            </div>
+          </div>
+          
           <div
             ref={scrollRef}
             {...handlers}
-            className="flex gap-3 md:gap-4 overflow-x-auto pb-4 px-4 cursor-grab active:cursor-grabbing select-none no-scrollbar"
+            className="flex gap-3 md:gap-4 overflow-x-auto pb-3 px-4 cursor-grab active:cursor-grabbing select-none no-scrollbar"
             style={{
               scrollbarWidth: 'none',
               msOverflowStyle: 'none',
@@ -63,7 +70,7 @@ export const VideoSection = () => {
               return (
                 <div
                   key={video.id}
-                  className="min-w-[calc(280px-20px)] sm:min-w-[calc(340px-20px)] md:min-w-[calc(400px-20px)] flex-shrink-0"
+                  className="min-w-[240px] sm:min-w-[280px] md:min-w-[320px] flex-shrink-0"
                   onClick={() => {
                     if (wasDragged()) return;
                     setSelectedVideo({
@@ -73,39 +80,29 @@ export const VideoSection = () => {
                   }}
                 >
                   <div className="relative group cursor-pointer">
-                    {/* Video thumbnail container */}
-                    <div className="relative rounded-2xl overflow-hidden bg-gray-900" style={{ height: 'calc(12rem - 20px)' }}>
-                      <div className="absolute inset-0 md:hidden" style={{ height: 'calc(14rem - 20px)' }}>
-                        {thumb && (
-                          <img
-                            src={thumb}
-                            alt={video.title || 'Video'}
-                            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                            draggable={false}
-                          />
-                        )}
-                      </div>
-                      <div className="hidden md:block absolute inset-0">
-                        {thumb && (
-                          <img
-                            src={thumb}
-                            alt={video.title || 'Video'}
-                            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                            draggable={false}
-                          />
-                        )}
-                      </div>
-                      {/* Play button overlay */}
+                    {/* Video thumbnail container - reduced height */}
+                    <div className="relative rounded-xl overflow-hidden bg-gradient-to-br from-[hsl(240,10%,8%)] to-[hsl(240,10%,6%)] border border-white/10 hover:border-primary/50 transition-all duration-300 group-hover:shadow-xl group-hover:shadow-primary/5" style={{ height: '160px' }}>
+                      {thumb && (
+                        <img
+                          src={thumb}
+                          alt={video.title || 'Video'}
+                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                          draggable={false}
+                          loading="lazy"
+                        />
+                      )}
+                      
+                      {/* Play button overlay - smaller */}
                       <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="w-14 h-14 md:w-16 md:h-16 rounded-full bg-black/60 flex items-center justify-center backdrop-blur-sm group-hover:bg-red-600/90 transition-colors">
-                          <Play className="text-white fill-current ml-1 w-6 h-6 md:w-7 md:h-7" />
+                        <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-black/60 flex items-center justify-center backdrop-blur-sm group-hover:bg-primary/90 transition-all duration-300 group-hover:scale-110">
+                          <Play className="text-white fill-current ml-0.5 w-5 h-5 md:w-5 md:h-5" />
                         </div>
                       </div>
                       
-                      {/* Video title overlay on bottom left */}
+                      {/* Video title overlay on bottom - more compact */}
                       {video.title && (
-                        <div className="absolute bottom-0 left-0 right-0 p-3 md:p-4 bg-gradient-to-t from-black/80 to-transparent">
-                          <h3 className="text-white text-sm md:text-base font-medium line-clamp-2">
+                        <div className="absolute bottom-0 left-0 right-0 p-2 md:p-3 bg-gradient-to-t from-black/90 via-black/50 to-transparent">
+                          <h3 className="text-white text-xs md:text-sm font-medium line-clamp-2 leading-tight">
                             {video.title}
                           </h3>
                         </div>
@@ -116,7 +113,8 @@ export const VideoSection = () => {
               );
             })}
           </div>
-          <p className="text-gray-400 text-sm mt-4 text-center md:hidden px-4">
+          
+          <p className="text-white/40 text-xs mt-3 text-center md:hidden px-4">
             Swipe left or right to explore
           </p>
         </div>

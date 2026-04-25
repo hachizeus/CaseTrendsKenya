@@ -131,26 +131,26 @@ const AuthPage = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#f4f6f9]">
+    <div className="min-h-screen flex flex-col bg-gradient-to-b from-[hsl(240,10%,3.9%)] to-[hsl(240,10%,4.5%)]">
       <TopBar />
       <Header />
 
       <main className="flex-1 flex items-center justify-center py-10 px-4">
-        <div className="w-full max-w-5xl grid lg:grid-cols-2 shadow-xl overflow-hidden rounded-xl">
+        <div className="w-full max-w-5xl grid lg:grid-cols-2 overflow-hidden rounded-2xl shadow-2xl shadow-primary/5">
 
-          {/* Left panel — branding */}
-          <div className="hidden lg:flex flex-col justify-between bg-gradient-to-br from-[#0f1117] to-[#1a1f2e] text-white p-10">
+          {/* Left panel — branding with dark theme */}
+          <div className="hidden lg:flex flex-col justify-between bg-gradient-to-br from-[hsl(240,10%,3.9%)] to-[hsl(240,10%,6%)] border-r border-white/10 text-white p-10">
             <div>
-              <img src="/logo.webp" alt="Case Trends Kenya" className="h-10 w-auto mb-10 brightness-200" />
+              <img src="/logo.webp" alt="Case Trends Kenya" className="h-10 w-auto mb-10" />
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5 }}
               >
-                <h2 className="text-3xl font-bold leading-tight mb-3">
-                  {isLogin ? "Welcome back." : "Join Case Trends Kenya."}
+                <h2 className="text-3xl font-bold leading-tight mb-3 bg-gradient-to-r from-white to-primary bg-clip-text text-transparent">
+                  {isLogin ? "Welcome back." : "Join Case Trends."}
                 </h2>
-                <p className="text-white/60 text-sm leading-relaxed mb-8">
+                <p className="text-white/50 text-sm leading-relaxed mb-8">
                   {isLogin
                     ? "Sign in to access your orders, wishlist, and exclusive deals."
                     : "Create a free account and start shopping the best electronics in Nairobi."}
@@ -167,22 +167,22 @@ const AuthPage = () => {
                       <div className="w-8 h-8 bg-primary/20 rounded-lg flex items-center justify-center flex-shrink-0">
                         <p.icon className="w-4 h-4 text-primary" />
                       </div>
-                      <span className="text-sm text-white/80">{p.text}</span>
+                      <span className="text-sm text-white/70">{p.text}</span>
                     </motion.div>
                   ))}
                 </div>
               </motion.div>
             </div>
-            <p className="text-xs text-white/30 mt-8">© 2026 Case Trends Kenya. All rights reserved.</p>
+            <p className="text-xs text-white/20 mt-8">© 2026 Case Trends Kenya. All rights reserved.</p>
           </div>
 
-          {/* Right panel — form */}
-          <div className="bg-white p-8 sm:p-10 flex flex-col justify-center">
+          {/* Right panel — form with dark theme */}
+          <div className="bg-[hsl(240,10%,6%)] p-8 sm:p-10 flex flex-col justify-center">
             <Link to="/" className="flex justify-center mb-6 lg:hidden">
               <img src="/logo.webp" alt="Case Trends Kenya" className="h-10 w-auto" />
             </Link>
 
-            <div className="flex border-b border-border mb-8">
+            <div className="flex border-b border-white/10 mb-8">
               {["Sign In", "Create Account"].map((label, i) => {
                 const active = i === 0 ? isLogin : !isLogin;
                 return (
@@ -190,7 +190,7 @@ const AuthPage = () => {
                     key={label}
                     onClick={() => switchMode(i === 0)}
                     className={`flex-1 pb-3 text-sm font-semibold transition-colors relative ${
-                      active ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+                      active ? "text-white" : "text-white/40 hover:text-white/60"
                     }`}
                   >
                     {label}
@@ -216,17 +216,17 @@ const AuthPage = () => {
                 className="space-y-4"
               >
                 <div>
-                  <h1 className="text-xl font-bold mb-1">
+                  <h1 className="text-xl font-bold mb-1 text-white">
                     {isLogin ? "Sign in to your account" : "Create your account"}
                   </h1>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-white/40">
                     {isLogin ? "Enter your credentials below." : "Fill in your details to get started."}
                   </p>
                 </div>
 
                 {!isLogin && (
                   <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
                     <Input
                       id="full-name"
                       name="fullName"
@@ -234,14 +234,14 @@ const AuthPage = () => {
                       value={fullName}
                       onChange={e => setFullName(e.target.value)}
                       required
-                      className="pl-10"
+                      className="pl-10 bg-black border-white/10 text-white placeholder:text-white/30 focus:border-primary/50"
                       disabled={loading}
                     />
                   </div>
                 )}
 
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
                   <Input
                     id="email"
                     name="email"
@@ -250,13 +250,13 @@ const AuthPage = () => {
                     value={email}
                     onChange={e => setEmail(e.target.value)}
                     required
-                    className="pl-10"
+                    className="pl-10 bg-black border-white/10 text-white placeholder:text-white/30 focus:border-primary/50"
                     disabled={loading}
                   />
                 </div>
 
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
                   <Input
                     id="password"
                     name="password"
@@ -266,13 +266,13 @@ const AuthPage = () => {
                     onChange={e => setPassword(e.target.value)}
                     required
                     minLength={6}
-                    className="pl-10 pr-10"
+                    className="pl-10 pr-10 bg-black border-white/10 text-white placeholder:text-white/30 focus:border-primary/50"
                     disabled={loading}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(v => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/60 transition-colors"
                     disabled={loading}
                   >
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -281,7 +281,7 @@ const AuthPage = () => {
 
                 {isLogin && (
                   <div className="text-right">
-                    <span className="text-xs text-muted-foreground">
+                    <span className="text-xs text-white/40">
                       Forgot password?{' '}
                       <button
                         type="button"
@@ -302,7 +302,7 @@ const AuthPage = () => {
 
                 <Button
                   type="submit"
-                  className="w-full gap-2 h-11 text-sm font-semibold"
+                  className="w-full gap-2 h-11 text-sm font-semibold bg-primary text-white hover:bg-primary/80"
                   disabled={loading || (shouldUseCaptcha && !captchaToken)}
                 >
                   {loading ? (
@@ -318,7 +318,7 @@ const AuthPage = () => {
                   )}
                 </Button>
 
-                <p className="text-center text-xs text-muted-foreground pt-2">
+                <p className="text-center text-xs text-white/40 pt-2">
                   {isLogin ? "Don't have an account?" : "Already have an account?"}{" "}
                   <button
                     type="button"
@@ -331,7 +331,7 @@ const AuthPage = () => {
                 </p>
 
                 {!isLogin && (
-                  <p className="text-center text-[11px] text-muted-foreground">
+                  <p className="text-center text-[11px] text-white/30">
                     By creating an account you agree to our{" "}
                     <span className="text-primary cursor-pointer hover:underline">Terms of Service</span>
                     {" & "}

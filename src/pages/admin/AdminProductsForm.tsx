@@ -459,31 +459,9 @@ export default function ProductForm() {
 
   const removeExistingImage = async (imageId: string, imageUrl: string) => {
     if (!confirm("Delete this image?")) return;
-
-    try {
-      setExistingImages(prev => prev.filter(img => img.id !== imageId));
-      
-      const urlParts = imageUrl.split("/product-images/");
-      if (urlParts.length === 2) {
-        await supabase.storage.from("product-images").remove([urlParts[1]]);
-      }
-
-      const deleteResult = await supabaseClient
-        .from("product_images")
-        .delete()
-        .eq("id", imageId);
-        
-      if (deleteResult.error) throw deleteResult.error;
-      
-      toast.success("Image deleted", {
-        icon: <CheckCircle2 className="w-4 h-4" />
-      });
-      setIsDirty(true);
-    } catch (error) {
-      console.error("Error deleting image:", error);
-      toast.error("Failed to delete image");
-      loadProduct();
-    }
+    await deleteImage(imageId, imageUrl, "product_images", "product-images");
+    setExistingImages(prev => prev.filter(img => img.id !== imageId));
+    setIsDirty(true);
   };
 
   const setPrimaryImage = async (imageId: string) => {

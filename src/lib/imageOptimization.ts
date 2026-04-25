@@ -17,6 +17,7 @@ export interface CompressedImage {
   size: number;
   mimeType: string;
   compressionRatio: number;
+  originalSize?: number; // Added optional property
 }
 
 /**
@@ -75,6 +76,7 @@ export async function compressImage(
               size: blob.size,
               mimeType,
               compressionRatio: parseFloat(compressionRatio),
+              originalSize: file.size, // Added original size
             });
           },
           mimeType,

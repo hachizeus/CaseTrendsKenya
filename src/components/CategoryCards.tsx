@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { MAIN_CATEGORIES } from "@/lib/categoryData";
+import { motion } from "framer-motion";
 
 // Category Image Mapping using local images from public folder
 const categoryImages: Record<string, string> = {
@@ -48,17 +49,18 @@ const CategoryCards = () => {
   const scrollItems = [...MAIN_CATEGORIES, ...MAIN_CATEGORIES];
 
   return (
-    <section className="py-8 sm:py-10 border-b border-border bg-white overflow-hidden">
+    <section className="py-8 sm:py-10 border-b border-white/5 bg-gradient-to-b from-[hsl(240,10%,3.9%)] to-[hsl(240,10%,4.5%)] overflow-hidden">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between mb-8">
-          <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
+          <h2 className="text-xl sm:text-2xl font-bold tracking-tight bg-gradient-to-r from-white to-primary bg-clip-text text-transparent">
             Shop by Category
           </h2>
           <Link 
             to="/products" 
-            className="text-sm font-semibold text-primary hover:text-primary/80 transition-colors"
+            className="text-sm font-semibold text-primary hover:text-primary/80 transition-all duration-300 hover:gap-2 flex items-center gap-1 group"
           >
-            View All Categories →
+            View All Categories 
+            <span className="group-hover:translate-x-1 transition-transform duration-300">→</span>
           </Link>
         </div>
       </div>
@@ -70,18 +72,22 @@ const CategoryCards = () => {
             <Link
               key={`${cat.slug}-${i}`}
               to={`/products?category=${encodeURIComponent(cat.slug)}`}
-              className="flex flex-col items-center gap-3 flex-shrink-0 w-28 sm:w-36"
+              className="flex flex-col items-center gap-3 flex-shrink-0 w-28 sm:w-36 group/card"
             >
-              <div className="w-24 h-24 sm:w-32 sm:h-32 bg-slate-50 overflow-hidden rounded-full border-2 border-transparent group-hover:border-slate-100 hover:!border-primary transition-all duration-300 shadow-sm">
+              <motion.div 
+                className="w-24 h-24 sm:w-32 sm:h-32 bg-gradient-to-br from-[hsl(240,10%,8%)] to-[hsl(240,10%,6%)] overflow-hidden rounded-2xl border border-white/10 group-hover/card:border-primary/50 transition-all duration-300 shadow-lg shadow-black/20 group-hover/card:shadow-primary/10 group-hover/card:-translate-y-1"
+                whileHover={{ scale: 1.05 }}
+                transition={{ duration: 0.3 }}
+              >
                 <img
                   src={getImage(cat.name)}
                   alt={cat.name}
-                  className="w-full h-full object-cover hover:scale-110 transition-transform duration-500"
+                  className="w-full h-full object-cover group-hover/card:scale-110 transition-transform duration-500"
                   loading="lazy"
                 />
-              </div>
+              </motion.div>
               <div className="text-center px-2">
-                <p className="text-[11px] sm:text-xs font-bold text-slate-700 uppercase tracking-wider leading-tight">
+                <p className="text-[11px] sm:text-xs font-semibold text-white/80 uppercase tracking-wider leading-tight group-hover/card:text-primary transition-colors">
                   {cat.name}
                 </p>
               </div>
@@ -89,9 +95,9 @@ const CategoryCards = () => {
           ))}
         </div>
 
-        {/* Gradient Fades for a professional edge-to-edge look */}
-        <div className="pointer-events-none absolute inset-y-0 left-0 w-20 bg-gradient-to-r from-white to-transparent z-10" />
-        <div className="pointer-events-none absolute inset-y-0 right-0 w-20 bg-gradient-to-l from-white to-transparent z-10" />
+        {/* Gradient Fades for a professional edge-to-edge look - Updated for dark theme */}
+        <div className="pointer-events-none absolute inset-y-0 left-0 w-20 bg-gradient-to-r from-[hsl(240,10%,3.9%)] to-transparent z-10" />
+        <div className="pointer-events-none absolute inset-y-0 right-0 w-20 bg-gradient-to-l from-[hsl(240,10%,3.9%)] to-transparent z-10" />
       </div>
     </section>
   );

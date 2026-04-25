@@ -15,6 +15,33 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 
+// HARDCODED BRANDS - Not fetching from database
+const HARDCODED_BRANDS = [
+  "All Laptop Brands",
+  "Apple",
+  "Google Pixel",
+  "HAVIT",
+  "Huawei",
+  "Infinix",
+  "iPhone",
+  "Itel",
+  "Motorola",
+  "Nokia",
+  "OnePlus",
+  "Oppo",
+  "Oraimo",
+  "Realme",
+  "Redmi",
+  "Samsung",
+  "Samsung Z fold",
+  "Soundcore",
+  "Tecno",
+  "Universal",
+  "Vivo",
+  "Xiaomi",
+  "Z fold 3/4/5/6/7",
+];
+
 const Badge = ({ children, variant, className }: any) => (
   <span className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-secondary text-secondary-foreground ${className || ''}`}>
     {children}
@@ -364,7 +391,7 @@ const ProductsPage = () => {
       result = result.filter(p => matchesCategorySmart(p, selectedCategory));
     }
     
-    // Brand filter
+    // Brand filter - using hardcoded brands
     if (selectedBrand) {
       result = result.filter(p => 
         p.brand?.toLowerCase() === selectedBrand.toLowerCase()
@@ -445,11 +472,8 @@ const ProductsPage = () => {
   }, [searchQuery, selectedCategory, selectedBrand, selectedModel, 
       selectedCompatibility, selectedColor, selectedPrice, sortBy]);
 
-  // Get brands from filtered products (not all products)
-  const brands = useMemo(() => {
-    const set = new Set<string>(filteredProducts.map((p: any) => p.brand).filter(Boolean));
-    return Array.from(set).sort();
-  }, [filteredProducts]);
+  // Use HARDCODED brands instead of fetching from database
+  const brands = HARDCODED_BRANDS;
 
   const availableModels = useMemo(() => {
     const filteredByBrand = selectedBrand 

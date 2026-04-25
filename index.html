@@ -16,16 +16,12 @@
     
     <!-- CSP is now handled ONLY by server headers - removed meta tag to allow YouTube embeds -->
     
-    <link rel="icon" type="image/png" href="/logo.webp" />
-    <link rel="apple-touch-icon" href="/logo.webp" />
+    <link rel="icon" type="image/png" href="/logo.webp" sizes="192x192" />
+    <link rel="apple-touch-icon" href="/logo.webp" sizes="192x192" />
     
     <!-- Performance & SEO Optimizations -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link rel="preconnect" href="https://yrhczwzqvzqalyjpxdmi.supabase.co" />
-    <link rel="preconnect" href="https://challenges.cloudflare.com" />
-    <link rel="preconnect" href="https://www.googletagmanager.com" />
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" />
+    <link rel="preload" as="image" href="/logo.webp" />
+    <link rel="preload" as="script" href="/src/main.tsx" />
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
     
     <!-- Primary Meta Tags -->
@@ -34,7 +30,7 @@
     <meta name="description" content="Your trusted electronics store in Nairobi. Genuine products, warranty, and free delivery. Shop phones, tablets, and accessories with confidence." />
     <meta name="author" content="Case Trends Kenya" />
     <meta name="keywords" content="electronics, phones, tablets, accessories, Nairobi, Kenya, Case Trends" />
-    <meta name="robots" content="index, follow" />
+    <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
     <meta name="language" content="English" />
 
     <!-- Open Graph / Facebook -->

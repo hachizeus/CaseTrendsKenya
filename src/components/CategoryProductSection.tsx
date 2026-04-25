@@ -4,187 +4,34 @@ import { supabase } from "@/integrations/supabase/client";
 import { ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
 import ProductCard from "./ProductCard";
-import { getDisplayCategoryName, productMatchesCategoryFilter } from "@/lib/utils";
+import { getDisplayCategoryName } from "@/lib/utils";
 
 interface CategoryProductSectionProps {
   category: string;
   bgClass?: string;
+  title?: string;
 }
 
-// Smart category matching function with proper exclusion logic
-const matchesCategorySmart = (product: any, categorySlug: string): boolean => {
-  const productName = product.name?.toLowerCase() || "";
-  const productDesc = product.description?.toLowerCase() || "";
-  const productCategory = product.category?.toLowerCase() || "";
-  const productBrand = product.brand?.toLowerCase() || "";
+// Direct category mapping - based on actual database values
+const getCategoryFilter = (categorySlug: string): string[] => {
+  const categoryMap: Record<string, string[]> = {
+    "protectors": ["protectors", "screen protectors", "lens protectors"],
+    "phone cases": ["phone cases", "cases", "magsafe cases", "covers"],
+    "accessories": ["accessories", "phone accessories", "holders", "stands"],
+    "charging-devices": ["charging devices", "chargers", "cables", "charging"],
+    "audio": ["audio", "headphones", "earbuds", "speakers"],
+    "smart watch": ["smart watch", "watch", "wearables", "bands"],
+    "power-banks": ["power banks", "powerbanks", "portable chargers"],
+    "camera-lens-protectors": ["camera lens protectors", "lens protectors"],
+    "phone-holders": ["phone holders", "holders", "stands", "mounts"],
+    "gaming": ["gaming", "game accessories"],
+    "stickers": ["stickers", "decals", "skins"],
+  };
   
-  // First, identify if this is an audio product to exclude from non-audio categories
-  const isAudioProduct = 
-    productName.includes("headphone") ||
-    productName.includes("earbud") ||
-    productName.includes("speaker") ||
-    productName.includes("airpods") ||
-    productDesc.includes("audio") ||
-    productCategory === "audio" ||
-    productBrand === "soundcore" ||
-    (productBrand === "anker" && (
-      productName.includes("soundcore") ||
-      productName.includes("earbud") ||
-      productName.includes("speaker")
-    ));
-  
-  // Identify if this is a smart watch product
-  const isSmartWatch = 
-    productName.includes("watch") ||
-    productName.includes("band") ||
-    productDesc.includes("smart watch") ||
-    productCategory === "smart-watch";
-  
-  // Identify if this is a power bank
-  const isPowerBank = 
-    productName.includes("power bank") ||
-    productName.includes("powerbank") ||
-    productName.includes("portable charger") ||
-    productCategory === "power-banks";
-  
-  // First try exact category match
-  if (productMatchesCategoryFilter(product, categorySlug)) {
-    return true;
-  }
-  
-  // Smart matching based on category type
-  switch (categorySlug) {
-    case "phone-cases":
-      // EXCLUDE audio, smart watch, and power bank products
-      if (isAudioProduct || isSmartWatch || isPowerBank) return false;
-      
-      return productName.includes("case") || 
-             productName.includes("cover") ||
-             productDesc.includes("case") ||
-             productDesc.includes("cover") ||
-             productCategory === "phone-cases" ||
-             productCategory === "phone cases";
-             
-    case "protectors":
-      // EXCLUDE audio, smart watch, and power bank products
-      if (isAudioProduct || isSmartWatch || isPowerBank) return false;
-      
-      return productName.includes("protector") || 
-             productName.includes("screen protector") ||
-             productName.includes("lens protector") ||
-             productDesc.includes("protector") ||
-             productCategory === "protectors";
-             
-    case "android-phones-protectors":
-      // EXCLUDE audio, smart watch, and power bank products
-      if (isAudioProduct || isSmartWatch || isPowerBank) return false;
-      
-      return (productBrand !== "apple" || productName.includes("android")) &&
-             (productName.includes("protector") || productDesc.includes("protector"));
-             
-    case "iphone-model-protectors":
-      // EXCLUDE audio, smart watch, and power bank products
-      if (isAudioProduct || isSmartWatch || isPowerBank) return false;
-      
-      return (productBrand === "apple" || productName.includes("iphone")) &&
-             (productName.includes("protector") || productDesc.includes("protector"));
-             
-    case "audio":
-      return productName.includes("headphone") ||
-             productName.includes("earbud") ||
-             productName.includes("speaker") ||
-             productName.includes("airpods") ||
-             productDesc.includes("audio") ||
-             productCategory === "audio" ||
-             productBrand === "soundcore" ||
-             (productBrand === "anker" && productName.includes("soundcore"));
-             
-    case "smart-watch":
-      // EXCLUDE audio products
-      if (isAudioProduct) return false;
-      
-      return productName.includes("watch") ||
-             productName.includes("band") ||
-             productDesc.includes("smart watch") ||
-             productCategory === "smart-watch";
-             
-    case "charging-devices":
-      // EXCLUDE audio products
-      if (isAudioProduct) return false;
-      
-      return productName.includes("charger") ||
-             productName.includes("charging") ||
-             productName.includes("cable") ||
-             productDesc.includes("charging") ||
-             productCategory === "charging-devices";
-             
-    case "power-banks":
-      // EXCLUDE audio products
-      if (isAudioProduct) return false;
-      
-      return productName.includes("power bank") ||
-             productName.includes("powerbank") ||
-             productName.includes("portable charger") ||
-             productDesc.includes("power bank") ||
-             productCategory === "power-banks";
-             
-    case "camera-lens-protectors":
-      // EXCLUDE audio, smart watch, and power bank products
-      if (isAudioProduct || isSmartWatch || isPowerBank) return false;
-      
-      return productName.includes("camera lens") ||
-             productName.includes("lens protector") ||
-             productDesc.includes("camera lens") ||
-             productCategory === "camera-lens-protectors";
-             
-    case "accessories":
-      // EXCLUDE audio products from accessories section
-      if (isAudioProduct) return false;
-      
-      return productName.includes("accessory") ||
-             productName.includes("holder") ||
-             productName.includes("stand") ||
-             productCategory === "accessories";
-             
-    case "phone-holders":
-      // EXCLUDE audio products
-      if (isAudioProduct) return false;
-      
-      return productName.includes("holder") ||
-             productName.includes("stand") ||
-             productName.includes("mount") ||
-             productCategory === "phone-holders";
-             
-    case "gaming":
-      return productName.includes("game") ||
-             productName.includes("gaming") ||
-             productDesc.includes("gaming") ||
-             productCategory === "gaming";
-             
-    case "magsafe-cases":
-      // EXCLUDE audio, smart watch, and power bank products
-      if (isAudioProduct || isSmartWatch || isPowerBank) return false;
-      
-      return productName.includes("magsafe") ||
-             productName.includes("mag safe") ||
-             productDesc.includes("magsafe") ||
-             productCategory === "magsafe-cases";
-             
-    case "stickers":
-      // EXCLUDE audio products
-      if (isAudioProduct) return false;
-      
-      return productName.includes("sticker") ||
-             productName.includes("decal") ||
-             productDesc.includes("sticker") ||
-             productCategory === "stickers";
-             
-    default:
-      return false;
-  }
+  return categoryMap[categorySlug] || [categorySlug];
 };
 
-const CategoryProductSection = ({ category, bgClass = "bg-white" }: CategoryProductSectionProps) => {
+const CategoryProductSection = ({ category, bgClass = "bg-gradient-to-b from-[hsl(240,10%,3.9%)] to-[hsl(240,10%,4.5%)]", title }: CategoryProductSectionProps) => {
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -192,12 +39,22 @@ const CategoryProductSection = ({ category, bgClass = "bg-white" }: CategoryProd
     const load = async () => {
       setLoading(true);
       try {
-        // Fetch more products to ensure we have enough after filtering
-        const { data, error } = await supabase
+        const categoryFilters = getCategoryFilter(category);
+        
+        // Build the query - removed is_active filter since column doesn't exist
+        let query = supabase
           .from("products")
           .select("*, product_images(*), reviews(rating)")
-          .order("created_at", { ascending: false })
-          .limit(100);
+          .order("created_at", { ascending: false });
+        
+        // Apply category filter - use OR condition for multiple category matches
+        if (categoryFilters.length === 1) {
+          query = query.eq("category", categoryFilters[0]);
+        } else {
+          query = query.in("category", categoryFilters);
+        }
+        
+        const { data, error } = await query.limit(50);
 
         if (error) {
           console.error("Error fetching products:", error);
@@ -206,6 +63,7 @@ const CategoryProductSection = ({ category, bgClass = "bg-white" }: CategoryProd
           return;
         }
 
+        // Process products with ratings
         const results = (data || [])
           .map((product: any) => {
             const reviews = Array.isArray(product.reviews) ? product.reviews : [];
@@ -219,20 +77,9 @@ const CategoryProductSection = ({ category, bgClass = "bg-white" }: CategoryProd
               review_count: reviewCount,
             };
           })
-          .filter(product => {
-            // Handle special case "All Accessories"
-            if (category === "All Accessories") return true;
-            
-            // Filter by category using smart matching
-            if (!product.category && !product.name) {
-              console.warn(`Product ${product.id} has no category or name field set`);
-              return false;
-            }
-            
-            return matchesCategorySmart(product, category);
-          })
-          .slice(0, 6); // Changed from 4 to 6
+          .slice(0, 6);
 
+        console.log(`Category ${category} - Found ${results.length} products:`, results.map(p => ({ name: p.name, category: p.category })));
         setProducts(results);
       } catch (err) {
         console.error("Failed to load products for category", category, err);
@@ -245,39 +92,42 @@ const CategoryProductSection = ({ category, bgClass = "bg-white" }: CategoryProd
     load();
   }, [category]);
 
-  const displayCategory = getDisplayCategoryName(category);
+  const displayCategory = title || getDisplayCategoryName(category);
+  const displaySubtitle = `Top picks in ${displayCategory}`;
 
   return (
-    <section className={`py-8 sm:py-10 border-t border-border ${bgClass}`}>
+    <section className={`py-8 sm:py-10 border-t border-white/5 ${bgClass}`}>
       <div className="container">
         <div className="flex items-center justify-between mb-5">
           <div>
-            <h2 className="text-base sm:text-lg lg:text-xl font-bold tracking-tight">{displayCategory}</h2>
-            <p className="text-xs text-muted-foreground mt-0.5">Top picks in {displayCategory}</p>
+            <h2 className="text-base sm:text-lg lg:text-xl font-bold bg-gradient-to-r from-white to-primary bg-clip-text text-transparent">
+              {displayCategory}
+            </h2>
+            <p className="text-xs text-white/50 mt-0.5">{displaySubtitle}</p>
           </div>
           <Link
             to={`/products?category=${encodeURIComponent(category)}`}
-            className="flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-primary border border-primary px-3 sm:px-4 py-1.5 sm:py-2 hover:bg-primary hover:text-white transition-colors"
+            className="flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-primary border border-primary/50 px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg hover:bg-primary hover:text-white transition-all duration-300"
           >
-            View All <ArrowRight className="w-3.5 h-3.5" />
+            View All <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
           </Link>
         </div>
 
         {loading ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
             {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="w-full bg-card border border-border animate-pulse">
-                <div className="aspect-square bg-secondary" />
+              <div key={i} className="w-full bg-[hsl(240,10%,6%)] border border-white/5 rounded-xl animate-pulse">
+                <div className="aspect-square bg-gradient-to-br from-[hsl(240,10%,8%)] to-[hsl(240,10%,4%)] rounded-t-xl" />
                 <div className="p-3 space-y-2">
-                  <div className="h-3 bg-secondary rounded w-1/2" />
-                  <div className="h-4 bg-secondary rounded" />
-                  <div className="h-4 bg-secondary rounded w-3/4" />
+                  <div className="h-3 bg-white/5 rounded w-1/2" />
+                  <div className="h-4 bg-white/5 rounded" />
+                  <div className="h-4 bg-white/5 rounded w-3/4" />
                 </div>
               </div>
             ))}
           </div>
         ) : products.length === 0 ? (
-          <div className="py-8 text-center text-sm text-muted-foreground">
+          <div className="py-8 text-center text-sm text-white/40">
             No products available in this category yet.
           </div>
         ) : (

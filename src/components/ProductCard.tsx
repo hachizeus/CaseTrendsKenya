@@ -1,7 +1,6 @@
 import { ShoppingCart, Heart, Star } from "lucide-react";
-import { motion } from "framer-motion";
-import React, { useState, useEffect, useCallback } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { memo, useState, useEffect, useCallback, useRef } from "react";
+import { Link } from "react-router-dom";
 import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -23,50 +22,85 @@ interface ProductCardProps {
   reviewCount?: number;
 }
 
-const ProductCard = ({ id, name, images, price, originalPrice, category, brand, model, stockStatus, index, rating, reviewCount }: ProductCardProps) => {
+const ProductCard = memo(({ 
+  id, name, images, price, originalPrice, brand, stockStatus, rating, reviewCount 
+}: ProductCardProps) => {
   const discount = originalPrice ? Math.round(((originalPrice - price) / originalPrice) * 100) : 0;
   const sorted = [...images].sort((a, b) => a.display_order - b.display_order);
   const primaryImg = sorted.find(i => i.is_primary)?.image_url || sorted[0]?.image_url || "/placeholder.svg";
   const secondaryImg = sorted.length > 1 ? sorted[1]?.image_url : primaryImg;
-  // Model display removed - no longer showing phone models on product cards
+  
+  // Preload secondary image on mount
+  const [secondaryPreloaded, setSecondaryPreloaded] = useState(false);
+  
+  useEffect(() => {
+    if (secondaryImg !== primaryImg) {
+      const img = new Image();
+      img.src = secondaryImg;
+      img.onload = () => setSecondaryPreloaded(true);
+    } else {
+      setSecondaryPreloaded(true);
+    }
+  }, [secondaryImg, primaryImg]);
   
   const avgRating = rating ? Math.max(0, Math.min(5, rating)) : 0;
   const [hovered, setHovered] = useState(false);
   const [isFav, setIsFav] = useState(false);
   const [addingToCart, setAddingToCart] = useState(false);
+  const [currentImage, setCurrentImage] = useState(primaryImg);
   const { addToCart } = useCart();
   const { user } = useAuth();
-  const navigate = useNavigate();
+  
+  // Smooth image transition with timeout
+  const hoverTimerRef = useRef<NodeJS.Timeout>();
 
   useEffect(() => {
     if (user?.id) {
-      // Logged-in user: check database
       const checkFav = async () => {
-        const { data } = await (supabase.from("favorites") as any).select("id").eq("user_id", user.id).eq("product_id", id).maybeSingle();
+        const { data } = await (supabase.from("favorites") as any)
+          .select("id")
+          .eq("user_id", user.id)
+          .eq("product_id", id)
+          .maybeSingle();
         setIsFav(!!data);
       };
       checkFav();
     } else {
-      // Guest user: check localStorage
       const guestFavs = JSON.parse(localStorage.getItem("guestFavorites") || "[]");
       setIsFav(guestFavs.includes(id));
     }
   }, [user?.id, id]);
 
-  const toggleFav = async (e: React.MouseEvent) => {
-    e.preventDefault(); e.stopPropagation();
+  // Handle hover with smooth transition
+  const handleMouseEnter = useCallback(() => {
+    if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+    setHovered(true);
+    if (secondaryPreloaded && secondaryImg !== primaryImg) {
+      setCurrentImage(secondaryImg);
+    }
+  }, [secondaryPreloaded, secondaryImg, primaryImg]);
+
+  const handleMouseLeave = useCallback(() => {
+    hoverTimerRef.current = setTimeout(() => {
+      setHovered(false);
+      setCurrentImage(primaryImg);
+    }, 50);
+  }, [primaryImg]);
+
+  const toggleFav = useCallback(async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
     if (user?.id) {
-      // Logged-in user: use database
       if (isFav) {
         await (supabase.from("favorites") as any).delete().eq("user_id", user.id).eq("product_id", id);
         setIsFav(false);
       } else {
         await (supabase.from("favorites") as any).insert({ user_id: user.id, product_id: id });
         setIsFav(true);
-        toast.success("Added to wishlist!");
+        toast.success("Added to wishlist! ❤️");
       }
     } else {
-      // Guest user: use localStorage
       const guestFavs = JSON.parse(localStorage.getItem("guestFavorites") || "[]");
       if (isFav) {
         const updated = guestFavs.filter((fav: string) => fav !== id);
@@ -76,152 +110,117 @@ const ProductCard = ({ id, name, images, price, originalPrice, category, brand, 
         guestFavs.push(id);
         localStorage.setItem("guestFavorites", JSON.stringify(guestFavs));
         setIsFav(true);
-        toast.success("Added to wishlist!");
+        toast.success("Added to wishlist! ❤️");
       }
     }
-  };
+  }, [user?.id, id, isFav]);
 
-  const handleAddToCart = async (e: React.MouseEvent) => {
-    e.preventDefault(); e.stopPropagation();
+  const handleAddToCart = useCallback(async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     setAddingToCart(true);
-    await addToCart({ 
-      id, 
-      name, 
-      price, 
-      image: primaryImg,
-      brand,
-      category,
-      stock_status: stockStatus,
-      original_price: originalPrice || undefined,
-    });
-    setTimeout(() => setAddingToCart(false), 600);
-  };
+    await addToCart({ id, name, price, image: primaryImg, brand, stock_status: stockStatus });
+    setTimeout(() => setAddingToCart(false), 500);
+  }, [id, name, price, primaryImg, brand, stockStatus, addToCart]);
+
+  // Cleanup timer
+  useEffect(() => {
+    return () => {
+      if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+    };
+  }, []);
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.35, delay: index * 0.04 }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+    <div
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
       className="group h-full w-full min-w-0"
     >
-      <Link to={`/product/${id}`} className="h-full min-h-full w-full bg-white hover:border-primary transition-colors duration-200 overflow-hidden flex flex-col">
+      <Link to={`/product/${id}`} className="block h-full bg-[hsl(240,10%,6%)] hover:border-primary/50 border border-white/5 rounded-xl overflow-hidden transition-all duration-200 hover:shadow-xl hover:shadow-primary/5">
         {/* Image */}
-        <div className="relative aspect-[4/5] bg-white overflow-hidden flex-shrink-0">
-          <motion.div
-            animate={{ scale: hovered ? 1.05 : 1 }}
-            transition={{ duration: 0.4, ease: "easeInOut" }}
-            className="w-full h-full"
-          >
-            <LazyImage
-              src={hovered && secondaryImg ? secondaryImg : primaryImg}
-              alt={name}
-              width={500}
-              height={625}
-              sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
-              resize="cover"
-              className="block w-full h-full object-cover object-center"
-            />
-          </motion.div>
-
+        <div className="relative aspect-[4/5] bg-gradient-to-br from-[hsl(240,10%,4%)] to-[hsl(240,10%,8%)] overflow-hidden">
+          {/* Main image with crossfade transition */}
+          <img
+            src={currentImage}
+            alt={name}
+            className={`w-full h-full object-cover transition-opacity duration-300 ease-in-out ${
+              hovered && secondaryPreloaded ? 'opacity-100' : 'opacity-100'
+            }`}
+            loading="lazy"
+            style={{ 
+ transition: 'opacity 0.3s ease-in-out',
+              opacity: 1
+            }}
+          />
+          
           {/* Badges */}
-          <div className="absolute top-2 left-2 flex flex-col gap-1">
+          <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-10">
             {discount > 0 && (
-              <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5">
-                -{discount}%
+              <span className="bg-primary text-white text-[11px] font-bold px-2 py-1 rounded-md shadow-lg">
+                -{discount}% OFF
               </span>
             )}
             {stockStatus === "out_of_stock" && (
-              <span className="bg-foreground text-background text-[10px] font-bold px-1.5 py-0.5">
+              <span className="bg-white/10 backdrop-blur-sm text-white text-[11px] font-bold px-2 py-1 rounded-md">
                 SOLD OUT
               </span>
             )}
           </div>
 
-          {/* Wishlist button — always visible on mobile, hover on desktop */}
+          {/* Wishlist button */}
           <button
             onClick={toggleFav}
-            aria-label={isFav ? "Remove from wishlist" : "Add to wishlist"}
-            className={`absolute top-2 right-2 transition-all duration-200 sm:opacity-0 sm:group-hover:opacity-100 ${isFav ? "text-red-500" : "text-muted-foreground"}`}
+            className={`absolute top-3 right-3 transition-all rounded-full p-1.5 z-10 ${
+              isFav ? "bg-primary/20 text-primary" : "bg-black/50 text-white/70 hover:bg-primary/20 hover:text-primary"
+            }`}
           >
-            <Heart className={`w-3.5 h-3.5 ${isFav ? "fill-red-500" : ""}`} />
+            <Heart className={`w-4 h-4 ${isFav ? "fill-current" : ""}`} />
           </button>
 
-          {/* Add to cart overlay — desktop hover */}
+          {/* Quick add button - desktop only */}
           {stockStatus !== "out_of_stock" && (
-            <motion.div
-              initial={{ y: "100%" }}
-              animate={{ y: hovered ? 0 : "100%" }}
-              transition={{ duration: 0.22, ease: "easeOut" }}
-              className="absolute bottom-0 left-0 right-0 hidden sm:block"
-            >
+            <div className={`absolute bottom-0 left-0 right-0 transition-transform duration-200 z-10 ${hovered ? 'translate-y-0' : 'translate-y-full'}`}>
               <button
                 onClick={handleAddToCart}
-                aria-label={`Add ${name} to cart`}
                 className={`w-full py-2.5 text-xs font-semibold flex items-center justify-center gap-2 transition-colors ${
-                  addingToCart ? "bg-green-500 text-white" : "bg-primary text-white hover:bg-primary/90"
+                  addingToCart ? "bg-green-500 text-white" : "bg-primary text-white hover:bg-primary/80"
                 }`}
               >
                 <ShoppingCart className="w-3.5 h-3.5" />
-                {addingToCart ? "Added!" : "Add to Cart"}
+                {addingToCart ? "Added!" : "Quick Add"}
               </button>
-            </motion.div>
+            </div>
           )}
         </div>
 
-        {/* Info - flex column to push rating & price to bottom */}
-        <div className="p-3 sm:p-4 border-t border-border flex flex-col flex-grow">
-          {/* Top section: brand only - model removed */}
-          <div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wide">{brand}</p>
-            </div>
-            <h3 className="text-[11px] sm:text-sm lg:text-base font-semibold line-clamp-2 mb-2 group-hover:text-primary transition-colors leading-snug">
-              {name}
-            </h3>
+        {/* Info */}
+        <div className="p-3">
+          <p className="text-[11px] text-primary/70 uppercase tracking-wider">{brand}</p>
+          <h3 className="text-sm font-semibold line-clamp-2 my-1 group-hover:text-primary transition-colors text-white/90">
+            {name}
+          </h3>
+          
+          {/* Rating */}
+          <div className="flex items-center gap-1 my-1.5">
+            {[1, 2, 3, 4, 5].map(s => (
+              <Star key={s} className={`w-3 h-3 ${s <= avgRating ? "text-yellow-400 fill-yellow-400" : "text-white/20"}`} />
+            ))}
           </div>
 
-          {/* Spacer to push rating and price to bottom */}
-          <div className="flex-grow" />
-
-          {/* Rating section - always at same level */}
-          <div className="space-y-2">
-            <div className="flex items-center gap-0.5">
-              {[1, 2, 3, 4, 5].map(s => (
-                <Star
-                  key={s}
-                  className={`w-3 h-3 ${s <= avgRating ? "text-yellow-400 fill-yellow-400" : "text-muted-foreground"}`}
-                />
-              ))}
-            </div>
-            <p className="text-[10px] sm:text-xs text-muted-foreground">
-              {reviewCount !== undefined && reviewCount > 0 
-                ? `${reviewCount} review${reviewCount === 1 ? "" : "s"}`
-                : "No reviews"}
-            </p>
-          </div>
-
-          {/* Price and mobile cart */}
-          <div className="flex items-center justify-between gap-2 mt-2">
+          {/* Price */}
+          <div className="flex items-center justify-between mt-2">
             <div>
-              <span className="text-sm sm:text-base font-bold text-primary">
-                KSh {price.toLocaleString()}
-              </span>
+              <span className="text-base font-bold text-primary">KSh {price.toLocaleString()}</span>
               {originalPrice && (
-                <span className="text-[10px] sm:text-xs text-muted-foreground line-through ml-1.5">
-                  KSh {originalPrice.toLocaleString()}
-                </span>
+                <span className="text-[10px] text-white/40 line-through ml-1.5">KSh {originalPrice.toLocaleString()}</span>
               )}
             </div>
+            
             {/* Mobile add to cart */}
             {stockStatus !== "out_of_stock" && (
               <button
                 onClick={handleAddToCart}
-                aria-label={`Add ${name} to cart`}
-                className={`sm:hidden w-7 h-7 flex items-center justify-center border transition-colors ${
-                  addingToCart ? "bg-green-500 border-green-500 text-white" : "border-primary text-primary hover:bg-primary hover:text-white"
-                }`}
+                className="sm:hidden w-8 h-8 flex items-center justify-center rounded-lg bg-primary/10 border border-primary/30 text-primary"
               >
                 <ShoppingCart className="w-3.5 h-3.5" />
               </button>
@@ -229,17 +228,10 @@ const ProductCard = ({ id, name, images, price, originalPrice, category, brand, 
           </div>
         </div>
       </Link>
-    </motion.div>
-  );
-};
-
-export default React.memo(ProductCard, (prevProps, nextProps) => {
-  return (
-    prevProps.id === nextProps.id &&
-    prevProps.price === nextProps.price &&
-    prevProps.name === nextProps.name &&
-    prevProps.images === nextProps.images &&
-    prevProps.rating === nextProps.rating &&
-    prevProps.reviewCount === nextProps.reviewCount
+    </div>
   );
 });
+
+ProductCard.displayName = "ProductCard";
+
+export default ProductCard;

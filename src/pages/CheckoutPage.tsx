@@ -296,7 +296,6 @@ const CheckoutPage = () => {
         status: "pending",
         payment_method: paymentMethod,
         guest_access_token: guestAccessToken,
-        // NOTE: captcha_token removed - not needed for order creation
       };
 
       if (paymentMethod === "whatsapp") {
@@ -374,23 +373,29 @@ const CheckoutPage = () => {
 
   if (items.length === 0) {
     return (
-      <div className="min-h-screen flex flex-col">
+      <div className="min-h-screen flex flex-col bg-gradient-to-b from-[hsl(240,10%,3.9%)] to-[hsl(240,10%,4.5%)]">
         <TopBar /><Header />
-        <div className="flex-1 flex items-center justify-center bg-secondary">
+        <div className="flex-1 flex items-center justify-center">
           <div className="text-center px-4">
             {whatsappOrderPlaced ? (
               <>
-                <h2 className="text-xl sm:text-2xl font-bold mb-4">Thank you for your order!</h2>
-                <p className="text-sm text-muted-foreground mb-6">
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-500/20 text-green-400 mb-4">
+                  <Truck className="w-8 h-8" />
+                </div>
+                <h2 className="text-xl sm:text-2xl font-bold text-white mb-4">Thank you for your order!</h2>
+                <p className="text-sm text-white/50 mb-6">
                   Your WhatsApp order has been created and the payment page will open in a new tab.
                 </p>
-                <Link to="/" className="inline-flex items-center justify-center rounded-lg bg-primary px-6 py-3 text-sm font-semibold text-white hover:bg-primary/90">
+                <Link to="/" className="inline-flex items-center justify-center rounded-lg bg-primary px-6 py-3 text-sm font-semibold text-white hover:bg-primary/80 transition-colors">
                   Continue Shopping
                 </Link>
               </>
             ) : (
               <>
-                <h2 className="text-xl sm:text-2xl font-bold mb-4">Your cart is empty</h2>
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-white/10 text-white/50 mb-4">
+                  <Truck className="w-8 h-8" />
+                </div>
+                <h2 className="text-xl sm:text-2xl font-bold text-white mb-4">Your cart is empty</h2>
                 <Link to="/" className="text-primary hover:underline">Continue Shopping</Link>
               </>
             )}
@@ -402,70 +407,98 @@ const CheckoutPage = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-secondary">
+    <div className="min-h-screen flex flex-col bg-gradient-to-b from-[hsl(240,10%,3.9%)] to-[hsl(240,10%,4.5%)]">
       <TopBar />
       <Header />
       <main className="flex-1">
         <div className="container py-6 sm:py-8 max-w-2xl">
-          <Link to="/" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary mb-6">
+          <Link to="/" className="flex items-center gap-2 text-sm text-white/50 hover:text-primary mb-6 transition-colors">
             <ArrowLeft className="w-4 h-4" /> Back to Shop
           </Link>
-          <h1 className="text-lg sm:text-2xl lg:text-3xl font-bold mb-6">Checkout</h1>
+          <h1 className="text-lg sm:text-2xl lg:text-3xl font-bold text-white mb-6">Checkout</h1>
 
-          <div className="bg-card rounded-xl p-4 sm:p-6 shadow-card mb-6">
-            <h2 className="font-semibold text-base sm:text-lg mb-4">Order Summary</h2>
-            {items.map(item => (
-              <div key={item.product_id} className="flex justify-between text-sm py-2 border-b last:border-0 gap-2">
-                <span className="flex-1 min-w-0 truncate">{item.name}{item.color ? ` (${item.color})` : ""} x{item.quantity}</span>
-                <span className="font-medium flex-shrink-0">KSh {(item.price * item.quantity).toLocaleString()}</span>
-              </div>
-            ))}
-            <div className="flex justify-between font-bold text-base sm:text-lg mt-4 pt-2 border-t">
-              <span>Total</span>
+          <div className="bg-white/5 rounded-xl border border-white/10 p-4 sm:p-6 shadow-lg mb-6">
+            <h2 className="font-semibold text-base sm:text-lg text-white mb-4">Order Summary</h2>
+            <div className="space-y-2">
+              {items.map(item => (
+                <div key={item.product_id} className="flex justify-between text-sm py-2 border-b border-white/10 last:border-0 gap-2">
+                  <span className="flex-1 min-w-0 truncate text-white/70">{item.name}{item.color ? ` (${item.color})` : ""} x{item.quantity}</span>
+                  <span className="font-medium text-white flex-shrink-0">KSh {(item.price * item.quantity).toLocaleString()}</span>
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-between font-bold text-base sm:text-lg mt-4 pt-2 border-t border-white/10">
+              <span className="text-white">Total</span>
               <span className="text-primary">KSh {finalTotal.toLocaleString()}</span>
             </div>
           </div>
 
-          <form onSubmit={handleSubmit} className="bg-card rounded-xl p-4 sm:p-6 shadow-card space-y-4">
-            <h2 className="font-semibold text-base sm:text-lg mb-2">Your Details</h2>
+          <form onSubmit={handleSubmit} className="bg-white/5 rounded-xl border border-white/10 p-4 sm:p-6 shadow-lg space-y-4">
+            <h2 className="font-semibold text-base sm:text-lg text-white mb-2">Your Details</h2>
+            
             <div>
-              <Label htmlFor="name">Full Name</Label>
-              <Input id="name" value={name} onChange={e => setName(e.target.value)} required disabled={isSubmitting} />
+              <Label htmlFor="name" className="text-white/70">Full Name</Label>
+              <Input 
+                id="name" 
+                value={name} 
+                onChange={e => setName(e.target.value)} 
+                required 
+                disabled={isSubmitting}
+                className="bg-black border-white/10 text-white placeholder:text-white/30 focus:border-primary/50"
+              />
             </div>
+            
             <div>
-              <Label htmlFor="phone">Phone Number</Label>
-              <Input id="phone" value={phone} onChange={e => setPhone(e.target.value)} required placeholder="+254..." disabled={isSubmitting} />
+              <Label htmlFor="phone" className="text-white/70">Phone Number</Label>
+              <Input 
+                id="phone" 
+                value={phone} 
+                onChange={e => setPhone(e.target.value)} 
+                required 
+                placeholder="+254..." 
+                disabled={isSubmitting}
+                className="bg-black border-white/10 text-white placeholder:text-white/30 focus:border-primary/50"
+              />
             </div>
+            
             <div>
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} required disabled={isSubmitting} />
+              <Label htmlFor="email" className="text-white/70">Email</Label>
+              <Input 
+                id="email" 
+                type="email" 
+                value={email} 
+                onChange={e => setEmail(e.target.value)} 
+                required 
+                disabled={isSubmitting}
+                className="bg-black border-white/10 text-white placeholder:text-white/30 focus:border-primary/50"
+              />
             </div>
 
             <div>
-              <Label>Delivery Method</Label>
+              <Label className="text-white/70">Delivery Method</Label>
               <RadioGroup value={delivery} onValueChange={setDelivery} className="mt-2">
                 <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="pickup" id="pickup" disabled={isSubmitting} />
-                  <Label htmlFor="pickup">Pickup (Free)</Label>
+                  <RadioGroupItem value="pickup" id="pickup" disabled={isSubmitting} className="border-white/30 text-primary" />
+                  <Label htmlFor="pickup" className="text-white/70">Pickup (Free)</Label>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="delivery" id="delivery" disabled={isSubmitting} />
-                  <Label htmlFor="delivery">Delivery</Label>
+                  <RadioGroupItem value="delivery" id="delivery" disabled={isSubmitting} className="border-white/30 text-primary" />
+                  <Label htmlFor="delivery" className="text-white/70">Delivery</Label>
                 </div>
               </RadioGroup>
             </div>
 
             <div>
-              <Label>Payment Method</Label>
+              <Label className="text-white/70">Payment Method</Label>
               <RadioGroup value={paymentMethod} onValueChange={(value) => setPaymentMethod(value as "whatsapp" | "paystack")} className="mt-2">
                 <div className="flex flex-col gap-2">
                   <label className="flex items-center gap-2 cursor-pointer">
-                    <RadioGroupItem value="whatsapp" id="payment-whatsapp" disabled={isSubmitting} />
-                    <span>WhatsApp Checkout</span>
+                    <RadioGroupItem value="whatsapp" id="payment-whatsapp" disabled={isSubmitting} className="border-white/30 text-primary" />
+                    <span className="text-white/70">WhatsApp Checkout</span>
                   </label>
                   <label className="flex items-center gap-2 cursor-pointer">
-                    <RadioGroupItem value="paystack" id="payment-paystack" disabled={isSubmitting} />
-                    <span>Card Payment</span>
+                    <RadioGroupItem value="paystack" id="payment-paystack" disabled={isSubmitting} className="border-white/30 text-primary" />
+                    <span className="text-white/70">Card Payment</span>
                   </label>
                 </div>
               </RadioGroup>
@@ -473,7 +506,7 @@ const CheckoutPage = () => {
 
             {delivery === "delivery" && (
               <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
-                <Label>Search Address</Label>
+                <Label className="text-white/70">Search Address</Label>
                 <div className="flex gap-2">
                   <Input
                     placeholder="Street, Landmark, or Area"
@@ -481,28 +514,29 @@ const CheckoutPage = () => {
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && handleSearch()}
                     disabled={isSubmitting}
+                    className="bg-black border-white/10 text-white placeholder:text-white/30 focus:border-primary/50"
                   />
-                  <Button type="button" onClick={handleSearch} variant="secondary" disabled={isSubmitting}>
+                  <Button type="button" onClick={handleSearch} variant="secondary" disabled={isSubmitting} className="bg-white/10 text-white hover:bg-white/20 border border-white/10">
                     <Search size={18} />
                   </Button>
                 </div>
 
-                <div ref={mapContainerRef} className="h-64 w-full rounded-lg border bg-slate-50 z-0" />
+                <div ref={mapContainerRef} className="h-64 w-full rounded-lg border border-white/10 bg-black/30 z-0" />
 
                 <div className="space-y-2">
-                  <Label>Selected Address</Label>
+                  <Label className="text-white/70">Selected Address</Label>
                   <Input
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
                     placeholder="Tap a location on the map and add landmark notes here"
-                    className="bg-muted"
+                    className="bg-black/50 border-white/10 text-white placeholder:text-white/30 focus:border-primary/50"
                     disabled={isSubmitting}
                   />
-                  <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+                  <p className="text-[10px] text-white/40 flex items-center gap-1">
                     <MapPin size={10} /> Coordinates: {coordinates ? `${coordinates.lat.toFixed(4)}, ${coordinates.lng.toFixed(4)}` : "Not selected"}
                   </p>
-                  {mapError ? <p className="text-sm text-red-600">{mapError}</p> : null}
-                  {mapLoading ? <p className="text-sm text-muted-foreground">Loading map...</p> : null}
+                  {mapError ? <p className="text-sm text-red-400">{mapError}</p> : null}
+                  {mapLoading ? <p className="text-sm text-white/50">Loading map...</p> : null}
                 </div>
               </div>
             )}
@@ -515,7 +549,7 @@ const CheckoutPage = () => {
 
             <Button 
               type="submit" 
-              className="w-full text-base sm:text-lg" 
+              className="w-full text-base sm:text-lg bg-primary text-white hover:bg-primary/80" 
               size="lg" 
               disabled={isSubmitting || (shouldUseCaptcha && !captchaToken)}
             >

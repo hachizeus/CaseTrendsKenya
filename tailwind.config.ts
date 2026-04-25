@@ -13,6 +13,16 @@ export default {
       },
     },
     extend: {
+      // Custom screens for better responsive control
+      screens: {
+        'xs': '475px',
+        'sm': '640px',
+        'md': '768px',
+        'lg': '1024px',
+        'xl': '1280px',
+        '2xl': '1400px',
+        '3xl': '1536px',
+      },
       fontFamily: {
         display: ['"Space Grotesk"', 'sans-serif'],
         body: ['"Plus Jakarta Sans"', 'sans-serif'],

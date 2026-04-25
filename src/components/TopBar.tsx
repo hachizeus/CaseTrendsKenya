@@ -22,7 +22,7 @@ const WhatsAppIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
-// Social Icon Button Component for consistency
+// Social Icon Button Component
 const SocialIconButton = ({ 
   href, 
   label, 
@@ -101,13 +101,13 @@ const TopBar = () => {
   ];
 
   return (
-    <div className="bg-black text-white text-xs py-2 hidden md:block">
+    <div className="bg-black text-white text-xs py-2 hidden md:block border-b border-white/10">
       <div className="container flex justify-between items-center">
         <div className="flex items-center gap-4">
-          <span className="flex items-center gap-1.5">
+          <span className="flex items-center gap-1.5 hover:text-white transition-colors">
             <Phone className="w-3 h-3" /> +254 707 177 657  | +254 714 204 2716
           </span>
-          <span className="flex items-center gap-1.5">
+          <span className="flex items-center gap-1.5 hover:text-white transition-colors">
             <Mail className="w-3 h-3" /> support@casetrendskenya.co.ke
           </span>
         </div>
