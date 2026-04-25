@@ -1,12 +1,12 @@
-import { 
-  Search, 
-  ShoppingCart, 
-  User, 
-  Heart, 
-  Menu, 
-  X, 
-  ChevronDown, 
-  LogOut, 
+import {
+  Search,
+  ShoppingCart,
+  User,
+  Heart,
+  Menu,
+  X,
+  ChevronDown,
+  LogOut,
   ChevronRight,
   Shield,
   Smartphone,
@@ -20,7 +20,7 @@ import {
   Magnet,
   Sticker,
   Cable,
-  LucideIcon
+  LucideIcon,
 } from "lucide-react";
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
@@ -28,7 +28,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useCart } from "@/contexts/CartContext";
 import SearchDropdown from "./SearchDropdown";
 import { getDisplayCategoryName } from "@/lib/utils";
-import { MAIN_CATEGORIES, getSubcategoriesByCategory } from "@/lib/categoryData";
+import {
+  MAIN_CATEGORIES,
+  getSubcategoriesByCategory,
+} from "@/lib/categoryData";
 
 const headerCategoryOptions = MAIN_CATEGORIES.map((cat) => cat.slug);
 import {
@@ -45,7 +48,7 @@ const useTypingPlaceholder = () => {
   const [displayText, setDisplayText] = useState("");
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
   const [isDeleting, setIsDeleting] = useState(false);
-  
+
   const words = [
     "Covers",
     "Protectors",
@@ -59,77 +62,80 @@ const useTypingPlaceholder = () => {
     "Camera Lens Protectors",
     "Accessories",
     "Phone Holders",
-    "Gaming"
+    "Gaming",
   ];
-  
+
   // Color mapping for each word
   const getColorForWord = (word: string): string => {
     const colorMap: Record<string, string> = {
-      "Covers": "text-blue-500",
-      "Protectors": "text-green-500",
+      Covers: "text-blue-500",
+      Protectors: "text-green-500",
       "Phone Cases": "text-purple-500",
       "Android Phones": "text-orange-500",
       "iPhone Models": "text-indigo-500",
-      "Audio": "text-pink-500",
+      Audio: "text-pink-500",
       "Smart Watch": "text-red-500",
       "Charging Devices": "text-yellow-600",
       "Power Banks": "text-teal-500",
       "Camera Lens Protectors": "text-cyan-500",
-      "Accessories": "text-amber-600",
+      Accessories: "text-amber-600",
       "Phone Holders": "text-emerald-500",
-      "Gaming": "text-violet-500"
+      Gaming: "text-violet-500",
     };
     return colorMap[word] || "text-gray-500";
   };
-  
+
   useEffect(() => {
     const currentWord = words[currentWordIndex];
     let timeout: NodeJS.Timeout;
-    
+
     if (!isDeleting && displayText === currentWord) {
       timeout = setTimeout(() => setIsDeleting(true), 2000);
     } else if (isDeleting && displayText === "") {
       setIsDeleting(false);
       setCurrentWordIndex((currentWordIndex + 1) % words.length);
     } else {
-      timeout = setTimeout(() => {
-        setDisplayText(prev => 
-          isDeleting 
-            ? prev.slice(0, -1)
-            : currentWord.slice(0, prev.length + 1)
-        );
-      }, isDeleting ? 50 : 100);
+      timeout = setTimeout(
+        () => {
+          setDisplayText((prev) =>
+            isDeleting
+              ? prev.slice(0, -1)
+              : currentWord.slice(0, prev.length + 1),
+          );
+        },
+        isDeleting ? 50 : 100,
+      );
     }
-    
+
     return () => clearTimeout(timeout);
   }, [displayText, isDeleting, currentWordIndex]);
-  
-  return { 
-    displayText, 
+
+  return {
+    displayText,
     currentColor: getColorForWord(words[currentWordIndex]),
-    isTyping: !isDeleting && displayText !== words[currentWordIndex]
+    isTyping: !isDeleting && displayText !== words[currentWordIndex],
   };
 };
 
 // Map category names to icons
 const getCategoryIcon = (categoryName: string): LucideIcon => {
   const iconMap: Record<string, LucideIcon> = {
-    "Protectors": Shield,
+    Protectors: Shield,
     "Phone Cases": Smartphone,
     "Android Phones": Smartphone,
     "iPhone Model": Smartphone,
-    "Audio": Headphones,
+    Audio: Headphones,
     "Smart Watch": Watch,
     "Charging Devices": Battery,
     "Power Banks": Battery,
     "Camera Lens Protectors": Camera,
-    "Accessories": Package,
+    Accessories: Package,
     "Phone Holders": SmartphoneNfc,
-    "Gaming": Gamepad2,
+    Gaming: Gamepad2,
     "MagSafe Cases": Magnet,
-    "Stickers": Sticker,
+    Stickers: Sticker,
   };
-  
+
   return iconMap[categoryName] || Package;
 };
 
@@ -143,8 +149,12 @@ const Header = () => {
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
   const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
-  const [hoveredElement, setHoveredElement] = useState<HTMLElement | null>(null);
-  const [mobileHoveredCategory, setMobileHoveredCategory] = useState<string | null>(null);
+  const [hoveredElement, setHoveredElement] = useState<HTMLElement | null>(
+    null,
+  );
+  const [mobileHoveredCategory, setMobileHoveredCategory] = useState<
+    string | null
+  >(null);
   const { user, role, isAdmin, isModerator, signOut } = useAuth();
   const { totalItems, totalPrice, setIsOpen } = useCart();
   const navigate = useNavigate();
@@ -172,15 +182,15 @@ const Header = () => {
     let animationFrame: number;
     let scrollPosition = 0;
     const scrollSpeed = 0.3;
-    
+
     const scroll = () => {
       if (scrollContainer && !hoveredCategory) {
         scrollPosition += scrollSpeed;
-        
+
         if (scrollPosition >= scrollContainer.scrollWidth / 2) {
           scrollPosition = 0;
         }
-        
+
         scrollContainer.scrollLeft = scrollPosition;
       }
       animationFrame = requestAnimationFrame(scroll);
@@ -203,15 +213,15 @@ const Header = () => {
     let animationFrame: number;
     let scrollPosition = 0;
     const scrollSpeed = 0.3;
-    
+
     const scroll = () => {
       if (scrollContainer && !mobileHoveredCategory) {
         scrollPosition += scrollSpeed;
-        
+
         if (scrollPosition >= scrollContainer.scrollWidth / 2) {
           scrollPosition = 0;
         }
-        
+
         scrollContainer.scrollLeft = scrollPosition;
       }
       animationFrame = requestAnimationFrame(scroll);
@@ -236,7 +246,7 @@ const Header = () => {
         if (scrollTimeoutRef.current) {
           clearTimeout(scrollTimeoutRef.current);
         }
-        
+
         scrollTimeoutRef.current = setTimeout(() => {
           setHoveredCategory(null);
           setHoveredElement(null);
@@ -244,10 +254,10 @@ const Header = () => {
       }
     };
 
-    scrollContainer.addEventListener('scroll', handleScroll);
-    
+    scrollContainer.addEventListener("scroll", handleScroll);
+
     return () => {
-      scrollContainer.removeEventListener('scroll', handleScroll);
+      scrollContainer.removeEventListener("scroll", handleScroll);
       if (scrollTimeoutRef.current) {
         clearTimeout(scrollTimeoutRef.current);
       }
@@ -264,17 +274,17 @@ const Header = () => {
         if (mobileScrollTimeoutRef.current) {
           clearTimeout(mobileScrollTimeoutRef.current);
         }
-        
+
         mobileScrollTimeoutRef.current = setTimeout(() => {
           setMobileHoveredCategory(null);
         }, 100);
       }
     };
 
-    scrollContainer.addEventListener('scroll', handleScroll);
-    
+    scrollContainer.addEventListener("scroll", handleScroll);
+
     return () => {
-      scrollContainer.removeEventListener('scroll', handleScroll);
+      scrollContainer.removeEventListener("scroll", handleScroll);
       if (mobileScrollTimeoutRef.current) {
         clearTimeout(mobileScrollTimeoutRef.current);
       }
@@ -294,14 +304,18 @@ const Header = () => {
   // Close category dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (categoryDropdownRef.current && !categoryDropdownRef.current.contains(e.target as Node)) {
+      if (
+        categoryDropdownRef.current &&
+        !categoryDropdownRef.current.contains(e.target as Node)
+      ) {
         setShowCategoryDropdown(false);
       }
     };
 
     if (showCategoryDropdown) {
       document.addEventListener("mousedown", handleClickOutside);
-      return () => document.removeEventListener("mousedown", handleClickOutside);
+      return () =>
+        document.removeEventListener("mousedown", handleClickOutside);
     }
   }, [showCategoryDropdown]);
 
@@ -311,7 +325,8 @@ const Header = () => {
       const params = new URLSearchParams();
       if (searchQuery.trim()) params.append("q", searchQuery.trim());
       if (selectedCategory) params.append("category", selectedCategory);
-      if (selectedSubcategory) params.append("subcategory", selectedSubcategory);
+      if (selectedSubcategory)
+        params.append("subcategory", selectedSubcategory);
       navigate(`/products?${params.toString()}`);
       setSearchQuery("");
       setSelectedCategory("");
@@ -320,11 +335,14 @@ const Header = () => {
     }
   };
 
-  const handleCategoryHover = (categorySlug: string, event: React.MouseEvent<HTMLButtonElement>) => {
+  const handleCategoryHover = (
+    categorySlug: string,
+    event: React.MouseEvent<HTMLButtonElement>,
+  ) => {
     if (hoverTimeoutRef.current) {
       clearTimeout(hoverTimeoutRef.current);
     }
-    
+
     setHoveredCategory(categorySlug);
     setHoveredElement(event.currentTarget);
   };
@@ -352,7 +370,7 @@ const Header = () => {
     if (mobileHoverTimeoutRef.current) {
       clearTimeout(mobileHoverTimeoutRef.current);
     }
-    
+
     setMobileHoveredCategory(categorySlug);
   };
 
@@ -373,16 +391,21 @@ const Header = () => {
   };
 
   // Get current category name for dropdown title
-  const currentCategory = MAIN_CATEGORIES.find(cat => cat.slug === hoveredCategory);
-  const currentMobileCategory = MAIN_CATEGORIES.find(cat => cat.slug === mobileHoveredCategory);
+  const currentCategory = MAIN_CATEGORIES.find(
+    (cat) => cat.slug === hoveredCategory,
+  );
+  const currentMobileCategory = MAIN_CATEGORIES.find(
+    (cat) => cat.slug === mobileHoveredCategory,
+  );
 
   // Calculate dropdown position relative to the container
   const getDropdownPosition = () => {
     if (!hoveredElement || !categoriesContainerRef.current) return { left: 0 };
-    
+
     const elementRect = hoveredElement.getBoundingClientRect();
-    const containerRect = categoriesContainerRef.current.getBoundingClientRect();
-    
+    const containerRect =
+      categoriesContainerRef.current.getBoundingClientRect();
+
     return {
       left: elementRect.left - containerRect.left,
     };
@@ -393,21 +416,34 @@ const Header = () => {
       <div className="container flex flex-col py-3 gap-4">
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-2 md:gap-3">
-            <button 
-              className="md:hidden p-1.5 text-white" 
+            <button
+              className="md:hidden p-1.5 text-white"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
               aria-expanded={mobileMenuOpen}
               aria-controls="mobile-menu"
             >
-              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              {mobileMenuOpen ? (
+                <X className="w-5 h-5" />
+              ) : (
+                <Menu className="w-5 h-5" />
+              )}
             </button>
             <Link to="/" className="flex-shrink-0">
-              <img src="/logo.webp" alt="Case Trends Kenya" width={56} height={56} className="h-10 sm:h-12 lg:h-14 w-auto" />
+              <img
+                src="/logo.webp"
+                alt="Case Trends Kenya"
+                width={56}
+                height={56}
+                className="h-10 sm:h-12 lg:h-14 w-auto"
+              />
             </Link>
           </div>
 
-          <form onSubmit={handleSearch} className="hidden md:flex flex-1 max-w-2xl items-center gap-2">
+          <form
+            onSubmit={handleSearch}
+            className="hidden md:flex flex-1 max-w-2xl items-center gap-2"
+          >
             <div className="relative flex-1">
               <button
                 type="button"
@@ -417,12 +453,15 @@ const Header = () => {
                 {selectedSubcategory
                   ? getDisplayCategoryName(selectedSubcategory)
                   : selectedCategory
-                  ? getDisplayCategoryName(selectedCategory)
-                  : "All Categories"}
+                    ? getDisplayCategoryName(selectedCategory)
+                    : "All Categories"}
                 <ChevronDown className="w-4 h-4" />
               </button>
               {showCategoryDropdown && (
-                <div ref={categoryDropdownRef} className="absolute top-full left-0 mt-1 bg-[hsl(240,10%,6%)] border border-white/10 rounded-lg shadow-lg z-50 min-w-[22rem] md:min-w-[24rem]">
+                <div
+                  ref={categoryDropdownRef}
+                  className="absolute top-full left-0 mt-1 bg-[hsl(240,10%,6%)] border border-white/10 rounded-lg shadow-lg z-50 min-w-[22rem] md:min-w-[24rem]"
+                >
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2 p-2">
                     <div className="space-y-1">
                       <button
@@ -450,7 +489,9 @@ const Header = () => {
                               setShowCategoryDropdown(false);
                             }}
                             className={`w-full text-left px-4 py-2.5 text-sm transition-colors hover:bg-white/10 flex items-center gap-2 ${
-                              selectedCategory === cat.slug ? "bg-white/10 font-medium" : ""
+                              selectedCategory === cat.slug
+                                ? "bg-white/10 font-medium"
+                                : ""
                             } text-white`}
                           >
                             <IconComponent className="w-4 h-4 text-white/60" />
@@ -460,26 +501,34 @@ const Header = () => {
                       })}
                     </div>
                     <div className="space-y-1 border-t border-white/10 md:border-t-0 md:border-l md:pl-2 md:pt-0 md:mt-0">
-                      <div className="px-4 py-2 text-xs uppercase tracking-wide text-white/50">Subcategories</div>
+                      <div className="px-4 py-2 text-xs uppercase tracking-wide text-white/50">
+                        Subcategories
+                      </div>
                       {dropdownCategory ? (
-                        getSubcategoriesByCategory(dropdownCategory).map((sub) => (
-                          <button
-                            key={sub.slug}
-                            type="button"
-                            onClick={() => {
-                              setSelectedCategory(dropdownCategory);
-                              setSelectedSubcategory(sub.slug);
-                              setShowCategoryDropdown(false);
-                            }}
-                            className={`w-full text-left px-4 py-2.5 text-sm transition-colors hover:bg-white/10 ${
-                              selectedSubcategory === sub.slug ? "bg-white/10 font-medium" : ""
-                            } text-white`}
-                          >
-                            {sub.name}
-                          </button>
-                        ))
+                        getSubcategoriesByCategory(dropdownCategory).map(
+                          (sub) => (
+                            <button
+                              key={sub.slug}
+                              type="button"
+                              onClick={() => {
+                                setSelectedCategory(dropdownCategory);
+                                setSelectedSubcategory(sub.slug);
+                                setShowCategoryDropdown(false);
+                              }}
+                              className={`w-full text-left px-4 py-2.5 text-sm transition-colors hover:bg-white/10 ${
+                                selectedSubcategory === sub.slug
+                                  ? "bg-white/10 font-medium"
+                                  : ""
+                              } text-white`}
+                            >
+                              {sub.name}
+                            </button>
+                          ),
+                        )
                       ) : (
-                        <p className="px-4 py-2 text-sm text-white/40">Hover a main category to see subcategories.</p>
+                        <p className="px-4 py-2 text-sm text-white/40">
+                          Hover a main category to see subcategories.
+                        </p>
                       )}
                     </div>
                   </div>
@@ -493,22 +542,24 @@ const Header = () => {
                   className="flex-1 px-4 py-2.5 text-sm bg-black text-white outline-none w-full"
                   style={{ paddingLeft: "140px", paddingRight: "50px" }}
                   value={searchQuery}
-                  onChange={e => {
+                  onChange={(e) => {
                     setSearchQuery(e.target.value);
                     setShowSearchDropdown(true);
                   }}
                   onFocus={() => setShowSearchDropdown(true)}
-                  onBlur={() => setTimeout(() => setShowSearchDropdown(false), 200)}
+                  onBlur={() =>
+                    setTimeout(() => setShowSearchDropdown(false), 200)
+                  }
                 />
                 {!searchQuery && (
-                  <div 
+                  <div
                     className="absolute left-4 top-1/2 transform -translate-y-1/2 pointer-events-none text-sm text-white/40"
-                    style={{ 
+                    style={{
                       left: "16px",
                       right: "50px",
                       overflow: "hidden",
                       textOverflow: "ellipsis",
-                      whiteSpace: "nowrap"
+                      whiteSpace: "nowrap",
                     }}
                   >
                     Search for{" "}
@@ -518,8 +569,8 @@ const Header = () => {
                     </span>
                   </div>
                 )}
-                <button 
-                  type="submit" 
+                <button
+                  type="submit"
                   className="bg-primary text-white px-5 hover:opacity-90 transition-colors flex-shrink-0 absolute right-0 top-0 bottom-0 z-10"
                   aria-label="Search products"
                 >
@@ -529,7 +580,7 @@ const Header = () => {
               <SearchDropdown
                 query={searchQuery}
                 isOpen={showSearchDropdown && searchQuery.trim().length > 0}
-                onSuggestionSelect={name => {
+                onSuggestionSelect={(name) => {
                   setSearchQuery(name);
                   setShowSearchDropdown(false);
                 }}
@@ -538,8 +589,8 @@ const Header = () => {
           </form>
 
           <div className="flex items-center gap-2 sm:gap-3">
-            <button 
-              className="md:hidden p-2 text-white" 
+            <button
+              className="md:hidden p-2 text-white"
               onClick={() => setSearchOpen(!searchOpen)}
               aria-label={searchOpen ? "Close search" : "Open search"}
               aria-expanded={searchOpen}
@@ -550,7 +601,10 @@ const Header = () => {
 
             {/* Only show wishlist icon when user is NOT logged in */}
             {!user && (
-              <Link to="/favorites" className="hidden sm:flex p-2 text-white/60 hover:text-primary transition-colors">
+              <Link
+                to="/favorites"
+                className="hidden sm:flex p-2 text-white/60 hover:text-primary transition-colors"
+              >
                 <Heart className="w-5 h-5" />
               </Link>
             )}
@@ -563,33 +617,51 @@ const Header = () => {
                       <User className="w-5 h-5" />
                     </button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-48 bg-[hsl(240,10%,6%)] border-white/10">
+                  <DropdownMenuContent
+                    align="end"
+                    className="w-48 bg-[hsl(240,10%,6%)] border-white/10"
+                  >
                     <DropdownMenuLabel className="text-xs text-white/60">
                       {user.email}
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator className="bg-white/10" />
-                    <DropdownMenuItem asChild className="text-white hover:text-primary focus:text-primary">
-                      <Link to="/account/orders" className="flex items-center gap-2 cursor-pointer">
+                    <DropdownMenuItem
+                      asChild
+                      className="text-white hover:bg-white/10 hover:text-white focus:bg-white/10 focus:text-white cursor-pointer"
+                    >
+                      <Link
+                        to="/account/orders"
+                        className="flex items-center gap-2"
+                      >
                         📦 My Orders
                       </Link>
                     </DropdownMenuItem>
-                    <DropdownMenuItem asChild className="text-white hover:text-primary focus:text-primary">
-                      <Link to="/favorites" className="flex items-center gap-2 cursor-pointer">
+                    <DropdownMenuItem
+                      asChild
+                      className="text-white hover:bg-white/10 hover:text-white focus:bg-white/10 focus:text-white cursor-pointer"
+                    >
+                      <Link to="/favorites" className="flex items-center gap-2">
                         <Heart className="w-4 h-4" /> Wishlist
                       </Link>
                     </DropdownMenuItem>
                     {canAccessAdminPanel && (
                       <>
                         <DropdownMenuSeparator className="bg-white/10" />
-                        <DropdownMenuItem asChild className="text-white hover:text-primary focus:text-primary">
-                          <Link to="/admin" className="flex items-center gap-2 cursor-pointer">
+                        <DropdownMenuItem
+                          asChild
+                          className="text-white hover:bg-white/10 hover:text-white focus:bg-white/10 focus:text-white cursor-pointer"
+                        >
+                          <Link to="/admin" className="flex items-center gap-2">
                             ⚙️ Admin Panel
                           </Link>
                         </DropdownMenuItem>
                       </>
                     )}
                     <DropdownMenuSeparator className="bg-white/10" />
-                    <DropdownMenuItem onClick={() => signOut()} className="flex items-center gap-2 cursor-pointer text-red-400 hover:text-red-300 focus:text-red-300">
+                    <DropdownMenuItem
+                      onClick={() => signOut()}
+                      className="flex items-center gap-2 cursor-pointer text-red-400 hover:bg-red-500/10 hover:text-red-300 focus:bg-red-500/10 focus:text-red-300"
+                    >
                       <LogOut className="w-4 h-4" /> Sign Out
                     </DropdownMenuItem>
                   </DropdownMenuContent>
@@ -597,7 +669,10 @@ const Header = () => {
               </div>
             ) : (
               <div className="hidden sm:flex items-center gap-3">
-                <Link to="/auth" className="flex items-center gap-1.5 text-sm text-white/60 hover:text-primary transition-colors">
+                <Link
+                  to="/auth"
+                  className="flex items-center gap-1.5 text-sm text-white/60 hover:text-primary transition-colors"
+                >
                   <User className="w-5 h-5" />
                   <span className="hidden lg:inline">Login / Register</span>
                 </Link>
@@ -609,7 +684,9 @@ const Header = () => {
               className="flex items-center gap-2 bg-primary text-white px-2 sm:px-4 py-2 text-sm font-medium hover:bg-primary/90 transition-colors relative rounded-lg"
             >
               <ShoppingCart className="w-4 h-4" />
-              <span className="hidden sm:inline">KSh {totalPrice.toLocaleString()}</span>
+              <span className="hidden sm:inline">
+                KSh {totalPrice.toLocaleString()}
+              </span>
               {totalItems > 0 && (
                 <span className="absolute -top-2 -right-2 bg-primary text-white text-xs w-5 h-5 rounded-full flex items-center justify-center font-bold">
                   {totalItems}
@@ -620,80 +697,93 @@ const Header = () => {
         </div>
 
         {/* Desktop Auto-scrolling Categories Section */}
-        <div 
+        <div
           ref={categoriesContainerRef}
           className="hidden md:block relative border-t border-white/10 pt-3"
         >
-          <div 
+          <div
             ref={scrollingCategoriesRef}
             className="overflow-x-hidden whitespace-nowrap relative"
-            style={{ 
-              WebkitMaskImage: 'linear-gradient(to right, transparent, black 20px, black calc(100% - 20px), transparent)',
-              cursor: hoveredCategory ? 'default' : 'auto'
+            style={{
+              WebkitMaskImage:
+                "linear-gradient(to right, transparent, black 20px, black calc(100% - 20px), transparent)",
+              cursor: hoveredCategory ? "default" : "auto",
             }}
           >
             <div className="inline-flex gap-1">
-              {[...MAIN_CATEGORIES, ...MAIN_CATEGORIES].map((category, index) => {
-                const IconComponent = getCategoryIcon(category.name);
-                return (
-                  <button
-                    key={`${category.slug}-${index}`}
-                    className="inline-flex items-center px-4 py-2 text-sm font-medium text-white/80 hover:text-primary hover:bg-white/10 rounded-lg transition-all duration-200 whitespace-nowrap group relative"
-                    onMouseEnter={(e) => handleCategoryHover(category.slug, e)}
-                    onMouseLeave={handleCategoryMouseLeave}
-                    onClick={() => navigate(`/products?category=${category.slug}`)}
-                  >
-                    <IconComponent className="w-4 h-4 mr-2 text-white/50 group-hover:text-primary transition-colors" />
-                    {category.name}
-                    <ChevronRight className="w-4 h-4 ml-1 opacity-50 group-hover:opacity-100 transition-opacity" />
-                  </button>
-                );
-              })}
+              {[...MAIN_CATEGORIES, ...MAIN_CATEGORIES].map(
+                (category, index) => {
+                  const IconComponent = getCategoryIcon(category.name);
+                  return (
+                    <button
+                      key={`${category.slug}-${index}`}
+                      className="inline-flex items-center px-4 py-2 text-sm font-medium text-white/80 hover:text-primary hover:bg-white/10 rounded-lg transition-all duration-200 whitespace-nowrap group relative"
+                      onMouseEnter={(e) =>
+                        handleCategoryHover(category.slug, e)
+                      }
+                      onMouseLeave={handleCategoryMouseLeave}
+                      onClick={() =>
+                        navigate(`/products?category=${category.slug}`)
+                      }
+                    >
+                      <IconComponent className="w-4 h-4 mr-2 text-white/50 group-hover:text-primary transition-colors" />
+                      {category.name}
+                      <ChevronRight className="w-4 h-4 ml-1 opacity-50 group-hover:opacity-100 transition-opacity" />
+                    </button>
+                  );
+                },
+              )}
             </div>
           </div>
 
           {/* Desktop Hover Dropdown */}
           {hoveredCategory && currentCategory && hoveredElement && (
             <>
-              <div 
+              <div
                 className="absolute w-full h-2 -bottom-2 left-0"
                 onMouseEnter={handleDropdownMouseEnter}
               />
-              
+
               <div
                 ref={dropdownRef}
                 className="absolute z-50 bg-[hsl(240,10%,6%)] border border-white/10 rounded-lg shadow-xl min-w-[280px] max-w-[350px]"
                 style={{
                   left: `${getDropdownPosition().left}px`,
-                  top: '100%',
-                  marginTop: '4px',
+                  top: "100%",
+                  marginTop: "4px",
                 }}
                 onMouseEnter={handleDropdownMouseEnter}
                 onMouseLeave={handleDropdownMouseLeave}
               >
-                <div 
+                <div
                   className="absolute -top-2 w-4 h-4 bg-[hsl(240,10%,6%)] border-t border-l border-white/10 transform rotate-45"
-                  style={{ left: '20px' }}
+                  style={{ left: "20px" }}
                 />
-                
+
                 <div className="p-2 relative bg-[hsl(240,10%,6%)] rounded-lg">
                   <div className="px-3 py-2 border-b border-white/10 mb-2">
                     <div className="flex items-center gap-2">
                       {(() => {
-                        const IconComponent = getCategoryIcon(currentCategory.name);
-                        return <IconComponent className="w-5 h-5 text-primary" />;
+                        const IconComponent = getCategoryIcon(
+                          currentCategory.name,
+                        );
+                        return (
+                          <IconComponent className="w-5 h-5 text-primary" />
+                        );
                       })()}
-                      <h3 className="font-semibold text-white">{currentCategory.name}</h3>
+                      <h3 className="font-semibold text-white">
+                        {currentCategory.name}
+                      </h3>
                     </div>
                     <p className="text-xs text-white/50 mt-0.5 ml-7">
                       Browse subcategories
                     </p>
                   </div>
-                  <div 
+                  <div
                     className="space-y-1 max-h-[400px] overflow-y-auto scrollbar-hide"
                     style={{
-                      scrollbarWidth: 'none',
-                      msOverflowStyle: 'none',
+                      scrollbarWidth: "none",
+                      msOverflowStyle: "none",
                     }}
                   >
                     <button
@@ -706,28 +796,32 @@ const Header = () => {
                       <span>All {currentCategory.name}</span>
                       <ChevronRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
                     </button>
-                    
+
                     {getSubcategoriesByCategory(hoveredCategory).length > 0 ? (
-                      getSubcategoriesByCategory(hoveredCategory).map((subcategory) => (
-                        <button
-                          key={subcategory.slug}
-                          className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-white/10 transition-colors flex items-center justify-between group text-white"
-                          onClick={() => {
-                            navigate(`/products?category=${hoveredCategory}&subcategory=${subcategory.slug}`);
-                            setHoveredCategory(null);
-                          }}
-                        >
-                          <span>{subcategory.name}</span>
-                          <ChevronRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
-                        </button>
-                      ))
+                      getSubcategoriesByCategory(hoveredCategory).map(
+                        (subcategory) => (
+                          <button
+                            key={subcategory.slug}
+                            className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-white/10 transition-colors flex items-center justify-between group text-white"
+                            onClick={() => {
+                              navigate(
+                                `/products?category=${hoveredCategory}&subcategory=${subcategory.slug}`,
+                              );
+                              setHoveredCategory(null);
+                            }}
+                          >
+                            <span>{subcategory.name}</span>
+                            <ChevronRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </button>
+                        ),
+                      )
                     ) : (
                       <p className="px-3 py-2 text-sm text-white/40">
                         No subcategories available
                       </p>
                     )}
                   </div>
-                  
+
                   <div className="mt-3 pt-2 border-t border-white/10">
                     <button
                       className="w-full text-center py-2 text-xs text-primary hover:underline"
@@ -746,53 +840,60 @@ const Header = () => {
         </div>
 
         {/* Mobile Auto-scrolling Categories Section */}
-        <div 
+        <div
           ref={mobileContainerRef}
           className="md:hidden relative border-t border-white/10 pt-2 -mx-4 px-4"
         >
-          <div 
+          <div
             ref={mobileScrollingRef}
             className="overflow-x-auto whitespace-nowrap relative scrollbar-hide"
-            style={{ 
-              WebkitMaskImage: 'linear-gradient(to right, transparent, black 10px, black calc(100% - 10px), transparent)',
-              scrollbarWidth: 'none',
-              msOverflowStyle: 'none',
-              cursor: mobileHoveredCategory ? 'default' : 'auto'
+            style={{
+              WebkitMaskImage:
+                "linear-gradient(to right, transparent, black 10px, black calc(100% - 10px), transparent)",
+              scrollbarWidth: "none",
+              msOverflowStyle: "none",
+              cursor: mobileHoveredCategory ? "default" : "auto",
             }}
           >
             <div className="inline-flex gap-2">
-              {[...MAIN_CATEGORIES, ...MAIN_CATEGORIES].map((category, index) => {
-                const IconComponent = getCategoryIcon(category.name);
-                return (
-                  <button
-                    key={`mobile-${category.slug}-${index}`}
-                    className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-white/80 hover:text-primary bg-white/5 hover:bg-white/10 rounded-full transition-all duration-200 whitespace-nowrap group relative"
-                    onMouseEnter={() => handleMobileCategoryHover(category.slug)}
-                    onMouseLeave={handleMobileCategoryMouseLeave}
-                    onClick={() => navigate(`/products?category=${category.slug}`)}
-                  >
-                    <IconComponent className="w-3.5 h-3.5 mr-1.5 text-white/50 group-hover:text-primary transition-colors" />
-                    {category.name}
-                  </button>
-                );
-              })}
+              {[...MAIN_CATEGORIES, ...MAIN_CATEGORIES].map(
+                (category, index) => {
+                  const IconComponent = getCategoryIcon(category.name);
+                  return (
+                    <button
+                      key={`mobile-${category.slug}-${index}`}
+                      className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-white/80 hover:text-primary bg-white/5 hover:bg-white/10 rounded-full transition-all duration-200 whitespace-nowrap group relative"
+                      onMouseEnter={() =>
+                        handleMobileCategoryHover(category.slug)
+                      }
+                      onMouseLeave={handleMobileCategoryMouseLeave}
+                      onClick={() =>
+                        navigate(`/products?category=${category.slug}`)
+                      }
+                    >
+                      <IconComponent className="w-3.5 h-3.5 mr-1.5 text-white/50 group-hover:text-primary transition-colors" />
+                      {category.name}
+                    </button>
+                  );
+                },
+              )}
             </div>
           </div>
 
           {/* Mobile Hover Dropdown */}
           {mobileHoveredCategory && currentMobileCategory && (
             <>
-              <div 
+              <div
                 className="absolute w-full h-2 -bottom-2 left-0"
                 onMouseEnter={handleMobileDropdownMouseEnter}
               />
-              
+
               <div
                 ref={mobileDropdownRef}
                 className="absolute left-0 right-0 z-50 bg-[hsl(240,10%,6%)] border border-white/10 rounded-lg shadow-xl mx-4"
                 style={{
-                  top: '100%',
-                  marginTop: '4px',
+                  top: "100%",
+                  marginTop: "4px",
                 }}
                 onMouseEnter={handleMobileDropdownMouseEnter}
                 onMouseLeave={handleMobileDropdownMouseLeave}
@@ -801,17 +902,23 @@ const Header = () => {
                   <div className="px-2 py-2 border-b border-white/10 mb-2">
                     <div className="flex items-center gap-2">
                       {(() => {
-                        const IconComponent = getCategoryIcon(currentMobileCategory.name);
-                        return <IconComponent className="w-4 h-4 text-primary" />;
+                        const IconComponent = getCategoryIcon(
+                          currentMobileCategory.name,
+                        );
+                        return (
+                          <IconComponent className="w-4 h-4 text-primary" />
+                        );
                       })()}
-                      <h3 className="font-semibold text-sm text-white">{currentMobileCategory.name}</h3>
+                      <h3 className="font-semibold text-sm text-white">
+                        {currentMobileCategory.name}
+                      </h3>
                     </div>
                   </div>
-                  <div 
+                  <div
                     className="space-y-1 max-h-[300px] overflow-y-auto scrollbar-hide"
                     style={{
-                      scrollbarWidth: 'none',
-                      msOverflowStyle: 'none',
+                      scrollbarWidth: "none",
+                      msOverflowStyle: "none",
                     }}
                   >
                     <button
@@ -824,21 +931,26 @@ const Header = () => {
                       <span>All {currentMobileCategory.name}</span>
                       <ChevronRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
                     </button>
-                    
-                    {getSubcategoriesByCategory(mobileHoveredCategory).length > 0 ? (
-                      getSubcategoriesByCategory(mobileHoveredCategory).map((subcategory) => (
-                        <button
-                          key={subcategory.slug}
-                          className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-white/10 transition-colors flex items-center justify-between group text-white"
-                          onClick={() => {
-                            navigate(`/products?category=${mobileHoveredCategory}&subcategory=${subcategory.slug}`);
-                            setMobileHoveredCategory(null);
-                          }}
-                        >
-                          <span className="text-sm">{subcategory.name}</span>
-                          <ChevronRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
-                        </button>
-                      ))
+
+                    {getSubcategoriesByCategory(mobileHoveredCategory).length >
+                    0 ? (
+                      getSubcategoriesByCategory(mobileHoveredCategory).map(
+                        (subcategory) => (
+                          <button
+                            key={subcategory.slug}
+                            className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-white/10 transition-colors flex items-center justify-between group text-white"
+                            onClick={() => {
+                              navigate(
+                                `/products?category=${mobileHoveredCategory}&subcategory=${subcategory.slug}`,
+                              );
+                              setMobileHoveredCategory(null);
+                            }}
+                          >
+                            <span className="text-sm">{subcategory.name}</span>
+                            <ChevronRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </button>
+                        ),
+                      )
                     ) : (
                       <p className="px-3 py-2 text-sm text-white/40">
                         No subcategories available
@@ -854,10 +966,14 @@ const Header = () => {
 
       {/* Mobile search */}
       {searchOpen && (
-        <form onSubmit={handleSearch} className="md:hidden w-full px-4 pb-3 space-y-2 overflow-x-hidden bg-black" id="mobile-search">
+        <form
+          onSubmit={handleSearch}
+          className="md:hidden w-full px-4 pb-3 space-y-2 overflow-x-hidden bg-black"
+          id="mobile-search"
+        >
           <select
             value={selectedCategory}
-            onChange={e => {
+            onChange={(e) => {
               setSelectedCategory(e.target.value);
               setSelectedSubcategory("");
             }}
@@ -876,7 +992,7 @@ const Header = () => {
               placeholder="Search cases, protectors, earbuds..."
               className="flex-1 px-4 py-2.5 text-base bg-black text-white outline-none"
               value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
+              onChange={(e) => setSearchQuery(e.target.value)}
               autoFocus
             />
             <button type="submit" className="bg-primary text-white px-4">
@@ -888,24 +1004,73 @@ const Header = () => {
 
       {/* Mobile menu */}
       {mobileMenuOpen && (
-        <div className="md:hidden border-t border-white/10 bg-black px-4 py-3 space-y-2" id="mobile-menu">
-          <Link to="/products" className="block py-2 text-sm font-medium text-white/80 hover:text-primary" onClick={() => setMobileMenuOpen(false)}>All Products</Link>
+        <div
+          className="md:hidden border-t border-white/10 bg-black px-4 py-3 space-y-2"
+          id="mobile-menu"
+        >
+          <Link
+            to="/products"
+            className="block py-2 text-sm font-medium text-white/80 hover:text-primary"
+            onClick={() => setMobileMenuOpen(false)}
+          >
+            All Products
+          </Link>
           {user && (
             <>
-              <Link to="/account/orders" className="block py-2 text-sm font-medium text-white/80 hover:text-primary" onClick={() => setMobileMenuOpen(false)}>My Orders</Link>
-              <Link to="/favorites" className="block py-2 text-sm font-medium text-white/80 hover:text-primary" onClick={() => setMobileMenuOpen(false)}>Wishlist</Link>
+              <Link
+                to="/account/orders"
+                className="block py-2 text-sm font-medium text-white/80 hover:text-primary"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                My Orders
+              </Link>
+              <Link
+                to="/favorites"
+                className="block py-2 text-sm font-medium text-white/80 hover:text-primary"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Wishlist
+              </Link>
             </>
           )}
           {!user && (
             <>
-              <Link to="/favorites" className="block py-2 text-sm font-medium text-white/80 hover:text-primary" onClick={() => setMobileMenuOpen(false)}>Wishlist</Link>
-              <Link to="/auth" className="block py-2 text-sm font-medium text-white/80 hover:text-primary" onClick={() => setMobileMenuOpen(false)}>Login / Register</Link>
+              <Link
+                to="/favorites"
+                className="block py-2 text-sm font-medium text-white/80 hover:text-primary"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Wishlist
+              </Link>
+              <Link
+                to="/auth"
+                className="block py-2 text-sm font-medium text-white/80 hover:text-primary"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Login / Register
+              </Link>
             </>
           )}
           {user && (
             <>
-              {canAccessAdminPanel && <Link to="/admin" className="block py-2 text-sm font-medium text-white/80 hover:text-primary" onClick={() => setMobileMenuOpen(false)}>Admin Panel</Link>}
-              <button onClick={() => { signOut(); setMobileMenuOpen(false); }} className="block w-full text-left py-2 text-sm font-medium text-red-400">Sign Out</button>
+              {canAccessAdminPanel && (
+                <Link
+                  to="/admin"
+                  className="block py-2 text-sm font-medium text-white/80 hover:text-primary"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Admin Panel
+                </Link>
+              )}
+              <button
+                onClick={() => {
+                  signOut();
+                  setMobileMenuOpen(false);
+                }}
+                className="block w-full text-left py-2 text-sm font-medium text-red-400"
+              >
+                Sign Out
+              </button>
             </>
           )}
         </div>
