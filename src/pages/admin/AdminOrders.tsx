@@ -44,7 +44,6 @@ const paymentConfig: Record<string, { label: string; icon: any; color: string }>
   paystack: { label: "Paystack", icon: CreditCard, color: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" },
 };
 
-// Define allowed state transitions
 const allowedTransitions: Record<string, string[]> = {
   pending: ["confirmed", "cancelled"],
   confirmed: ["processing", "cancelled"],
@@ -53,7 +52,6 @@ const allowedTransitions: Record<string, string[]> = {
   cancelled: [],
 };
 
-// Helper function to check if a status transition is allowed
 const isStatusTransitionAllowed = (currentStatus: string, newStatus: string): boolean => {
   return allowedTransitions[currentStatus]?.includes(newStatus) || false;
 };
@@ -109,12 +107,13 @@ const AdminOrders = () => {
     if (isManual) setSendingEmail(true);
 
     try {
+      // Send the ACTUAL user role - both admin and moderator are allowed
       const emailBody = {
         to: order.customer_email,
         type: "status_update",
         data: {
           ...order,
-          actor_role: "admin"
+          actor_role: role || "admin" // Sends "admin" or "moderator" based on actual role
         },
       };
       
@@ -127,10 +126,9 @@ const AdminOrders = () => {
         headers.Authorization = `Bearer ${session.access_token}`;
       }
 
-      console.log("Sending email with headers:", { 
+      console.log("Sending email:", { 
         hasAuth: !!headers.Authorization, 
-        actualRole: role, 
-        sentAsRole: "admin",
+        userRole: role, 
         orderId: order.id,
         status: order.status 
       });
@@ -261,6 +259,7 @@ const AdminOrders = () => {
     }
   };
 
+  // ... (rest of the component stays exactly the same: filtered, stats, StatusBadge, PaymentBadge, OrderCard, and the entire return JSX)
   const filtered = useMemo(() => {
     return orders
       .filter(o => {
@@ -362,15 +361,11 @@ const AdminOrders = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-[hsl(240,10%,3.9%)] to-[hsl(240,10%,4.5%)]">
       <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 max-w-7xl">
-        {/* Header */}
         <div className="mb-6">
           <h1 className="text-2xl sm:text-3xl font-bold text-white">Orders</h1>
-          <p className="text-sm text-white/50 mt-1">
-            Manage and track all customer orders
-          </p>
+          <p className="text-sm text-white/50 mt-1">Manage and track all customer orders</p>
         </div>
 
-        {/* Stats Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
           <Card className="bg-gradient-to-br from-primary/20 to-primary/10 border-primary/30">
             <CardContent className="p-3">
@@ -414,7 +409,6 @@ const AdminOrders = () => {
           )}
         </div>
 
-        {/* Filters - Desktop */}
         <div className="hidden md:flex flex-wrap gap-3 mb-4">
           <div className="flex gap-2 flex-wrap">
             {["all", ...STATUS_OPTIONS].map(s => (
@@ -449,40 +443,21 @@ const AdminOrders = () => {
           </div>
         </div>
 
-        {/* Filters - Mobile */}
         <div className="md:hidden flex gap-2 mb-4">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setIsMobileFilterOpen(true)}
-            className="flex-1 border-white/10 text-white hover:bg-white/10"
-          >
-            <Filter className="w-4 h-4 mr-2" />
-            Filters
+          <Button variant="outline" size="sm" onClick={() => setIsMobileFilterOpen(true)} className="flex-1 border-white/10 text-white hover:bg-white/10">
+            <Filter className="w-4 h-4 mr-2" />Filters
           </Button>
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
-            <Input
-              placeholder="Search..."
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              className="pl-9 bg-black/30 border-white/10 text-white placeholder:text-white/30"
-            />
+            <Input placeholder="Search..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-9 bg-black/30 border-white/10 text-white placeholder:text-white/30" />
           </div>
         </div>
 
-        {/* Search - Desktop */}
         <div className="hidden md:block relative mb-4">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
-          <Input
-            placeholder="Search by customer name or phone number..."
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            className="pl-9 bg-black/30 border-white/10 text-white placeholder:text-white/30"
-          />
+          <Input placeholder="Search by customer name or phone number..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-9 bg-black/30 border-white/10 text-white placeholder:text-white/30" />
         </div>
 
-        {/* Mobile Filter Sheet */}
         <Sheet open={isMobileFilterOpen} onOpenChange={setIsMobileFilterOpen}>
           <SheetContent side="bottom" className="rounded-t-xl bg-[hsl(240,10%,6%)] border-white/10">
             <SheetHeader>
@@ -494,20 +469,7 @@ const AdminOrders = () => {
                 <p className="text-sm font-medium text-white mb-2">Status</p>
                 <div className="flex flex-wrap gap-2">
                   {["all", ...STATUS_OPTIONS].map(s => (
-                    <button
-                      key={s}
-                      onClick={() => {
-                        setStatusFilter(s);
-                        setIsMobileFilterOpen(false);
-                      }}
-                      className={`px-3 py-1.5 text-xs font-semibold rounded-full transition-all capitalize ${
-                        statusFilter === s
-                          ? "bg-primary text-white"
-                          : "bg-white/10 text-white/70"
-                      }`}
-                    >
-                      {s}
-                    </button>
+                    <button key={s} onClick={() => { setStatusFilter(s); setIsMobileFilterOpen(false); }} className={`px-3 py-1.5 text-xs font-semibold rounded-full transition-all capitalize ${statusFilter === s ? "bg-primary text-white" : "bg-white/10 text-white/70"}`}>{s}</button>
                   ))}
                 </div>
               </div>
@@ -515,20 +477,7 @@ const AdminOrders = () => {
                 <p className="text-sm font-medium text-white mb-2">Payment Method</p>
                 <div className="flex flex-wrap gap-2">
                   {PAYMENT_METHOD_OPTIONS.map(method => (
-                    <button
-                      key={method}
-                      onClick={() => {
-                        setPaymentFilter(method);
-                        setIsMobileFilterOpen(false);
-                      }}
-                      className={`px-3 py-1.5 text-xs font-semibold rounded-full transition-all capitalize ${
-                        paymentFilter === method
-                          ? "bg-primary text-white"
-                          : "bg-white/10 text-white/70"
-                      }`}
-                    >
-                      {method === "all" ? "All" : method}
-                    </button>
+                    <button key={method} onClick={() => { setPaymentFilter(method); setIsMobileFilterOpen(false); }} className={`px-3 py-1.5 text-xs font-semibold rounded-full transition-all capitalize ${paymentFilter === method ? "bg-primary text-white" : "bg-white/10 text-white/70"}`}>{method === "all" ? "All" : method}</button>
                   ))}
                 </div>
               </div>
@@ -536,7 +485,6 @@ const AdminOrders = () => {
           </SheetContent>
         </Sheet>
 
-        {/* Orders Grid - Mobile */}
         <div className="md:hidden space-y-3">
           {loading ? (
             Array.from({ length: 5 }).map((_, i) => (
@@ -550,16 +498,13 @@ const AdminOrders = () => {
             ))
           ) : filtered.length === 0 ? (
             <Card className="bg-white/5 border-white/10">
-              <CardContent className="p-8 text-center">
-                <p className="text-white/50">No orders found</p>
-              </CardContent>
+              <CardContent className="p-8 text-center"><p className="text-white/50">No orders found</p></CardContent>
             </Card>
           ) : (
             filtered.map(order => <OrderCard key={order.id} order={order} />)
           )}
         </div>
 
-        {/* Orders Table - Desktop */}
         <div className="hidden md:block bg-white/5 border border-white/10 rounded-xl overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -577,178 +522,72 @@ const AdminOrders = () => {
               </thead>
               <tbody className="divide-y divide-white/10">
                 {loading ? Array.from({ length: 5 }).map((_, i) => (
-                  <tr key={i}>
-                    {Array.from({ length: 8 }).map((_, j) => (
-                      <td key={j} className="px-4 py-3">
-                        <Skeleton className="h-4 w-full bg-white/10" />
-                      </td>
-                    ))}
-                  </tr>
+                  <tr key={i}>{Array.from({ length: 8 }).map((_, j) => (<td key={j} className="px-4 py-3"><Skeleton className="h-4 w-full bg-white/10" /></td>))}</tr>
                 )) : filtered.map(o => (
                   <tr key={o.id} className="hover:bg-white/5 transition-colors">
                     <td className="px-4 py-3 font-medium text-white">{o.customer_name}</td>
                     <td className="px-4 py-3 text-white/60">{o.customer_phone}</td>
-                    <td className="px-4 py-3 font-semibold text-primary">
-                      {isModerator ? "KSh ****" : `KSh ${Number(o.total_amount).toLocaleString()}`}
-                    </td>
+                    <td className="px-4 py-3 font-semibold text-primary">{isModerator ? "KSh ****" : `KSh ${Number(o.total_amount).toLocaleString()}`}</td>
+                    <td className="px-4 py-3"><PaymentBadge method={o.payment_method || "whatsapp"} /></td>
+                    <td className="px-4 py-3"><Badge variant="outline" className="gap-1 border-white/20 text-white/60">{o.delivery_method === "delivery" ? <Truck className="w-3 h-3" /> : <Package className="w-3 h-3" />}{o.delivery_method === "delivery" ? "Delivery" : "Pickup"}</Badge></td>
                     <td className="px-4 py-3">
-                      <PaymentBadge method={o.payment_method || "whatsapp"} />
-                    </td>
-                    <td className="px-4 py-3">
-                      <Badge variant="outline" className="gap-1 border-white/20 text-white/60">
-                        {o.delivery_method === "delivery" ? <Truck className="w-3 h-3" /> : <Package className="w-3 h-3" />}
-                        {o.delivery_method === "delivery" ? "Delivery" : "Pickup"}
-                      </Badge>
-                    </td>
-                    <td className="px-4 py-3">
-                      <select
-                        value={o.status}
-                        onChange={e => updateStatus(o.id, e.target.value)}
-                        className={`text-[10px] font-semibold px-2 py-1 rounded-lg border-0 outline-none cursor-pointer bg-transparent ${statusConfig[o.status]?.color || statusConfig.pending.color}`}
-                      >
-                        {STATUS_OPTIONS.map(s => (
-                          <option 
-                            key={s} 
-                            value={s} 
-                            disabled={!isStatusTransitionAllowed(o.status, s)}
-                            className="bg-[hsl(240,10%,6%)] text-white capitalize"
-                          >
-                            {s}
-                          </option>
-                        ))}
+                      <select value={o.status} onChange={e => updateStatus(o.id, e.target.value)} className={`text-[10px] font-semibold px-2 py-1 rounded-lg border-0 outline-none cursor-pointer bg-transparent ${statusConfig[o.status]?.color || statusConfig.pending.color}`}>
+                        {STATUS_OPTIONS.map(s => (<option key={s} value={s} disabled={!isStatusTransitionAllowed(o.status, s)} className="bg-[hsl(240,10%,6%)] text-white capitalize">{s}</option>))}
                       </select>
                     </td>
-                    <td className="px-4 py-3 text-white/50 text-xs">
-                      {new Date(o.created_at).toLocaleDateString()}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setSelected(o)}
-                        className="text-white/60 hover:text-primary"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </Button>
-                    </td>
+                    <td className="px-4 py-3 text-white/50 text-xs">{new Date(o.created_at).toLocaleDateString()}</td>
+                    <td className="px-4 py-3 text-right"><Button variant="ghost" size="sm" onClick={() => setSelected(o)} className="text-white/60 hover:text-primary"><Eye className="w-4 h-4" /></Button></td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            {!loading && filtered.length === 0 && (
-              <div className="text-center py-12">
-                <p className="text-white/50">No orders match your filters.</p>
-              </div>
-            )}
+            {!loading && filtered.length === 0 && (<div className="text-center py-12"><p className="text-white/50">No orders match your filters.</p></div>)}
           </div>
         </div>
 
-        {/* Order Detail Sheet */}
         <Sheet open={!!selected} onOpenChange={() => setSelected(null)}>
           <SheetContent className="w-full sm:max-w-lg overflow-y-auto bg-[hsl(240,10%,6%)] border-l border-white/10">
             {selected && (
               <>
                 <SheetHeader>
                   <SheetTitle className="text-white">Order Details</SheetTitle>
-                  <SheetDescription className="text-white/50">
-                    Order #{selected.id.slice(-8)}
-                  </SheetDescription>
+                  <SheetDescription className="text-white/50">Order #{selected.id.slice(-8)}</SheetDescription>
                 </SheetHeader>
-                
                 <div className="mt-6 space-y-6">
-                  {/* Status Update */}
                   <div className="space-y-2">
                     <p className="text-sm font-medium text-white">Order Status</p>
-                    <select
-                      value={selected.status}
-                      onChange={e => updateStatus(selected.id, e.target.value)}
-                      className={`w-full text-sm font-semibold px-3 py-2 rounded-lg border outline-none cursor-pointer bg-black/30 ${statusConfig[selected.status]?.color || statusConfig.pending.color}`}
-                    >
-                      {STATUS_OPTIONS.map(s => (
-                        <option 
-                          key={s} 
-                          value={s} 
-                          disabled={!isStatusTransitionAllowed(selected.status, s)}
-                          className="bg-[hsl(240,10%,6%)] text-white capitalize"
-                        >
-                          {s}
-                        </option>
-                      ))}
+                    <select value={selected.status} onChange={e => updateStatus(selected.id, e.target.value)} className={`w-full text-sm font-semibold px-3 py-2 rounded-lg border outline-none cursor-pointer bg-black/30 ${statusConfig[selected.status]?.color || statusConfig.pending.color}`}>
+                      {STATUS_OPTIONS.map(s => (<option key={s} value={s} disabled={!isStatusTransitionAllowed(selected.status, s)} className="bg-[hsl(240,10%,6%)] text-white capitalize">{s}</option>))}
                     </select>
                   </div>
-
-                  {/* Action Buttons */}
                   <div className="flex gap-2">
                     {selected.customer_email && (
-                      <Button
-                        onClick={() => sendStatusUpdateEmail(selected, true)}
-                        disabled={sendingEmail}
-                        variant="outline"
-                        size="sm"
-                        className="flex-1 border-white/10 text-white hover:bg-white/10"
-                      >
-                        {sendingEmail ? (
-                          <Loader className="w-4 h-4 mr-2 animate-spin" />
-                        ) : (
-                          <Mail className="w-4 h-4 mr-2" />
-                        )}
-                        Email
+                      <Button onClick={() => sendStatusUpdateEmail(selected, true)} disabled={sendingEmail} variant="outline" size="sm" className="flex-1 border-white/10 text-white hover:bg-white/10">
+                        {sendingEmail ? <Loader className="w-4 h-4 mr-2 animate-spin" /> : <Mail className="w-4 h-4 mr-2" />}Email
                       </Button>
                     )}
                     {selected.customer_phone && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="flex-1 border-white/10 text-white hover:bg-white/10"
-                        onClick={() => window.open(`https://wa.me/${selected.customer_phone.replace(/\D/g, "")}`, "_blank")}
-                      >
-                        <MessageCircle className="w-4 h-4 mr-2" />
-                        WhatsApp
+                      <Button variant="outline" size="sm" className="flex-1 border-white/10 text-white hover:bg-white/10" onClick={() => window.open(`https://wa.me/${selected.customer_phone.replace(/\D/g, "")}`, "_blank")}>
+                        <MessageCircle className="w-4 h-4 mr-2" />WhatsApp
                       </Button>
                     )}
                   </div>
-
-                  {/* Delivery Info */}
                   <div className="bg-black/30 rounded-xl p-4 space-y-2 border border-white/10">
-                    <div className="flex items-center gap-2 text-sm font-medium text-white">
-                      <Truck className="w-4 h-4 text-primary" />
-                      Delivery Information
-                    </div>
+                    <div className="flex items-center gap-2 text-sm font-medium text-white"><Truck className="w-4 h-4 text-primary" />Delivery Information</div>
                     {selected.delivery_method === "delivery" ? (
                       <>
                         <p className="text-sm text-white/60">{selected.delivery_address || "Address not available"}</p>
                         {selected.delivery_latitude && selected.delivery_longitude && (
-                          <Button
-                            variant="link"
-                            size="sm"
-                            className="p-0 h-auto text-primary"
-                            onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${selected.delivery_latitude},${selected.delivery_longitude}`, "_blank")}
-                          >
-                            <MapPin className="w-3 h-3 mr-1" />
-                            View on Map
-                          </Button>
+                          <Button variant="link" size="sm" className="p-0 h-auto text-primary" onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${selected.delivery_latitude},${selected.delivery_longitude}`, "_blank")}><MapPin className="w-3 h-3 mr-1" />View on Map</Button>
                         )}
                       </>
-                    ) : (
-                      <p className="text-sm text-white/60">Store Pickup</p>
-                    )}
+                    ) : (<p className="text-sm text-white/60">Store Pickup</p>)}
                   </div>
-
-                  {/* Payment Info */}
                   <div className="bg-black/30 rounded-xl p-4 space-y-2 border border-white/10">
-                    <div className="flex items-center gap-2 text-sm font-medium text-white">
-                      <CreditCard className="w-4 h-4 text-primary" />
-                      Payment Information
-                    </div>
+                    <div className="flex items-center gap-2 text-sm font-medium text-white"><CreditCard className="w-4 h-4 text-primary" />Payment Information</div>
                     <PaymentBadge method={selected.payment_method || "whatsapp"} />
-                    <p className="text-xs text-white/40 mt-2">
-                      {selected.payment_method === "paystack"
-                        ? "Card orders are only saved after payment completes."
-                        : "WhatsApp orders are saved when the user clicks through to WhatsApp."}
-                    </p>
+                    <p className="text-xs text-white/40 mt-2">{selected.payment_method === "paystack" ? "Card orders are only saved after payment completes." : "WhatsApp orders are saved when the user clicks through to WhatsApp."}</p>
                   </div>
-
-                  {/* Order Items */}
                   <div className="space-y-3">
                     <p className="text-sm font-medium text-white">Order Items</p>
                     <div className="space-y-2">
@@ -761,15 +600,10 @@ const AdminOrders = () => {
                     </div>
                     <div className="flex justify-between font-bold text-base pt-3 border-t border-white/10">
                       <span className="text-white">Total</span>
-                      <span className="text-primary">
-                        {isModerator ? "KSh ****" : `KSh ${Number(selected.total_amount).toLocaleString()}`}
-                      </span>
+                      <span className="text-primary">{isModerator ? "KSh ****" : `KSh ${Number(selected.total_amount).toLocaleString()}`}</span>
                     </div>
                   </div>
-
-                  <p className="text-xs text-white/30 text-center pt-4">
-                    Placed on {new Date(selected.created_at).toLocaleString()}
-                  </p>
+                  <p className="text-xs text-white/30 text-center pt-4">Placed on {new Date(selected.created_at).toLocaleString()}</p>
                 </div>
               </>
             )}
