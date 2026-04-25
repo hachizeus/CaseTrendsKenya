@@ -25,7 +25,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
-import { API_URL } from "@/lib/constants";
 import { logAuditAction } from "@/lib/audit";
 
 const STATUS_OPTIONS = ["pending", "confirmed", "processing", "delivered", "cancelled"];
@@ -97,101 +96,43 @@ const AdminOrders = () => {
   };
 
   const sendStatusUpdateEmail = async (order: any, isManual: boolean = false) => {
-  if (!order.customer_email) {
-    if (isManual) {
-      toast.error("No email address on file for this order");
-    }
-    return false;
-  }
-
-  if (isManual) setSendingEmail(true);
-
-  try {
-    // USE SUPABASE EDGE FUNCTION - NOT the Render API
-    // This bypasses the 403 error completely
-    const { data, error } = await supabase.functions.invoke('send-email', {
-      body: {
-        to: order.customer_email,
-        type: "status_update",
-        data: {
-          id: order.id,
-          customer_name: order.customer_name,
-          customer_email: order.customer_email,
-          customer_phone: order.customer_phone,
-          delivery_method: order.delivery_method,
-          delivery_address: order.delivery_address,
-          status: order.status,
-          total_amount: order.total_amount,
-          items: order.items,
-          created_at: order.created_at
-        }
+    if (!order.customer_email) {
+      if (isManual) {
+        toast.error("No email address on file for this order");
       }
-    });
-
-    if (error) {
-      console.error("Email send failed:", error);
-      if (isManual) toast.error(`Email failed: ${error.message || "Unknown error"}`);
       return false;
     }
 
-    console.log("Email sent successfully:", data);
-    
-    if (isManual) {
-      toast.success(`Status update email sent to ${order.customer_email}`);
-      await logAuditAction({
-        actor_id: user?.id ?? null,
-        actor_email: user?.email ?? null,
-        action_type: "status_update_email_sent",
-        entity: "orders",
-        entity_id: order.id,
-        details: { 
-          customer_email: order.customer_email, 
-          status: order.status,
-          actor_role: role
-        },
-        user_id: order.user_id ?? null,
-      });
-    }
-    return true;
-  } catch (err) {
-    console.error("Error sending email:", err);
-    if (isManual) toast.error(`Failed to send email: ${err instanceof Error ? err.message : "Connection error"}`);
-    return false;
-  } finally {
-    if (isManual) setSendingEmail(false);
-  }
-};
-      const headers: Record<string, string> = { 
-        "Content-Type": "application/json",
-        "Accept": "application/json"
-      };
-      
-      if (session?.access_token) {
-        headers.Authorization = `Bearer ${session.access_token}`;
-      }
+    if (isManual) setSendingEmail(true);
 
-      console.log("Sending email:", { 
-        hasAuth: !!headers.Authorization, 
-        userRole: role, 
-        orderId: order.id,
-        status: order.status 
+    try {
+      // USE SUPABASE EDGE FUNCTION - Works for ALL roles (admin AND moderator)
+      const { data, error } = await supabase.functions.invoke('send-email', {
+        body: {
+          to: order.customer_email,
+          type: "status_update",
+          data: {
+            id: order.id,
+            customer_name: order.customer_name,
+            customer_email: order.customer_email,
+            customer_phone: order.customer_phone,
+            delivery_method: order.delivery_method,
+            delivery_address: order.delivery_address,
+            status: order.status,
+            total_amount: order.total_amount,
+            items: order.items,
+            created_at: order.created_at
+          }
+        }
       });
 
-      const response = await fetch(`${API_URL}/api/send-email`, {
-        method: "POST",
-        headers,
-        body: JSON.stringify(emailBody),
-      });
-
-      const responseData = await response.json();
-      
-      if (!response.ok) {
-        console.error("Email send failed:", responseData);
-        if (isManual) toast.error(`Email failed: ${responseData.error || "Unknown error"}`);
+      if (error) {
+        console.error("Email send failed:", error);
+        if (isManual) toast.error(`Email failed: ${error.message || "Unknown error"}`);
         return false;
       }
 
-      console.log("Email sent successfully:", responseData);
+      console.log("Email sent successfully:", data);
       
       if (isManual) {
         toast.success(`Status update email sent to ${order.customer_email}`);
@@ -212,7 +153,7 @@ const AdminOrders = () => {
       return true;
     } catch (err) {
       console.error("Error sending email:", err);
-      if (isManual) toast.error(`Failed to send email: ${err instanceof Error ? err.message : "Unknown error"}`);
+      if (isManual) toast.error(`Failed to send email: ${err instanceof Error ? err.message : "Connection error"}`);
       return false;
     } finally {
       if (isManual) setSendingEmail(false);
@@ -303,7 +244,6 @@ const AdminOrders = () => {
     }
   };
 
-  // ... (rest of the component stays exactly the same: filtered, stats, StatusBadge, PaymentBadge, OrderCard, and the entire return JSX)
   const filtered = useMemo(() => {
     return orders
       .filter(o => {
