@@ -369,9 +369,9 @@ SELECT p.id, 'Warranty', '1 Year', 2 FROM products p WHERE p.sku = 'IPH15-BLK-00
 
 -- Add product images
 INSERT INTO public.product_images (product_id, image_url, display_order, is_primary)
-SELECT p.id, 'https://example.com/image1.jpg', 0, true FROM products p WHERE p.sku = 'IPH15-BLK-001'
+SELECT p.id, 'https://example.com/image1.webp', 0, true FROM products p WHERE p.sku = 'IPH15-BLK-001'
 UNION ALL
-SELECT p.id, 'https://example.com/image2.jpg', 1, false FROM products p WHERE p.sku = 'IPH15-BLK-001';
+SELECT p.id, 'https://example.com/image2.webp', 1, false FROM products p WHERE p.sku = 'IPH15-BLK-001';
 
 -- Get complete product with all related data
 SELECT

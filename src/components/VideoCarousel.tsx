@@ -17,7 +17,7 @@ const VideoCarousel = () => {
       {videos.map((video, index) => (
         <div key={index} className="video-card">
           <img
-            src={video.thumbnail || `https://img.youtube.com/vi/${video.url.split('v=')[1]}/0.jpg`}
+            src={video.thumbnail || `https://img.youtube.com/vi/${video.url.split('v=')[1]}/0.webp`}
             alt={video.title || 'Video thumbnail'}
             className="video-thumbnail"
           />

@@ -31,7 +31,7 @@ export const SortableVideoItem = ({ video, onDelete, onToggleVisibility, onEdit 
 
   const getYouTubeThumbnail = (url: string) => {
     const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&?#]+)/);
-    return match ? `https://img.youtube.com/vi/${match[1]}/mqdefault.jpg` : null;
+    return match ? `https://img.youtube.com/vi/${match[1]}/mqdefault.webp` : null;
   };
 
   const thumbnail = video.thumbnail_url || getYouTubeThumbnail(video.youtube_url);

@@ -125,7 +125,7 @@ https://your-project.supabase.co/storage/v1/object/public/product-images/slides/
 ```
 https://res.cloudinary.com/your-cloud/image/upload/
   w_1400,h_800,c_fill,q_auto,f_auto/
-  v1234567890/product-image.jpg
+  v1234567890/product-image.webp
 ```
 
 ---

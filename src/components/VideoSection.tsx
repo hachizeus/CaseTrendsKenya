@@ -33,7 +33,7 @@ export const VideoSection = () => {
 
   const getYouTubeThumbnail = (url: string) => {
     const id = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&?#]+)/)?.[1];
-    return id ? `https://img.youtube.com/vi/${id}/hqdefault.jpg` : null;
+    return id ? `https://img.youtube.com/vi/${id}/hqdefault.webp` : null;
   };
 
   // duplicate for seamless infinite loop

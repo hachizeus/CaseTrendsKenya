@@ -117,7 +117,7 @@ const AdminVideoManager = () => {
 
   const getYouTubeThumbnail = (url: string) => {
     const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&?#]+)/);
-    return match ? `https://img.youtube.com/vi/${match[1]}/mqdefault.jpg` : null;
+    return match ? `https://img.youtube.com/vi/${match[1]}/mqdefault.webp` : null;
   };
 
   return (
@@ -168,7 +168,7 @@ const AdminVideoManager = () => {
                 <div className="relative mt-1">
                   <ImageIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
-                    placeholder="https://example.com/thumbnail.jpg"
+                    placeholder="https://example.com/thumbnail.webp"
                     value={newVideo.thumbnail_url}
                     onChange={(e) => setNewVideo({ ...newVideo, thumbnail_url: e.target.value })}
                     className="pl-9"

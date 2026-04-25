@@ -2882,7 +2882,7 @@ function isNewRouteInstance(currentMatch, match) {
   return (
     // param change for this match, /users/123 -> /users/456
     currentMatch.pathname !== match.pathname || // splat param changed, which is not present in match.path
-    // e.g. /files/images/avatar.jpg -> files/finances.xls
+    // e.g. /files/images/avatar.webp -> files/finances.xls
     currentPath != null && currentPath.endsWith("*") && currentMatch.params["*"] !== match.params["*"]
   );
 }

@@ -21,14 +21,14 @@ Your images should be served in modern formats with fallbacks:
 **Example conversion commands:**
 ```bash
 # Using ImageMagick
-convert image.jpg -quality 80 image.webp
-convert image.jpg -quality 75 image.avif
+convert image.webp -quality 80 image.webp
+convert image.webp -quality 75 image.avif
 
 # Using cwebp (Google)
-cwebp -q 80 image.jpg -o image.webp
+cwebp -q 80 image.webp -o image.webp
 
 # Using FFmpeg
-ffmpeg -i image.jpg -q:v 5 image.avif
+ffmpeg -i image.webp -q:v 5 image.avif
 ```
 
 ### 2. **Responsive Image Sizing**
@@ -50,14 +50,14 @@ Product Images (500x500):
 **Generate responsive images with ImageMagick:**
 ```bash
 # Hero banner
-convert hero.jpg -resize 1400x480 hero-1400.jpg
-convert hero.jpg -resize 900x320 hero-900.jpg
-convert hero.jpg -resize 600x200 hero-600.jpg
+convert hero.webp -resize 1400x480 hero-1400.webp
+convert hero.webp -resize 900x320 hero-900.webp
+convert hero.webp -resize 600x200 hero-600.webp
 
 # Convert to WebP
-cwebp -q 80 hero-1400.jpg -o hero-1400.webp
-cwebp -q 80 hero-900.jpg -o hero-900.webp
-cwebp -q 80 hero-600.jpg -o hero-600.webp
+cwebp -q 80 hero-1400.webp -o hero-1400.webp
+cwebp -q 80 hero-900.webp -o hero-900.webp
+cwebp -q 80 hero-600.webp -o hero-600.webp
 ```
 
 ### 3. **Update Image URLs in Database**
@@ -66,7 +66,7 @@ After converting images, update your Supabase image URLs to point to the WebP/AV
 
 **Before:**
 ```
-https://storage.example.com/images/product-123.jpg
+https://storage.example.com/images/product-123.webp
 ```
 
 **After (with fallback query params):**
@@ -77,7 +77,7 @@ https://storage.example.com/images/product-123
 The LazyImage component will automatically serve:
 1. `product-123.avif` (if browser supports AVIF)
 2. `product-123.webp` (if browser supports WebP)
-3. `product-123.jpg` (fallback for all browsers)
+3. `product-123.webp` (fallback for all browsers)
 
 ### 4. **Bulk Image Optimization Script**
 
@@ -188,7 +188,7 @@ If images are served from Supabase or a CDN, enable:
 
 Example Supabase CDN URL patterns:
 ```
-https://your-project.supabase.co/storage/v1/object/public/images/product.jpg?width=500&quality=80
+https://your-project.supabase.co/storage/v1/object/public/images/product.webp?width=500&quality=80
 ```
 
 ## Tools Installed in Your Project

@@ -45,7 +45,7 @@
 
 ### 5. **Caching Strategy** ✅
 - ✅ Cache headers configured in server.js:
-  - Static assets (.js, .css, .png, etc.): 1 year immutable cache
+  - Static assets (.js, .css, .webp, etc.): 1 year immutable cache
   - HTML: 1 hour with must-revalidate
   - Dynamic content: no-cache, must-revalidate
 - ✅ Efficient cache lifetimes: ~1,042 KiB savings

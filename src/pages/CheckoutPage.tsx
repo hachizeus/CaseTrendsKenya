@@ -13,9 +13,9 @@ import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import CaptchaWidget from "@/components/CaptchaWidget";
 import "leaflet/dist/leaflet.css";
-import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
-import markerIcon from "leaflet/dist/images/marker-icon.png";
-import markerShadow from "leaflet/dist/images/marker-shadow.png";
+import markerIcon2x from "leaflet/dist/images/marker-icon-2x.webp";
+import markerIcon from "leaflet/dist/images/marker-icon.webp";
+import markerShadow from "leaflet/dist/images/marker-shadow.webp";
 import TopBar from "@/components/TopBar";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -173,7 +173,7 @@ const CheckoutPage = () => {
       const initialPos: [number, number] = [-1.2921, 36.8219];
       mapRef.current = L.map(mapContainerRef.current).setView(initialPos, 13);
 
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.webp", {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
       }).addTo(mapRef.current);
 
