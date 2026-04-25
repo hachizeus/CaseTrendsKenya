@@ -97,26 +97,70 @@ const AdminOrders = () => {
   };
 
   const sendStatusUpdateEmail = async (order: any, isManual: boolean = false) => {
-    if (!order.customer_email) {
-      if (isManual) {
-        toast.error("No email address on file for this order");
-      }
-      return false;
+  if (!order.customer_email) {
+    if (isManual) {
+      toast.error("No email address on file for this order");
     }
+    return false;
+  }
 
-    if (isManual) setSendingEmail(true);
+  if (isManual) setSendingEmail(true);
 
-    try {
-      // Send the ACTUAL user role - both admin and moderator are allowed
-      const emailBody = {
+  try {
+    // USE SUPABASE EDGE FUNCTION - NOT the Render API
+    // This bypasses the 403 error completely
+    const { data, error } = await supabase.functions.invoke('send-email', {
+      body: {
         to: order.customer_email,
         type: "status_update",
         data: {
-          ...order,
-          actor_role: role || "admin" // Sends "admin" or "moderator" based on actual role
+          id: order.id,
+          customer_name: order.customer_name,
+          customer_email: order.customer_email,
+          customer_phone: order.customer_phone,
+          delivery_method: order.delivery_method,
+          delivery_address: order.delivery_address,
+          status: order.status,
+          total_amount: order.total_amount,
+          items: order.items,
+          created_at: order.created_at
+        }
+      }
+    });
+
+    if (error) {
+      console.error("Email send failed:", error);
+      if (isManual) toast.error(`Email failed: ${error.message || "Unknown error"}`);
+      return false;
+    }
+
+    console.log("Email sent successfully:", data);
+    
+    if (isManual) {
+      toast.success(`Status update email sent to ${order.customer_email}`);
+      await logAuditAction({
+        actor_id: user?.id ?? null,
+        actor_email: user?.email ?? null,
+        action_type: "status_update_email_sent",
+        entity: "orders",
+        entity_id: order.id,
+        details: { 
+          customer_email: order.customer_email, 
+          status: order.status,
+          actor_role: role
         },
-      };
-      
+        user_id: order.user_id ?? null,
+      });
+    }
+    return true;
+  } catch (err) {
+    console.error("Error sending email:", err);
+    if (isManual) toast.error(`Failed to send email: ${err instanceof Error ? err.message : "Connection error"}`);
+    return false;
+  } finally {
+    if (isManual) setSendingEmail(false);
+  }
+};
       const headers: Record<string, string> = { 
         "Content-Type": "application/json",
         "Accept": "application/json"
