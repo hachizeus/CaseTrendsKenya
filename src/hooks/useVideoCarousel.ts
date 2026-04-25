@@ -6,122 +6,99 @@ interface UseVideoCarouselProps {
 }
 
 export const useVideoCarousel = ({
-  autoplaySpeed = 0.3, // pixels per frame (VERY smooth)
-  pauseOnHover = true
+  autoplaySpeed = 0.35,
+  pauseOnHover = true,
 }: UseVideoCarouselProps = {}) => {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const [isPaused, setIsPaused] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
 
+  const pointerDown = useRef(false);
   const startX = useRef(0);
-  const scrollLeft = useRef(0);
-  const velocity = useRef(0);
-  const lastX = useRef(0);
+  const startScrollLeft = useRef(0);
+  const moved = useRef(false);
+  const rafRef = useRef<number>();
 
-  const animationRef = useRef<number>();
-
-  // 🔥 Smooth RAF auto scroll (no jitter)
+  // Smooth autoplay
   const autoScroll = useCallback(() => {
-    if (!scrollRef.current) return;
+    const el = scrollRef.current;
+    if (!el) return;
 
     if (!isPaused && !isDragging) {
-      const el = scrollRef.current;
-
       el.scrollLeft += autoplaySpeed;
 
-      // Infinite loop
       if (el.scrollLeft >= el.scrollWidth - el.clientWidth) {
         el.scrollLeft = 0;
       }
     }
 
-    animationRef.current = requestAnimationFrame(autoScroll);
-  }, [isPaused, isDragging, autoplaySpeed]);
+    rafRef.current = requestAnimationFrame(autoScroll);
+  }, [autoplaySpeed, isPaused, isDragging]);
 
   useEffect(() => {
-    animationRef.current = requestAnimationFrame(autoScroll);
-
+    rafRef.current = requestAnimationFrame(autoScroll);
     return () => {
-      if (animationRef.current) cancelAnimationFrame(animationRef.current);
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
   }, [autoScroll]);
 
-  // ------------------
-  // Desktop Drag
-  // ------------------
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (!scrollRef.current) return;
+  const onPointerDown = (e: React.PointerEvent) => {
+    const el = scrollRef.current;
+    if (!el) return;
 
-    setIsDragging(true);
+    pointerDown.current = true;
+    moved.current = false;
+    setIsDragging(false);
     setIsPaused(true);
 
-    startX.current = e.pageX;
-    scrollLeft.current = scrollRef.current.scrollLeft;
-    lastX.current = e.pageX;
+    startX.current = e.clientX;
+    startScrollLeft.current = el.scrollLeft;
+
+    el.setPointerCapture(e.pointerId);
   };
 
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDragging || !scrollRef.current) return;
+  const onPointerMove = (e: React.PointerEvent) => {
+    const el = scrollRef.current;
+    if (!el || !pointerDown.current) return;
 
-    const dx = e.pageX - startX.current;
-    scrollRef.current.scrollLeft = scrollLeft.current - dx;
+    const delta = e.clientX - startX.current;
 
-    velocity.current = e.pageX - lastX.current;
-    lastX.current = e.pageX;
+    if (Math.abs(delta) > 5) {
+      moved.current = true;
+      setIsDragging(true);
+    }
+
+    if (moved.current) {
+      el.scrollLeft = startScrollLeft.current - delta;
+    }
   };
 
-  const handleMouseUp = () => {
+  const onPointerUp = (e: React.PointerEvent) => {
+    const el = scrollRef.current;
+    if (!el) return;
+
+    pointerDown.current = false;
     setIsDragging(false);
     setIsPaused(false);
-  };
 
-  // ------------------
-  // Touch (FIXED)
-  // ------------------
-  const handleTouchStart = (e: React.TouchEvent) => {
-    if (!scrollRef.current) return;
-
-    setIsDragging(true);
-    setIsPaused(true);
-
-    startX.current = e.touches[0].pageX;
-    scrollLeft.current = scrollRef.current.scrollLeft;
-    lastX.current = e.touches[0].pageX;
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (!isDragging || !scrollRef.current) return;
-
-    // ❌ DO NOT preventDefault → keeps native scrolling smooth
-
-    const x = e.touches[0].pageX;
-    const dx = x - startX.current;
-
-    scrollRef.current.scrollLeft = scrollLeft.current - dx;
-
-    velocity.current = x - lastX.current;
-    lastX.current = x;
-  };
-
-  const handleTouchEnd = () => {
-    setIsDragging(false);
-    setIsPaused(false);
+    try {
+      el.releasePointerCapture(e.pointerId);
+    } catch {}
   };
 
   return {
     scrollRef,
+    isDragging,
+    wasDragged: () => moved.current,
     handlers: {
       onMouseEnter: () => pauseOnHover && setIsPaused(true),
       onMouseLeave: () => pauseOnHover && setIsPaused(false),
-      onMouseDown: handleMouseDown,
-      onMouseMove: handleMouseMove,
-      onMouseUp: handleMouseUp,
-      onMouseLeaveCapture: handleMouseUp,
 
-      onTouchStart: handleTouchStart,
-      onTouchMove: handleTouchMove,
-      onTouchEnd: handleTouchEnd,
+      onPointerDown,
+      onPointerMove,
+      onPointerUp,
+      onPointerCancel: onPointerUp,
     },
   };
 };
