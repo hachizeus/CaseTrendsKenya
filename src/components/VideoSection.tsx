@@ -43,7 +43,7 @@ export const VideoSection = () => {
     <>
       <section className="py-12 md:py-16">
         <div className="w-full">
-          <h2 className="text-3xl font-bold text-white mb-8 px-4">
+          <h2 className="text-3xl font-bold text-black mb-8 px-4">
             Watch Our Latest Videos
           </h2>
           <div
