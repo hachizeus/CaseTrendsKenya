@@ -43,6 +43,7 @@ export const VideoSection = () => {
     <>
       <section className="py-8 md:py-10 bg-gradient-to-b from-[hsl(240,10%,3.9%)] to-[hsl(240,10%,4.5%)]">
         <div className="w-full">
+<<<<<<< HEAD
           <div className="flex items-center justify-between mb-6 px-4">
             <h2 className="text-xl md:text-2xl font-bold bg-gradient-to-r from-white to-primary bg-clip-text text-transparent">
               Watch Our Latest Videos
@@ -53,6 +54,11 @@ export const VideoSection = () => {
             </div>
           </div>
           
+=======
+          <h2 className="text-3xl font-bold text-black mb-8 px-4">
+            Watch Our Latest Videos
+          </h2>
+>>>>>>> 288b6cd7c2b08dafce759857c07dc551515c678c
           <div
             ref={scrollRef}
             {...handlers}
