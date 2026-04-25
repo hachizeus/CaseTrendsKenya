@@ -16,6 +16,32 @@ import { toast } from "sonner";
 import { compressImage, formatFileSize, getImageDimensions, getOptimizedImageUrl } from "@/lib/imageOptimization";
 import type { CompressedImage } from "@/lib/imageOptimization";
 
+// Helper function to normalize links
+const normalizeLink = (link: string): string => {
+  if (!link) return "/products";
+  if (link.startsWith("http") || link.startsWith("/")) return link;
+  return `/${link}`;
+};
+
+// Helper function to delete image/slide
+const deleteImage = async (slideId: string, imageUrl: string, tableName: string, storageBucket: string) => {
+  try {
+    // Delete from database
+    const { error } = await (supabase
+      .from(tableName as any)
+      .delete()
+      .eq("id", slideId));
+    
+    if (error) throw error;
+    
+    toast.success("Slide deleted successfully");
+  } catch (error) {
+    console.error("Error deleting slide:", error);
+    toast.error("Failed to delete slide");
+    throw error;
+  }
+};
+
 // WebP conversion utility for slides
 async function convertToWebP(file: File, quality: number = 85): Promise<File> {
   return new Promise((resolve, reject) => {
@@ -28,7 +54,6 @@ async function convertToWebP(file: File, quality: number = 85): Promise<File> {
         const canvas = document.createElement("canvas");
         const ctx = canvas.getContext("2d");
         
-        // Slide dimensions: max 1920x800 for hero images
         let width = img.width;
         let height = img.height;
         const maxWidth = 1920;
@@ -114,18 +139,13 @@ export default function AdminSlidesOverview() {
   const loadSections = async () => {
     setLoading(true);
     try {
-      // Query hero sections with type bypass for newly created table
       const { data: sectionsData, error } = await (anySupabase
-        .from("hero_sections" as any)
+        .from("hero_sections")
         .select("*")
-        .order("section_number") as any);
+        .order("section_number"));
 
       if (error) {
         console.error("AdminSlidesOverview - Error loading sections:", error);
-        console.log("If you see PGRST errors, you may need to:");
-        console.log("1. Run the SQL migrations in Supabase");
-        console.log("2. Ensure RLS policies allow public read access");
-        console.log("3. Refresh the Supabase schema cache");
         setSections([]);
         setLoading(false);
         return;
@@ -133,22 +153,19 @@ export default function AdminSlidesOverview() {
 
       setSections(sectionsData || []);
 
-      // Fetch slides for each section
       if (sectionsData && sectionsData.length > 0) {
         const slidesData: { [key: string]: any[] } = {};
         
         for (const section of sectionsData) {
           const { data: sectionSlides, error: slidesError } = await (anySupabase
-            .from("hero_slides" as any)
+            .from("hero_slides")
             .select("*")
             .eq("section_id", section.id)
-            .order("display_order") as any;
+            .order("display_order"));
           
-          if (slidesError) {
-            console.error(`Error loading slides for section ${section.id}:`, slidesError);
+          if (!slidesError) {
+            slidesData[section.id] = sectionSlides || [];
           }
-          
-          slidesData[section.id] = sectionSlides || [];
         }
         
         setSlides(slidesData);
@@ -173,9 +190,9 @@ export default function AdminSlidesOverview() {
 
       for (const section of heroSectionsData) {
         const { error } = await (anySupabase
-          .from("hero_sections" as any)
+          .from("hero_sections")
           .insert([section])
-          .select() as any;
+          .select());
 
         if (error && !error.message.includes("duplicate key")) {
           throw error;
@@ -192,6 +209,7 @@ export default function AdminSlidesOverview() {
         user_id: null,
       });
       await loadSections();
+      toast.success("Hero sections created successfully!");
     } catch (err: any) {
       console.error("Error seeding hero sections:", err);
       toast.error(`Error creating sections: ${err.message}`);
@@ -247,7 +265,6 @@ export default function AdminSlidesOverview() {
 
     setCompressing(true);
     try {
-      // Convert to WebP first (better compression than JPEG)
       let webpFile: File;
       
       if (file.type === "image/webp") {
@@ -256,7 +273,6 @@ export default function AdminSlidesOverview() {
         webpFile = await convertToWebP(file, 85);
       }
       
-      // Then apply additional optimization if needed
       const compressed = await compressImage(webpFile, {
         maxWidth: 1920,
         maxHeight: 800,
@@ -264,7 +280,6 @@ export default function AdminSlidesOverview() {
         mimeType: "image/webp",
       });
 
-      // Create a new File object from the compressed blob
       const finalFile = new File([compressed.blob], webpFile.name, {
         type: "image/webp",
       });
@@ -288,11 +303,37 @@ export default function AdminSlidesOverview() {
   };
 
   const saveSlide = async () => {
+    if (!selectedSectionId) {
+      toast.error("No section selected");
+      return;
+    }
+
+    setSaving(true);
     try {
+      let imageUrl = preview;
+      
+      // If there's a new image file, upload it
+      if (imageFile) {
+        const fileName = `hero_${Date.now()}_${Math.random().toString(36).substr(2, 9)}.webp`;
+        const { data: uploadData, error: uploadError } = await anySupabase
+          .storage
+          .from("product-images")
+          .upload(fileName, imageFile);
+
+        if (uploadError) throw uploadError;
+        
+        const { data: { publicUrl } } = anySupabase
+          .storage
+          .from("product-images")
+          .getPublicUrl(fileName);
+        
+        imageUrl = publicUrl;
+      }
+
       const payload = {
         title: slideForm.title,
         subtitle: slideForm.subtitle || null,
-        image_url: preview || "",
+        image_url: imageUrl,
         cta_text: slideForm.cta_text || null,
         cta_link: normalizeLink(slideForm.cta_link || ""),
         is_active: slideForm.is_active,
@@ -306,33 +347,49 @@ export default function AdminSlidesOverview() {
           .update(payload)
           .eq("id", editingSlide.id);
         if (error) throw error;
+        toast.success("Slide updated successfully!");
       } else {
         const { error } = await anySupabase
           .from("hero_slides")
           .insert([payload]);
         if (error) throw error;
+        toast.success("Slide created successfully!");
       }
 
-      toast.success("Slide saved successfully!");
+      setSlideDialogOpen(false);
       await loadSections();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error saving slide:", error);
-      toast.error("Failed to save slide");
+      toast.error(error.message || "Failed to save slide");
+    } finally {
+      setSaving(false);
     }
   };
 
-  const deleteSlide = async (slideId: string, imageUrl: string) => {
+  const handleDeleteSlide = async (slideId: string, imageUrl: string) => {
     if (!confirm("Delete this slide?")) return;
-    await deleteImage(slideId, imageUrl, "hero_slides", "product-images");
-    await loadSections();
+    try {
+      const { error } = await anySupabase
+        .from("hero_slides")
+        .delete()
+        .eq("id", slideId);
+      
+      if (error) throw error;
+      
+      toast.success("Slide deleted successfully");
+      await loadSections();
+    } catch (error: any) {
+      console.error("Error deleting slide:", error);
+      toast.error(error.message || "Failed to delete slide");
+    }
   };
 
   const toggleSlideActive = async (sectionId: string, slide: any) => {
     try {
       const { error } = await (anySupabase
-        .from("hero_slides" as any)
+        .from("hero_slides")
         .update({ is_active: !slide.is_active })
-        .eq("id", slide.id) as any;
+        .eq("id", slide.id));
       if (error) throw error;
       await logAuditAction({
         actor_id: user?.id ?? null,
@@ -344,6 +401,7 @@ export default function AdminSlidesOverview() {
         user_id: null,
       });
       await loadSections();
+      toast.success(`Slide ${slide.is_active ? "deactivated" : "activated"}`);
     } catch (err: any) {
       toast.error(err.message);
     }
@@ -473,7 +531,7 @@ export default function AdminSlidesOverview() {
                               <Pencil className="w-4 h-4" />
                             </button>
                             <button
-                              onClick={() => deleteSlide(slide.id, slide.image_url)}
+                              onClick={() => handleDeleteSlide(slide.id, slide.image_url)}
                               className="p-1.5 hover:bg-red-50 hover:text-red-600 border border-transparent hover:border-red-200 transition-colors rounded"
                             >
                               <Trash2 className="w-4 h-4" />
@@ -520,19 +578,15 @@ export default function AdminSlidesOverview() {
                   onChange={(e) => handleFileChange(e.target.files?.[0] || null)}
                 />
               </label>
-              {imageFile && (
+              {imageFile && compressionStats && (
                 <div className="mt-3 p-3 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg space-y-2">
                   <div className="flex items-start gap-2">
                     <Info className="w-4 h-4 text-green-700 dark:text-green-400 mt-0.5 flex-shrink-0" />
                     <div className="text-xs text-green-900 dark:text-green-300 space-y-1 flex-1">
                       <p className="font-semibold">✨ WebP Optimized!</p>
-                      {compressionStats && (
-                        <>
-                          <p>📦 Size: {formatFileSize(compressionStats.size)} ({compressionStats.compressionRatio}% smaller)</p>
-                          <p>📏 Dimensions: {compressionStats.width}×{compressionStats.height}px</p>
-                          <p>🎨 Format: WebP (modern browser format)</p>
-                        </>
-                      )}
+                      <p>📦 Size: {formatFileSize(compressionStats.size)} ({compressionStats.compressionRatio}% smaller)</p>
+                      <p>📏 Dimensions: {compressionStats.width}×{compressionStats.height}px</p>
+                      <p>🎨 Format: WebP (modern browser format)</p>
                       <p className="text-[11px] text-green-800 dark:text-green-400 mt-2">
                         Images are automatically converted to WebP format for faster loading and better user experience. ✅
                       </p>
@@ -592,7 +646,7 @@ export default function AdminSlidesOverview() {
               <Button onClick={saveSlide} disabled={saving || compressing} className="gap-2">
                 {compressing && <Loader2 className="w-4 h-4 animate-spin" />}
                 {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-                {compressing ? "Converting to WebP..." : saving ? "Uploading..." : editingSlide ? "Update Slide" : "Create Slide"}
+                {compressing ? "Converting to WebP..." : saving ? "Saving..." : editingSlide ? "Update Slide" : "Create Slide"}
               </Button>
             </div>
           </div>

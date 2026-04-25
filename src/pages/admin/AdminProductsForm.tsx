@@ -9,7 +9,6 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-// Create an untyped supabase client to avoid TypeScript issues with complex generated types
 const supabaseClient = supabase as any;
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -51,6 +50,24 @@ import { motion, AnimatePresence } from "framer-motion";
 import { debounce } from "lodash";
 import { cn } from "@/lib/utils";
 
+// Helper function to delete image
+const deleteImage = async (imageId: string, imageUrl: string, tableName: string, storageBucket: string) => {
+  try {
+    const { error } = await supabaseClient
+      .from(tableName)
+      .delete()
+      .eq("id", imageId);
+    
+    if (error) throw error;
+    
+    toast.success("Image deleted successfully");
+  } catch (error) {
+    console.error("Error deleting image:", error);
+    toast.error("Failed to delete image");
+    throw error;
+  }
+};
+
 // Image optimization utility
 async function convertToWebP(file: File, quality: number = 80): Promise<File> {
   return new Promise((resolve, reject) => {
@@ -63,7 +80,6 @@ async function convertToWebP(file: File, quality: number = 80): Promise<File> {
         const canvas = document.createElement("canvas");
         const ctx = canvas.getContext("2d");
         
-        // Calculate new dimensions (max 2000px width/height for performance)
         let width = img.width;
         let height = img.height;
         const maxDimension = 2000;
@@ -141,11 +157,9 @@ const stockStatusOptions = [
   { value: "out_of_stock", label: "Out of Stock", color: "text-red-600", bgColor: "bg-red-100" },
 ];
 
-// Constants
 const MAX_IMAGES = 10;
 const AUTO_SAVE_DEBOUNCE = 1000;
 
-// Animation variants
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
@@ -209,7 +223,7 @@ export default function ProductForm() {
   // Calculate form completion progress
   useEffect(() => {
     let completed = 0;
-    const total = 7; // Total number of important fields
+    const total = 7;
     
     if (formData.name) completed++;
     if (formData.description) completed++;
@@ -222,7 +236,6 @@ export default function ProductForm() {
     setCompletionProgress((completed / total) * 100);
   }, [formData, existingImages, images]);
 
-  // Memoized filtered subcategories
   const filteredSubcategories = useMemo(() => {
     if (!formData.category_id) return [];
     return subcategories.filter(s => s.category_id === formData.category_id);
@@ -352,29 +365,29 @@ export default function ProductForm() {
 
       setExistingImages(imagesResult.data || []);
 
-      Promise.allSettled([
-        supabaseClient
-          .from("product_colors")
-          .select("color, status")
-          .eq("product_id", id!)
-          .order("display_order")
-          .then(result => {
-            if (result.data) setColors(result.data as { color: string; status: string; }[]);
-          }),
-        supabaseClient
-          .from("product_specifications")
-          .select("spec_key, spec_value")
-          .eq("product_id", id!)
-          .order("display_order")
-          .then(result => {
-            if (result.data) {
-              setSpecifications(result.data.map((s: any) => ({ 
-                key: s.spec_key, 
-                value: s.spec_value 
-              })));
-            }
-          })
-      ]).catch(console.warn);
+      // Load colors and specifications
+      const colorsResult = await supabaseClient
+        .from("product_colors")
+        .select("color, status")
+        .eq("product_id", id!)
+        .order("display_order");
+      
+      if (colorsResult.data) {
+        setColors(colorsResult.data);
+      }
+
+      const specsResult = await supabaseClient
+        .from("product_specifications")
+        .select("spec_key, spec_value")
+        .eq("product_id", id!)
+        .order("display_order");
+      
+      if (specsResult.data) {
+        setSpecifications(specsResult.data.map((s: any) => ({ 
+          key: s.spec_key, 
+          value: s.spec_value 
+        })));
+      }
 
     } catch (error) {
       console.error("Error loading product:", error);
@@ -393,7 +406,6 @@ export default function ProductForm() {
       return;
     }
 
-    // Show converting toast
     const convertToastId = toast.loading(`Converting ${newFiles.length} image(s) to WebP...`, {
       duration: 30000,
     });
@@ -401,12 +413,10 @@ export default function ProductForm() {
     setConvertingImages(true);
     
     try {
-      // Convert all new images to WebP
       const convertedFiles: File[] = [];
       const convertedPreviews: string[] = [];
       
       for (const file of newFiles) {
-        // Skip if already WebP
         if (file.type === "image/webp") {
           convertedFiles.push(file);
           convertedPreviews.push(URL.createObjectURL(file));
@@ -418,7 +428,6 @@ export default function ProductForm() {
           convertedFiles.push(webpFile);
           convertedPreviews.push(URL.createObjectURL(webpFile));
           
-          // Log size reduction
           const originalSize = (file.size / 1024).toFixed(2);
           const newSize = (webpFile.size / 1024).toFixed(2);
           console.log(`🖼️ Converted: ${file.name} (${originalSize}KB) → WebP (${newSize}KB)`);
@@ -566,13 +575,12 @@ export default function ProductForm() {
       const batch = images.slice(i, i + BATCH_SIZE);
       const batchPromises = batch.map(async (file, batchIndex) => {
         const index = i + batchIndex;
-        // Files are already WebP from handleImageSelect
         const ext = "webp";
         const fileName = file.name.replace(/\.\w+$/, ".webp");
         const path = `${productId}/${Date.now()}_${index}.${ext}`;
 
         try {
-          const { error: uploadError } = await supabase.storage
+          const { error: uploadError } = await supabaseClient.storage
             .from("product-images")
             .upload(path, file, {
               contentType: "image/webp",
@@ -584,7 +592,7 @@ export default function ProductForm() {
             return null;
           }
 
-          const { data: urlData } = supabase.storage
+          const { data: urlData } = supabaseClient.storage
             .from("product-images")
             .getPublicUrl(path);
             
@@ -740,17 +748,7 @@ export default function ProductForm() {
         savePromises.push(saveSpecifications(productId));
       }
 
-      const results = await Promise.allSettled(savePromises);
-      
-      const uploadResult = results[0];
-      if (uploadResult && uploadResult.status === 'fulfilled' && typeof uploadResult.value === 'number') {
-        const uploaded = uploadResult.value;
-        if (uploaded > 0) {
-          toast.success(`${uploaded} WebP image${uploaded !== 1 ? "s" : ""} uploaded`, {
-            icon: <ImageIcon className="w-4 h-4" />
-          });
-        }
-      }
+      await Promise.allSettled(savePromises);
 
       setIsDirty(false);
       navigate("/admin/products");
@@ -801,7 +799,7 @@ export default function ProductForm() {
     <TooltipProvider>
       <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/5">
         <div className="container mx-auto py-8 max-w-5xl" ref={formRef}>
-          {/* Enhanced Header */}
+          {/* Header */}
           <motion.div 
             className="mb-8"
             initial={{ opacity: 0, y: -20 }}
@@ -927,9 +925,6 @@ export default function ProductForm() {
                 >
                   <Package className="w-4 h-4 mr-2" />
                   Basic Info
-                  {(!formData.name || !formData.category_id) && (
-                    <AlertCircle className="w-3 h-3 ml-2 text-yellow-500" />
-                  )}
                 </TabsTrigger>
                 <TabsTrigger 
                   value="images"
@@ -980,14 +975,6 @@ export default function ProductForm() {
                         <Label htmlFor="name" className="flex items-center gap-2">
                           Product Name
                           <span className="text-red-500">*</span>
-                          <Tooltip>
-                            <TooltipTrigger>
-                              <Info className="w-4 h-4 text-muted-foreground" />
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <div>Choose a clear, descriptive name for your product</div>
-                            </TooltipContent>
-                          </Tooltip>
                         </Label>
                         <Input
                           id="name"
@@ -1013,7 +1000,7 @@ export default function ProductForm() {
                       <div className="grid grid-cols-2 gap-6">
                         <div>
                           <Label htmlFor="category" className="flex items-center gap-2">
-                            Category                            <span className="text-red-500">*</span>
+                            Category <span className="text-red-500">*</span>
                           </Label>
                           <Select
                             value={formData.category_id}
@@ -1141,8 +1128,7 @@ export default function ProductForm() {
                       <div className="grid grid-cols-2 gap-6">
                         <div>
                           <Label htmlFor="price" className="flex items-center gap-2">
-                            Price
-                            <span className="text-red-500">*</span>
+                            Price <span className="text-red-500">*</span>
                           </Label>
                           <div className="relative mt-2">
                             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">KSh</span>
@@ -1335,7 +1321,7 @@ export default function ProductForm() {
                             </div>
                             <div className="text-sm font-medium">Click to upload images</div>
                             <div className="text-xs text-muted-foreground mt-1">
-                              PNG, JPG, WebP - Automatically converted to WebP for best performance
+                              PNG, JPG, WebP - Automatically converted to WebP
                             </div>
                           </div>
                           <input
@@ -1518,7 +1504,6 @@ export default function ProductForm() {
                                 initial={{ opacity: 0, x: -20 }}
                                 animate={{ opacity: 1, x: 0 }}
                                 exit={{ opacity: 0, x: 20 }}
-                                transition={{ delay: index * 0.05 }}
                               >
                                 <div className="mt-2 cursor-move">
                                   <GripVertical className="w-4 h-4 text-muted-foreground" />
@@ -1560,9 +1545,6 @@ export default function ProductForm() {
                             <div className="text-center py-12">
                               <Settings className="w-12 h-12 text-muted-foreground mx-auto mb-3 opacity-50" />
                               <div className="text-muted-foreground">No specifications added yet</div>
-                              <div className="text-sm text-muted-foreground mt-1">
-                                Add specifications like Processor, RAM, Storage, etc.
-                              </div>
                             </div>
                           )}
                         </div>
@@ -1677,7 +1659,7 @@ export default function ProductForm() {
               </TabsContent>
             </Tabs>
 
-            {/* Enhanced Actions Footer */}
+            {/* Actions Footer */}
             <motion.div 
               className="sticky bottom-0 z-10 bg-background/95 backdrop-blur-sm border-t mt-8 pt-4 pb-4 flex gap-3"
               initial={{ opacity: 0, y: 20 }}
