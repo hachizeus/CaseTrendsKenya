@@ -58,7 +58,7 @@ const CategoryCards = () => {
   // Duplicate items for seamless infinite scroll
   const scrollItems = useMemo(() => [...MAIN_CATEGORIES, ...MAIN_CATEGORIES], []);
 
-  const autoplaySpeed = isMobile ? 0.45 : 0.6;
+  const autoplaySpeed = isMobile ? 0.35 : 0.6;
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -90,27 +90,47 @@ const CategoryCards = () => {
     };
   }, [autoScroll]);
 
-  const onPointerDown = (e: React.PointerEvent) => {
-    if (!scrollRef.current) return;
-
+  const handleTouchStart = (e: React.TouchEvent) => {
     isDragging.current = true;
     moved.current = false;
-    startX.current = e.clientX;
-    startScrollLeft.current = scrollRef.current.scrollLeft;
-    scrollRef.current.style.scrollBehavior = "auto";
+    startX.current = e.touches[0].clientX;
+    startScrollLeft.current = scrollRef.current?.scrollLeft || 0;
   };
 
-  const onPointerMove = (e: React.PointerEvent) => {
+  const handleTouchMove = (e: React.TouchEvent) => {
     if (!isDragging.current || !scrollRef.current) return;
-
-    const delta = e.clientX - startX.current;
-    if (Math.abs(delta) > 4) {
+    
+    const delta = e.touches[0].clientX - startX.current;
+    if (Math.abs(delta) > 5) {
       moved.current = true;
       scrollRef.current.scrollLeft = startScrollLeft.current - delta;
     }
   };
 
-  const onPointerUp = () => {
+  const handleTouchEnd = () => {
+    isDragging.current = false;
+  };
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (isMobile) return;
+    isDragging.current = true;
+    moved.current = false;
+    startX.current = e.clientX;
+    startScrollLeft.current = scrollRef.current?.scrollLeft || 0;
+    scrollRef.current!.style.scrollBehavior = "auto";
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging.current || !scrollRef.current || isMobile) return;
+    
+    const delta = e.clientX - startX.current;
+    if (Math.abs(delta) > 5) {
+      moved.current = true;
+      scrollRef.current.scrollLeft = startScrollLeft.current - delta;
+    }
+  };
+
+  const handleMouseUp = () => {
     isDragging.current = false;
     if (scrollRef.current) {
       scrollRef.current.style.scrollBehavior = "smooth";
@@ -140,16 +160,17 @@ const CategoryCards = () => {
           ref={scrollRef}
           onMouseEnter={() => !isMobile && setIsPaused(true)}
           onMouseLeave={() => !isMobile && setIsPaused(false)}
-          onPointerDown={onPointerDown}
-          onPointerMove={onPointerMove}
-          onPointerUp={onPointerUp}
-          onPointerCancel={onPointerUp}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
           className="overflow-x-auto whitespace-nowrap no-scrollbar cursor-grab active:cursor-grabbing"
           style={{
             scrollbarWidth: "none",
             msOverflowStyle: "none",
             WebkitOverflowScrolling: "touch",
-            touchAction: "pan-x",
           }}
         >
           <div className="inline-flex items-start gap-3 sm:gap-5 md:gap-8 px-4">
