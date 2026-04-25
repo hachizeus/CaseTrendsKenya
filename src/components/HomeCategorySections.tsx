@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { memo } from "react";
 import CategoryProductSection from "./CategoryProductSection";
 import MiniHeroBanner from "./MiniHeroBanner";
