@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Plus, Pencil, Trash2, Upload, Eye, EyeOff, ChevronLeft, ArrowUp, ArrowDown } from "lucide-react";
+import { Plus, Pencil, Trash2, Upload, Eye, EyeOff, ChevronLeft, ArrowUp, ArrowDown, ImageIcon } from "lucide-react";
 import { toast } from "sonner";
 import { getOptimizedImageUrl } from "@/lib/imageOptimization";
 
@@ -275,59 +275,73 @@ const AdminSlideManager = () => {
   };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 max-w-5xl mx-auto p-4 md:p-6">
+      {/* Header */}
       <div className="flex items-center gap-4">
         <button
           onClick={() => navigate("/admin/slides-overview")}
-          className="p-2 hover:bg-secondary border border-transparent hover:border-border transition-colors"
+          className="p-2 hover:bg-white/10 rounded-lg transition-colors text-white/60 hover:text-white"
         >
-          <ChevronLeft className="w-4 h-4" />
+          <ChevronLeft className="w-5 h-5" />
         </button>
         <div>
-          <h1 className="text-xl font-bold">{section?.label}</h1>
-          <p className="text-sm text-muted-foreground">{slides.length}/5 slides</p>
+          <div className="flex items-center gap-2 mb-1">
+            <div className="h-8 w-1 bg-gradient-to-b from-primary to-primary/40 rounded-full"></div>
+            <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent">
+              {section?.label || "Slide Manager"}
+            </h1>
+          </div>
+          <p className="text-sm text-white/50 ml-3">{slides.length}/5 slides</p>
         </div>
       </div>
 
+      {/* Add Slide Button */}
       {slides.length < 5 && (
-        <Button onClick={openNew} className="gap-2">
+        <Button onClick={openNew} className="gap-2 bg-primary text-white hover:bg-primary/80">
           <Plus className="w-4 h-4" /> Add Slide
         </Button>
       )}
 
+      {/* Slides Grid */}
       <div className="grid gap-3">
         {slides.map((s, i) => (
           <div
             key={s.id}
-            className="bg-white border border-border flex overflow-hidden hover:border-primary transition-colors cursor-pointer"
+            className="bg-white/5 border border-white/10 rounded-xl flex overflow-hidden hover:border-primary/50 transition-all cursor-pointer group"
             onClick={() => openEdit(s)}
-            title="Edit Slide"
           >
-            <div className="relative w-40 sm:w-56 flex-shrink-0">
-              <img src={getOptimizedImageUrl(s.image_url, {
-                width: 560,
-                height: 180,
-                quality: 70,
-                resize: "contain",
-              })} alt={s.title} loading="lazy" decoding="async" className="w-full h-28 object-cover" />
-              <span className="absolute top-2 left-2 bg-black/60 text-white text-[10px] px-1.5 py-0.5 font-mono rounded">
+            <div className="relative w-32 sm:w-40 md:w-48 flex-shrink-0">
+              <img 
+                src={getOptimizedImageUrl(s.image_url, {
+                  width: 400,
+                  height: 180,
+                  quality: 70,
+                  resize: "contain",
+                })} 
+                alt={s.title} 
+                loading="lazy" 
+                className="w-full h-24 sm:h-28 object-cover" 
+              />
+              <span className="absolute top-2 left-2 bg-black/60 backdrop-blur-sm text-white text-[10px] px-1.5 py-0.5 font-mono rounded">
                 Slide {i + 1}
               </span>
             </div>
-            <div className="flex-1 p-4 flex items-center justify-between gap-4 min-w-0">
+            <div className="flex-1 p-3 sm:p-4 flex items-center justify-between gap-3 min-w-0">
               <div className="min-w-0">
-                <h3 className="font-semibold truncate">{s.title}</h3>
-                {s.subtitle && <p className="text-sm text-muted-foreground truncate mt-0.5">{s.subtitle}</p>}
+                <h3 className="font-semibold text-white truncate">{s.title}</h3>
+                {s.subtitle && <p className="text-sm text-white/50 truncate mt-0.5">{s.subtitle}</p>}
                 <div className="flex items-center gap-2 mt-2">
                   <span
-                    className={`text-[10px] font-semibold px-2 py-0.5 ${
-                      s.is_active ? "bg-emerald-100 text-emerald-700" : "bg-secondary text-muted-foreground"
+                    className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                      s.is_active 
+                        ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" 
+                        : "bg-white/10 text-white/50 border border-white/10"
                     }`}
                   >
                     {s.is_active ? "Active" : "Inactive"}
                   </span>
                   {s.cta_text && (
-                    <span className="text-[10px] text-muted-foreground border border-border px-2 py-0.5">
+                    <span className="text-[10px] text-white/40 border border-white/10 px-2 py-0.5 rounded-full">
                       {s.cta_text}
                     </span>
                   )}
@@ -337,7 +351,11 @@ const AdminSlideManager = () => {
                 <button
                   onClick={() => swapSlideOrder(i, "up")}
                   disabled={i === 0}
-                  className={`p-1.5 border border-transparent transition-colors ${i === 0 ? "opacity-40 cursor-not-allowed" : "hover:bg-secondary hover:border-border"}`}
+                  className={`p-1.5 rounded-lg transition-colors ${
+                    i === 0 
+                      ? "opacity-40 cursor-not-allowed" 
+                      : "hover:bg-white/10 text-white/60 hover:text-white"
+                  }`}
                   title="Move up"
                 >
                   <ArrowUp className="w-4 h-4" />
@@ -345,31 +363,35 @@ const AdminSlideManager = () => {
                 <button
                   onClick={() => swapSlideOrder(i, "down")}
                   disabled={i === slides.length - 1}
-                  className={`p-1.5 border border-transparent transition-colors ${i === slides.length - 1 ? "opacity-40 cursor-not-allowed" : "hover:bg-secondary hover:border-border"}`}
+                  className={`p-1.5 rounded-lg transition-colors ${
+                    i === slides.length - 1 
+                      ? "opacity-40 cursor-not-allowed" 
+                      : "hover:bg-white/10 text-white/60 hover:text-white"
+                  }`}
                   title="Move down"
                 >
                   <ArrowDown className="w-4 h-4" />
                 </button>
                 <button
                   onClick={() => toggleActive(s)}
-                  className="p-1.5 hover:bg-secondary border border-transparent hover:border-border transition-colors"
+                  className="p-1.5 rounded-lg hover:bg-white/10 text-white/60 hover:text-white transition-colors"
                   title={s.is_active ? "Deactivate" : "Activate"}
                 >
                   {s.is_active ? (
-                    <EyeOff className="w-4 h-4 text-muted-foreground" />
+                    <EyeOff className="w-4 h-4" />
                   ) : (
-                    <Eye className="w-4 h-4 text-muted-foreground" />
+                    <Eye className="w-4 h-4" />
                   )}
                 </button>
                 <button
                   onClick={() => openEdit(s)}
-                  className="p-1.5 hover:bg-secondary border border-transparent hover:border-border transition-colors"
+                  className="p-1.5 rounded-lg hover:bg-white/10 text-white/60 hover:text-white transition-colors"
                 >
                   <Pencil className="w-4 h-4" />
                 </button>
                 <button
                   onClick={() => handleDelete(s.id)}
-                  className="p-1.5 hover:bg-red-50 hover:text-red-600 border border-transparent hover:border-red-200 transition-colors"
+                  className="p-1.5 rounded-lg hover:bg-red-500/20 hover:text-red-400 text-white/60 transition-colors"
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
@@ -377,26 +399,37 @@ const AdminSlideManager = () => {
             </div>
           </div>
         ))}
+        
+        {slides.length === 0 && (
+          <div className="text-center py-12 bg-white/5 rounded-xl border border-white/10">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-white/10 mb-3">
+              <ImageIcon className="w-8 h-8 text-white/30" />
+            </div>
+            <p className="text-white/50 font-medium">No slides yet</p>
+            <p className="text-sm text-white/30 mt-1">Click "Add Slide" to create your first slide</p>
+          </div>
+        )}
       </div>
 
+      {/* Add/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto bg-[hsl(240,10%,6%)] border-white/10">
           <DialogHeader>
-            <DialogTitle>{editing ? "Edit Slide" : "New Slide"}</DialogTitle>
+            <DialogTitle className="text-white">{editing ? "Edit Slide" : "New Slide"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 pt-2">
             <div>
-              <Label>Slide Image *</Label>
-              <label className="mt-1 flex flex-col items-center justify-center border-2 border-dashed border-border hover:border-primary transition-colors cursor-pointer overflow-hidden" style={{ minHeight: 120 }}>
+              <Label className="text-white/70">Slide Image *</Label>
+              <label className="mt-1 flex flex-col items-center justify-center border-2 border-dashed border-white/20 hover:border-primary/50 transition-colors cursor-pointer overflow-hidden rounded-lg" style={{ minHeight: 120 }}>
                 {preview ? (
                   <img src={getOptimizedImageUrl(preview, {
                     width: 1200,
                     height: 500,
                     quality: 70,
                     resize: "contain",
-                  })} alt="preview" loading="lazy" decoding="async" className="w-full h-36 object-cover" />
+                  })} alt="preview" loading="lazy" className="w-full h-36 object-cover" />
                 ) : (
-                  <div className="flex flex-col items-center gap-2 py-8 text-muted-foreground">
+                  <div className="flex flex-col items-center gap-2 py-8 text-white/50">
                     <Upload className="w-6 h-6" />
                     <span className="text-xs">Click to upload image</span>
                   </div>
@@ -408,52 +441,56 @@ const AdminSlideManager = () => {
                   onChange={(e) => handleFileChange(e.target.files?.[0] || null)}
                 />
               </label>
-              <p className="text-xs text-muted-foreground mt-1">16:9 recommended for best slide display.</p>
-              {imageFile && <p className="text-xs text-muted-foreground mt-1">{imageFile.name}</p>}
+              <p className="text-xs text-white/40 mt-1">16:9 recommended for best slide display.</p>
+              {imageFile && <p className="text-xs text-white/40 mt-1">{imageFile.name}</p>}
             </div>
             <div>
-              <Label>Title *</Label>
+              <Label className="text-white/70">Title *</Label>
               <Input
                 value={form.title}
                 onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+                className="mt-1 bg-black/30 border-white/10 text-white placeholder:text-white/30"
               />
             </div>
             <div>
-              <Label>Subtitle</Label>
+              <Label className="text-white/70">Subtitle</Label>
               <Input
                 value={form.subtitle}
                 onChange={(e) => setForm((f) => ({ ...f, subtitle: e.target.value }))}
                 placeholder="Optional tagline"
+                className="mt-1 bg-black/30 border-white/10 text-white placeholder:text-white/30"
               />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>Button Text</Label>
+                <Label className="text-white/70">Button Text</Label>
                 <Input
                   value={form.cta_text}
                   onChange={(e) => setForm((f) => ({ ...f, cta_text: e.target.value }))}
                   placeholder="e.g. Shop Now"
+                  className="mt-1 bg-black/30 border-white/10 text-white placeholder:text-white/30"
                 />
               </div>
               <div>
-                <Label>Button Link</Label>
+                <Label className="text-white/70">Button Link</Label>
                 <Input
                   value={form.cta_link}
                   onChange={(e) => setForm((f) => ({ ...f, cta_link: e.target.value }))}
                   placeholder="/products"
+                  className="mt-1 bg-black/30 border-white/10 text-white placeholder:text-white/30"
                 />
               </div>
             </div>
-            <label className="flex items-center gap-2 text-sm cursor-pointer">
+            <label className="flex items-center gap-2 text-sm cursor-pointer text-white/70">
               <input
                 type="checkbox"
                 checked={form.is_active}
                 onChange={(e) => setForm((f) => ({ ...f, is_active: e.target.checked }))}
-                className="w-4 h-4"
+                className="w-4 h-4 rounded border-white/20 text-primary focus:ring-primary/50"
               />
               Active (visible on homepage carousel)
             </label>
-            <Button onClick={handleSave} disabled={saving} className="w-full">
+            <Button onClick={handleSave} disabled={saving} className="w-full bg-primary text-white hover:bg-primary/80">
               {saving ? "Saving..." : editing ? "Update Slide" : "Create Slide"}
             </Button>
           </div>

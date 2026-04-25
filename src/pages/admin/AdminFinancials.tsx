@@ -146,23 +146,23 @@ const FinancialsPage = () => {
         data: revenue,
         fill: true,
         tension: 0.4,
-        borderColor: "#10b981",
+        borderColor: "#FF1493",
         backgroundColor: (context: any) => {
           const chart = context.chart;
           const { ctx, chartArea } = chart;
-          if (!chartArea) return "rgba(16,185,129,0.25)";
+          if (!chartArea) return "rgba(255,20,147,0.25)";
           const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
-          gradient.addColorStop(0, "rgba(16,185,129,0.28)");
-          gradient.addColorStop(0.65, "rgba(16,185,129,0.12)");
-          gradient.addColorStop(1, "rgba(16,185,129,0)");
+          gradient.addColorStop(0, "rgba(255,20,147,0.28)");
+          gradient.addColorStop(0.65, "rgba(255,20,147,0.12)");
+          gradient.addColorStop(1, "rgba(255,20,147,0)");
           return gradient;
         },
         borderWidth: 3,
         pointRadius: 4,
-        pointBackgroundColor: "#10b981",
+        pointBackgroundColor: "#FF1493",
         pointHoverRadius: 6,
         pointHoverBorderWidth: 2,
-        pointHoverBorderColor: "#065f46",
+        pointHoverBorderColor: "#FF1493",
       },
     ],
   };
@@ -172,10 +172,10 @@ const FinancialsPage = () => {
     datasets: [
       {
         data: [paystackRevenue],
-        backgroundColor: ["#10b981"],
-        hoverBackgroundColor: ["#059669"],
+        backgroundColor: ["#FF1493"],
+        hoverBackgroundColor: ["#e01382"],
         borderWidth: 1,
-        borderColor: "#f8fafc",
+        borderColor: "#ffffff20",
       },
     ],
   };
@@ -186,8 +186,8 @@ const FinancialsPage = () => {
       {
         label: "Order Volume",
         data: orderVolume,
-        backgroundColor: "rgba(16,185,129,0.72)",
-        borderColor: "#10b981",
+        backgroundColor: "rgba(255,20,147,0.72)",
+        borderColor: "#FF1493",
         borderWidth: 1,
         borderRadius: 6,
         maxBarThickness: 32,
@@ -204,21 +204,21 @@ const FinancialsPage = () => {
     },
     scales: {
       x: {
-        grid: { color: "rgba(148,163,184,0.16)" },
+        grid: { color: "rgba(255,255,255,0.1)" },
         ticks: { 
-          color: "#64748b",
+          color: "#ffffff80",
           maxRotation: 45,
           minRotation: 45,
           font: {
             size: window.innerWidth < 640 ? 10 : 12
           }
         },
-        border: { color: "rgba(148,163,184,0.35)" },
+        border: { color: "rgba(255,255,255,0.2)" },
       },
       y: {
-        grid: { color: "rgba(148,163,184,0.16)" },
+        grid: { color: "rgba(255,255,255,0.1)" },
         ticks: { 
-          color: "#64748b", 
+          color: "#ffffff80", 
           callback: (value: any) => {
             if (window.innerWidth < 640) {
               return Number(value) >= 1000 ? `KSh ${(value/1000).toFixed(0)}k` : `KSh ${value}`;
@@ -229,26 +229,26 @@ const FinancialsPage = () => {
             size: window.innerWidth < 640 ? 10 : 12
           }
         },
-        border: { color: "rgba(148,163,184,0.35)" },
+        border: { color: "rgba(255,255,255,0.2)" },
       },
     },
   };
 
   if (authLoading) {
     return (
-      <div className="min-h-[60vh] flex items-center justify-center">
-        <div className="text-sm text-muted-foreground">Checking permissions...</div>
+      <div className="min-h-[60vh] flex items-center justify-center bg-gradient-to-b from-[hsl(240,10%,3.9%)] to-[hsl(240,10%,4.5%)]">
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   if (!isAdmin) {
     return (
-      <div className="min-h-[60vh] flex items-center justify-center px-4">
-        <div className="max-w-lg w-full rounded-3xl border border-emerald-100 bg-emerald-50 p-6 sm:p-10 text-center">
-          <p className="text-xs sm:text-sm uppercase tracking-[0.25em] text-emerald-800">Access Denied</p>
-          <h1 className="mt-4 text-xl sm:text-2xl font-semibold text-emerald-900">Admin access required</h1>
-          <p className="mt-3 text-xs sm:text-sm text-emerald-800/90">
+      <div className="min-h-[60vh] flex items-center justify-center px-4 bg-gradient-to-b from-[hsl(240,10%,3.9%)] to-[hsl(240,10%,4.5%)]">
+        <div className="max-w-lg w-full rounded-xl border border-white/10 bg-white/5 p-6 sm:p-10 text-center">
+          <p className="text-xs sm:text-sm uppercase tracking-[0.25em] text-primary">Access Denied</p>
+          <h1 className="mt-4 text-xl sm:text-2xl font-semibold text-white">Admin access required</h1>
+          <p className="mt-3 text-xs sm:text-sm text-white/50">
             This dashboard is restricted to administrators. If you believe this is an error, please contact your team owner.
           </p>
         </div>
@@ -257,11 +257,11 @@ const FinancialsPage = () => {
   }
 
   return (
-    <div className="w-full max-w-full overflow-x-hidden px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-6">
+    <div className="w-full max-w-full overflow-x-hidden px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-6 bg-gradient-to-b from-[hsl(240,10%,3.9%)] to-[hsl(240,10%,4.5%)] min-h-screen">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold">Financial Dashboard</h1>
-          <p className="text-xs sm:text-sm text-muted-foreground mt-1">High-fidelity analytics for revenue, order volume, and payment channel performance.</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-white">Financial Dashboard</h1>
+          <p className="text-xs sm:text-sm text-white/50 mt-1">High-fidelity analytics for revenue, order volume, and payment channel performance.</p>
         </div>
         <div className="flex flex-wrap gap-2">
           {DATE_RANGES.map((option) => (
@@ -269,10 +269,10 @@ const FinancialsPage = () => {
               key={option.value}
               type="button"
               onClick={() => setDateRange(option.value)}
-              className={`rounded-full border px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium transition whitespace-nowrap ${
+              className={`rounded-full px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium transition whitespace-nowrap ${
                 dateRange === option.value
-                  ? "border-emerald-600 bg-emerald-600 text-white"
-                  : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
+                  ? "bg-primary text-white"
+                  : "border border-white/20 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white"
               }`}
             >
               {option.label}
@@ -282,7 +282,7 @@ const FinancialsPage = () => {
       </div>
 
       {error && (
-        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900">
+        <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
           {error}
         </div>
       )}
@@ -290,34 +290,34 @@ const FinancialsPage = () => {
       <div className="grid gap-4 lg:gap-6 xl:grid-cols-[1.5fr_1fr]">
         <div className="grid gap-4">
           <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-3">
-            <div className="rounded-2xl sm:rounded-3xl border border-border bg-white p-4 sm:p-5 shadow-sm">
-              <p className="text-xs sm:text-sm text-muted-foreground">Total Revenue</p>
-              <p className="mt-2 sm:mt-3 text-xl sm:text-2xl lg:text-3xl font-semibold text-slate-900 truncate">KSh {totalRevenue.toLocaleString()}</p>
+            <div className="rounded-xl border border-white/10 bg-white/5 p-4 sm:p-5 shadow-sm">
+              <p className="text-xs sm:text-sm text-white/50">Total Revenue</p>
+              <p className="mt-2 sm:mt-3 text-xl sm:text-2xl lg:text-3xl font-semibold text-white truncate">KSh {totalRevenue.toLocaleString()}</p>
             </div>
-            <div className="rounded-2xl sm:rounded-3xl border border-border bg-white p-4 sm:p-5 shadow-sm">
-              <p className="text-xs sm:text-sm text-muted-foreground">Total Orders</p>
-              <p className="mt-2 sm:mt-3 text-xl sm:text-2xl lg:text-3xl font-semibold text-slate-900">{totalOrders.toLocaleString()}</p>
+            <div className="rounded-xl border border-white/10 bg-white/5 p-4 sm:p-5 shadow-sm">
+              <p className="text-xs sm:text-sm text-white/50">Total Orders</p>
+              <p className="mt-2 sm:mt-3 text-xl sm:text-2xl lg:text-3xl font-semibold text-white">{totalOrders.toLocaleString()}</p>
             </div>
-            <div className="rounded-2xl sm:rounded-3xl border border-border bg-white p-4 sm:p-5 shadow-sm">
-              <p className="text-xs sm:text-sm text-muted-foreground">Avg. Order Value</p>
-              <p className="mt-2 sm:mt-3 text-xl sm:text-2xl lg:text-3xl font-semibold text-slate-900 truncate">KSh {averageOrderValue.toFixed(0).toLocaleString()}</p>
+            <div className="rounded-xl border border-white/10 bg-white/5 p-4 sm:p-5 shadow-sm">
+              <p className="text-xs sm:text-sm text-white/50">Avg. Order Value</p>
+              <p className="mt-2 sm:mt-3 text-xl sm:text-2xl lg:text-3xl font-semibold text-white truncate">KSh {averageOrderValue.toFixed(0).toLocaleString()}</p>
             </div>
           </div>
 
-          <div className="rounded-2xl sm:rounded-3xl border border-border bg-white p-4 sm:p-5 shadow-sm">
+          <div className="rounded-xl border border-white/10 bg-white/5 p-4 sm:p-5 shadow-sm">
             <div className="flex items-center justify-between gap-4">
               <div>
-                <h2 className="text-sm font-semibold text-slate-900">Revenue Trend</h2>
-                <p className="mt-1 text-xs text-slate-500 hidden sm:block">Daily revenue over the selected date range.</p>
+                <h2 className="text-sm font-semibold text-white">Revenue Trend</h2>
+                <p className="mt-1 text-xs text-white/40 hidden sm:block">Daily revenue over the selected date range.</p>
               </div>
             </div>
             <div className="mt-4 sm:mt-6 h-[300px] sm:h-[360px] min-h-[280px] w-full">
               {loading ? (
-                <div className="flex h-full items-center justify-center text-sm text-slate-500">Loading chart...</div>
+                <div className="flex h-full items-center justify-center text-sm text-white/50">Loading chart...</div>
               ) : !hasChartData ? (
-                <div className="flex h-full flex-col items-center justify-center rounded-2xl sm:rounded-3xl border border-dashed border-slate-300 bg-slate-50 px-4 sm:px-6 text-center text-slate-600">
+                <div className="flex h-full flex-col items-center justify-center rounded-xl border border-dashed border-white/20 bg-white/5 px-4 sm:px-6 text-center text-white/50">
                   <p className="text-sm font-medium">No revenue recorded for this period.</p>
-                  <p className="mt-2 text-xs text-slate-500">Try a different date range or verify that paid orders exist in the selected window.</p>
+                  <p className="mt-2 text-xs text-white/30">Try a different date range or verify that paid orders exist in the selected window.</p>
                 </div>
               ) : (
                 <Line data={lineChartData} options={{
@@ -327,7 +327,7 @@ const FinancialsPage = () => {
                     title: {
                       display: true,
                       text: "Daily Revenue",
-                      color: "#0f172a",
+                      color: "#ffffff",
                       font: { size: window.innerWidth < 640 ? 12 : 14, weight: 600 },
                     },
                   },
@@ -338,20 +338,20 @@ const FinancialsPage = () => {
         </div>
 
         <div className="grid gap-4">
-          <div className="rounded-2xl sm:rounded-3xl border border-border bg-white p-4 sm:p-5 shadow-sm">
+          <div className="rounded-xl border border-white/10 bg-white/5 p-4 sm:p-5 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-sm font-semibold text-slate-900">Paystack Revenue</h2>
-                <p className="mt-1 text-xs text-slate-500 hidden sm:block">All revenue shown here comes from Paystack transactions only.</p>
+                <h2 className="text-sm font-semibold text-white">Paystack Revenue</h2>
+                <p className="mt-1 text-xs text-white/40 hidden sm:block">All revenue shown here comes from Paystack transactions only.</p>
               </div>
             </div>
             <div className="mt-4 sm:mt-6 h-[280px] sm:h-[320px] min-h-[260px] w-full">
               {loading ? (
-                <div className="flex h-full items-center justify-center text-sm text-slate-500">Loading chart...</div>
+                <div className="flex h-full items-center justify-center text-sm text-white/50">Loading chart...</div>
               ) : !hasPaystackData ? (
-                <div className="flex h-full flex-col items-center justify-center rounded-2xl sm:rounded-3xl border border-dashed border-slate-300 bg-slate-50 px-4 sm:px-6 text-center text-slate-600">
+                <div className="flex h-full flex-col items-center justify-center rounded-xl border border-dashed border-white/20 bg-white/5 px-4 sm:px-6 text-center text-white/50">
                   <p className="text-sm font-medium">No Paystack revenue recorded for this period.</p>
-                  <p className="mt-2 text-xs text-slate-500">Try a different date range or verify Paystack order data in the selected window.</p>
+                  <p className="mt-2 text-xs text-white/30">Try a different date range or verify Paystack order data in the selected window.</p>
                 </div>
               ) : (
                 <Doughnut data={doughnutChartData} options={{
@@ -373,20 +373,20 @@ const FinancialsPage = () => {
             </div>
           </div>
 
-          <div className="rounded-2xl sm:rounded-3xl border border-border bg-white p-4 sm:p-5 shadow-sm">
+          <div className="rounded-xl border border-white/10 bg-white/5 p-4 sm:p-5 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-sm font-semibold text-slate-900">Order Volume</h2>
-                <p className="mt-1 text-xs text-slate-500 hidden sm:block">Orders placed per day in the current range.</p>
+                <h2 className="text-sm font-semibold text-white">Order Volume</h2>
+                <p className="mt-1 text-xs text-white/40 hidden sm:block">Orders placed per day in the current range.</p>
               </div>
             </div>
             <div className="mt-4 sm:mt-6 h-[280px] sm:h-[320px] min-h-[260px] w-full">
               {loading ? (
-                <div className="flex h-full items-center justify-center text-sm text-slate-500">Loading chart...</div>
+                <div className="flex h-full items-center justify-center text-sm text-white/50">Loading chart...</div>
               ) : !orderVolume.some((value) => value > 0) ? (
-                <div className="flex h-full flex-col items-center justify-center rounded-2xl sm:rounded-3xl border border-dashed border-slate-300 bg-slate-50 px-4 sm:px-6 text-center text-slate-600">
+                <div className="flex h-full flex-col items-center justify-center rounded-xl border border-dashed border-white/20 bg-white/5 px-4 sm:px-6 text-center text-white/50">
                   <p className="text-sm font-medium">No orders recorded for this period.</p>
-                  <p className="mt-2 text-xs text-slate-500">Please choose a wider range or verify order data in Supabase.</p>
+                  <p className="mt-2 text-xs text-white/30">Please choose a wider range or verify order data in Supabase.</p>
                 </div>
               ) : (
                 <Bar data={barChartData} options={{
@@ -396,7 +396,7 @@ const FinancialsPage = () => {
                     title: {
                       display: true,
                       text: "Daily Order Volume",
-                      color: "#0f172a",
+                      color: "#ffffff",
                       font: { size: window.innerWidth < 640 ? 12 : 14, weight: 600 },
                     },
                   },

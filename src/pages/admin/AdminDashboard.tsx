@@ -93,7 +93,7 @@ const AdminDashboard = () => {
   }, [refreshTrigger]);
 
   const statCards = [
-    { label: "Total Products", value: stats.products, icon: Package, color: "bg-slate-700", link: "/admin/products" },
+    { label: "Total Products", value: stats.products, icon: Package, color: "bg-slate-600", link: "/admin/products" },
     { label: "Low Stock Items", value: lowStockCount, icon: FolderTree, color: "bg-yellow-500", link: "/admin/products" },
     { label: "Registered Users", value: stats.users, icon: Users, color: "bg-emerald-500", link: "/admin/users", adminOnly: true },
     { label: "Orders", value: stats.orders, icon: ShoppingBag, color: "bg-primary", link: "/admin/orders" },
@@ -103,9 +103,9 @@ const AdminDashboard = () => {
   const visibleStatCards = statCards.filter(card => !card.adminOnly || isAdmin);
 
   const quickActions = [
-    { label: "Add Product", to: "/admin/products", icon: Plus, color: "bg-slate-100 text-slate-700 border-slate-200" },
-    { label: "Add Hero Slide", to: "/admin/slides", icon: Plus, color: "bg-orange-50 text-orange-600 border-orange-200" },
-    { label: "View Orders", to: "/admin/orders", icon: ShoppingBag, color: "bg-primary/10 text-primary border-primary/20" },
+    { label: "Add Product", to: "/admin/products", icon: Plus, color: "bg-white/10 text-white border-white/20 hover:bg-white/20" },
+    { label: "Add Hero Slide", to: "/admin/slides", icon: Plus, color: "bg-orange-500/20 text-orange-400 border-orange-500/30 hover:bg-orange-500/30" },
+    { label: "View Orders", to: "/admin/orders", icon: ShoppingBag, color: "bg-primary/20 text-primary border-primary/30 hover:bg-primary/30" },
   ];
 
   const processedRevenue = useMemo(() => {
@@ -126,11 +126,13 @@ const AdminDashboard = () => {
         {
           label: "Paystack Revenue",
           data: revenueTrend.map((item) => item.amount),
-          borderColor: "#0ea5e9",
-          backgroundColor: "rgba(14,165,233,0.18)",
+          borderColor: "#FF1493",
+          backgroundColor: "rgba(255,20,147,0.18)",
           fill: true,
           tension: 0.35,
           pointRadius: 2,
+          pointBackgroundColor: "#FF1493",
+          pointBorderColor: "#FF1493",
         },
       ],
     }),
@@ -147,7 +149,7 @@ const AdminDashboard = () => {
         title: {
           display: true,
           text: "Paystack revenue last 30 days",
-          color: "#0f172a",
+          color: "#ffffff",
           font: { size: 14, weight: "bold" as const },
         },
         tooltip: {
@@ -161,9 +163,9 @@ const AdminDashboard = () => {
       },
       scales: {
         x: { 
-          grid: { display: false }, 
+          grid: { display: false, color: "rgba(255,255,255,0.1)" }, 
           ticks: { 
-            color: "#64748b",
+            color: "#ffffff80",
             maxRotation: 45,
             minRotation: 45,
             autoSkip: true,
@@ -172,10 +174,10 @@ const AdminDashboard = () => {
         },
         y: {
           ticks: {
-            color: "#64748b",
+            color: "#ffffff80",
             callback: (value: any) => `KSh ${Number(value).toLocaleString()}`,
           },
-          grid: { color: "rgba(148,163,184,0.16)" },
+          grid: { color: "rgba(255,255,255,0.1)" },
         },
       },
     }) as any,
@@ -183,25 +185,25 @@ const AdminDashboard = () => {
   );
 
   const stockBadge = (s: string) =>
-    s === "in_stock" ? "bg-emerald-100 text-emerald-700" :
-    s === "low_stock" ? "bg-yellow-100 text-yellow-700" :
-    "bg-red-100 text-red-600";
+    s === "in_stock" ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" :
+    s === "low_stock" ? "bg-yellow-500/20 text-yellow-400 border-yellow-500/30" :
+    "bg-red-500/20 text-red-400 border-red-500/30";
 
   const orderBadge = (s: string) =>
-    s === "delivered" ? "bg-emerald-100 text-emerald-700" :
-    s === "cancelled" ? "bg-red-100 text-red-600" :
-    s === "confirmed" ? "bg-gray-200 text-gray-700" :
-    "bg-yellow-100 text-yellow-700";
+    s === "delivered" ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" :
+    s === "cancelled" ? "bg-red-500/20 text-red-400 border-red-500/30" :
+    s === "confirmed" ? "bg-white/10 text-white/70 border-white/20" :
+    "bg-yellow-500/20 text-yellow-400 border-yellow-500/30";
 
   return (
     <div className="w-full max-w-full overflow-x-hidden px-3 sm:px-4 md:px-5 lg:px-6 space-y-4 sm:space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-foreground">Dashboard</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">Welcome back — here's what's happening.</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-white">Dashboard</h1>
+          <p className="text-sm text-white/50 mt-0.5">Welcome back — here's what's happening.</p>
         </div>
-        <Link to="/admin/products" className="hidden sm:flex items-center gap-2 bg-primary text-white px-4 py-2 text-sm font-medium hover:bg-primary/90 transition-colors w-fit">
+        <Link to="/admin/products" className="hidden sm:flex items-center gap-2 bg-primary text-white px-4 py-2 text-sm font-medium hover:bg-primary/80 transition-colors w-fit rounded-lg">
           <Plus className="w-4 h-4" /> Add Product
         </Link>
       </div>
@@ -209,20 +211,20 @@ const AdminDashboard = () => {
       {/* Revenue overview */}
       {isAdmin && (
         <div className="grid gap-4 lg:grid-cols-[1.5fr_0.9fr]">
-          <div className="rounded-3xl border border-border bg-white p-4 sm:p-5 shadow-sm overflow-x-auto">
+          <div className="rounded-xl border border-white/10 bg-white/5 p-4 sm:p-5 shadow-sm overflow-x-auto">
             <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
               <div>
-                <h2 className="text-sm font-semibold text-slate-900">Revenue Overview</h2>
-                <p className="mt-1 text-xs text-muted-foreground">Paystack-only revenue for the last 30 days, sourced directly from orders.</p>
+                <h2 className="text-sm font-semibold text-white">Revenue Overview</h2>
+                <p className="mt-1 text-xs text-white/50">Paystack-only revenue for the last 30 days, sourced directly from orders.</p>
               </div>
             </div>
             <div className="h-[280px] sm:h-[320px] min-w-[280px]">
               {loading ? (
-                <div className="flex h-full items-center justify-center text-sm text-slate-500">Loading revenue chart...</div>
+                <div className="flex h-full items-center justify-center text-sm text-white/50">Loading revenue chart...</div>
               ) : paystackRevenue === 0 ? (
-                <div className="flex h-full flex-col items-center justify-center rounded-3xl border border-dashed border-slate-300 bg-slate-50 px-6 text-center text-slate-600">
+                <div className="flex h-full flex-col items-center justify-center rounded-xl border border-dashed border-white/20 bg-white/5 px-6 text-center text-white/50">
                   <p className="text-sm font-medium">No Paystack revenue recorded in the last 30 days.</p>
-                  <p className="mt-2 text-xs text-slate-500">Ensure Paystack orders are complete and try again.</p>
+                  <p className="mt-2 text-xs text-white/30">Ensure Paystack orders are complete and try again.</p>
                 </div>
               ) : (
                 <Line data={revenueChartData} options={revenueChartOptions} />
@@ -231,13 +233,13 @@ const AdminDashboard = () => {
           </div>
 
           <div className="grid gap-4 grid-cols-2 sm:grid-cols-1">
-            <div className="rounded-3xl border border-border bg-white p-4 sm:p-5 shadow-sm">
-              <p className="text-sm text-muted-foreground">Total Paystack Revenue</p>
-              <p className="mt-2 sm:mt-3 text-2xl sm:text-3xl font-semibold text-slate-900 break-words">KSh {processedRevenue.total.toLocaleString()}</p>
+            <div className="rounded-xl border border-white/10 bg-white/5 p-4 sm:p-5 shadow-sm">
+              <p className="text-sm text-white/50">Total Paystack Revenue</p>
+              <p className="mt-2 sm:mt-3 text-2xl sm:text-3xl font-semibold text-white break-words">KSh {processedRevenue.total.toLocaleString()}</p>
             </div>
-            <div className="rounded-3xl border border-border bg-white p-4 sm:p-5 shadow-sm">
-              <p className="text-sm text-muted-foreground">Average Paystack Order</p>
-              <p className="mt-2 sm:mt-3 text-2xl sm:text-3xl font-semibold text-slate-900 break-words">KSh {processedRevenue.avg.toFixed(0).toLocaleString()}</p>
+            <div className="rounded-xl border border-white/10 bg-white/5 p-4 sm:p-5 shadow-sm">
+              <p className="text-sm text-white/50">Average Paystack Order</p>
+              <p className="mt-2 sm:mt-3 text-2xl sm:text-3xl font-semibold text-white break-words">KSh {processedRevenue.avg.toFixed(0).toLocaleString()}</p>
             </div>
           </div>
         </div>
@@ -245,21 +247,21 @@ const AdminDashboard = () => {
 
       {/* Stat cards */}
       {!isAdmin && (
-        <div className="rounded-xl border border-yellow-200 bg-yellow-50 p-3 sm:p-4 text-xs sm:text-sm text-amber-900">
+        <div className="rounded-xl border border-yellow-500/30 bg-yellow-500/10 p-3 sm:p-4 text-xs sm:text-sm text-yellow-400">
           Moderators have limited admin access: you can view and manage orders, products, categories, slides, and reviews, but user management and financial dashboards are restricted to admins only.
         </div>
       )}
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3 md:gap-4">
         {visibleStatCards.map(card => (
-          <Link key={card.label} to={card.link} className="bg-white border border-border p-3 sm:p-4 md:p-5 hover:border-primary transition-colors group block">
-            <div className={`w-8 h-8 sm:w-9 sm:h-9 ${card.color} flex items-center justify-center mb-2 sm:mb-3`}>
+          <Link key={card.label} to={card.link} className="bg-white/5 border border-white/10 rounded-xl p-3 sm:p-4 md:p-5 hover:border-primary/50 hover:bg-white/8 transition-all group block">
+            <div className={`w-8 h-8 sm:w-9 sm:h-9 ${card.color} rounded-lg flex items-center justify-center mb-2 sm:mb-3`}>
               <card.icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" />
             </div>
-            <p className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground break-words">
-              {loading ? <span className="inline-block w-8 h-6 bg-secondary animate-pulse" /> : card.value}
+            <p className="text-xl sm:text-2xl md:text-3xl font-bold text-white break-words">
+              {loading ? <span className="inline-block w-8 h-6 bg-white/10 rounded animate-pulse" /> : card.value}
             </p>
-            <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 break-words">{card.label}</p>
+            <p className="text-[10px] sm:text-xs text-white/50 mt-1 break-words">{card.label}</p>
           </Link>
         ))}
       </div>
@@ -267,68 +269,68 @@ const AdminDashboard = () => {
       {/* Recent Orders + Recent Products */}
       <div className="grid lg:grid-cols-2 gap-4 sm:gap-6">
         {/* Recent Orders */}
-        <div className="bg-white border border-border overflow-hidden">
-          <div className="flex items-center justify-between px-4 sm:px-5 py-3 sm:py-4 border-b border-border">
-            <h2 className="font-semibold text-xs sm:text-sm flex items-center gap-2">
+        <div className="bg-white/5 border border-white/10 rounded-xl overflow-hidden">
+          <div className="flex items-center justify-between px-4 sm:px-5 py-3 sm:py-4 border-b border-white/10">
+            <h2 className="font-semibold text-xs sm:text-sm text-white flex items-center gap-2">
               <ShoppingBag className="w-4 h-4 text-primary" /> Recent Orders
             </h2>
-            <Link to="/admin/orders" className="text-xs text-primary hover:underline flex items-center gap-1">
+            <Link to="/admin/orders" className="text-xs text-primary hover:text-primary/80 flex items-center gap-1">
               View all <ArrowRight className="w-3 h-3" />
             </Link>
           </div>
-          <div className="divide-y divide-border">
+          <div className="divide-y divide-white/10">
             {loading ? Array.from({ length: 4 }).map((_, i) => (
               <div key={i} className="flex items-center gap-3 px-4 sm:px-5 py-3 animate-pulse">
                 <div className="flex-1 space-y-1.5">
-                  <div className="h-3 bg-secondary rounded w-3/4" />
-                  <div className="h-3 bg-secondary rounded w-1/3" />
+                  <div className="h-3 bg-white/10 rounded w-3/4" />
+                  <div className="h-3 bg-white/10 rounded w-1/3" />
                 </div>
               </div>
             )) : recentOrders.map(o => (
-              <div key={o.id} className="flex items-center gap-2 sm:gap-3 px-4 sm:px-5 py-3 hover:bg-secondary/40 transition-colors">
+              <div key={o.id} className="flex items-center gap-2 sm:gap-3 px-4 sm:px-5 py-3 hover:bg-white/5 transition-colors">
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs sm:text-sm font-medium truncate">{o.customer_name}</p>
-                  <p className="text-[10px] sm:text-xs text-muted-foreground truncate">{o.customer_phone}</p>
+                  <p className="text-xs sm:text-sm font-medium text-white truncate">{o.customer_name}</p>
+                  <p className="text-[10px] sm:text-xs text-white/50 truncate">{o.customer_phone}</p>
                 </div>
                 <div className="text-right flex-shrink-0">
                   <p className="text-xs sm:text-sm font-semibold text-primary whitespace-nowrap">
                     {isAdmin ? `KSh ${Number(o.total_amount).toLocaleString()}` : "KSh ****"}
                   </p>
-                  <span className={`text-[9px] sm:text-[10px] font-semibold px-1.5 py-0.5 capitalize ${orderBadge(o.status)} whitespace-nowrap`}>
+                  <span className={`text-[9px] sm:text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${orderBadge(o.status)} whitespace-nowrap`}>
                     {o.status}
                   </span>
                 </div>
               </div>
             ))}
             {!loading && recentOrders.length === 0 && (
-              <p className="text-sm text-muted-foreground text-center py-8">No orders yet.</p>
+              <p className="text-sm text-white/50 text-center py-8">No orders yet.</p>
             )}
           </div>
         </div>
 
         {/* Recent Products */}
-        <div className="bg-white border border-border overflow-hidden">
-          <div className="flex items-center justify-between px-4 sm:px-5 py-3 sm:py-4 border-b border-border">
-            <h2 className="font-semibold text-xs sm:text-sm flex items-center gap-2">
+        <div className="bg-white/5 border border-white/10 rounded-xl overflow-hidden">
+          <div className="flex items-center justify-between px-4 sm:px-5 py-3 sm:py-4 border-b border-white/10">
+            <h2 className="font-semibold text-xs sm:text-sm text-white flex items-center gap-2">
               <TrendingUp className="w-4 h-4 text-primary" /> Recent Products
             </h2>
-            <Link to="/admin/products" className="text-xs text-primary hover:underline flex items-center gap-1">
+            <Link to="/admin/products" className="text-xs text-primary hover:text-primary/80 flex items-center gap-1">
               View all <ArrowRight className="w-3 h-3" />
             </Link>
           </div>
-          <div className="divide-y divide-border">
+          <div className="divide-y divide-white/10">
             {loading ? Array.from({ length: 4 }).map((_, i) => (
               <div key={i} className="flex items-center gap-3 px-4 sm:px-5 py-3 animate-pulse">
-                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-secondary flex-shrink-0" />
+                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white/10 rounded flex-shrink-0" />
                 <div className="flex-1 space-y-1.5">
-                  <div className="h-3 bg-secondary rounded w-3/4" />
-                  <div className="h-3 bg-secondary rounded w-1/3" />
+                  <div className="h-3 bg-white/10 rounded w-3/4" />
+                  <div className="h-3 bg-white/10 rounded w-1/3" />
                 </div>
               </div>
             )) : recentProducts.map(p => {
               const img = p.product_images?.find((i: any) => i.is_primary)?.image_url || p.product_images?.[0]?.image_url || "/placeholder.svg";
               return (
-                <div key={p.id} className="flex items-center gap-2 sm:gap-3 px-4 sm:px-5 py-3 hover:bg-secondary/40 transition-colors">
+                <div key={p.id} className="flex items-center gap-2 sm:gap-3 px-4 sm:px-5 py-3 hover:bg-white/5 transition-colors">
                   <img
                     src={getOptimizedImageUrl(img, {
                       width: 120,
@@ -339,33 +341,33 @@ const AdminDashboard = () => {
                     alt={p.name}
                     loading="lazy"
                     decoding="async"
-                    className="w-8 h-8 sm:w-10 sm:h-10 object-contain bg-secondary border border-border flex-shrink-0"
+                    className="w-8 h-8 sm:w-10 sm:h-10 object-contain bg-black/30 rounded border border-white/10 flex-shrink-0"
                   />
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs sm:text-sm font-medium truncate">{p.name}</p>
-                    <p className="text-[10px] sm:text-xs text-muted-foreground whitespace-nowrap">KSh {Number(p.price).toLocaleString()}</p>
+                    <p className="text-xs sm:text-sm font-medium text-white truncate">{p.name}</p>
+                    <p className="text-[10px] sm:text-xs text-white/50 whitespace-nowrap">KSh {Number(p.price).toLocaleString()}</p>
                   </div>
-                  <span className={`text-[9px] sm:text-[10px] font-semibold px-1.5 sm:px-2 py-0.5 whitespace-nowrap ${stockBadge(p.stock_status)}`}>
+                  <span className={`text-[9px] sm:text-[10px] font-semibold px-1.5 sm:px-2 py-0.5 rounded-full ${stockBadge(p.stock_status)} whitespace-nowrap`}>
                     {p.stock_status === "in_stock" ? "In Stock" : p.stock_status === "low_stock" ? "Low Stock" : "Sold Out"}
                   </span>
                 </div>
               );
             })}
             {!loading && recentProducts.length === 0 && (
-              <p className="text-sm text-muted-foreground text-center py-8">No products yet.</p>
+              <p className="text-sm text-white/50 text-center py-8">No products yet.</p>
             )}
           </div>
         </div>
       </div>
 
       {/* Quick Actions */}
-      <div className="bg-white border border-border overflow-hidden">
-        <div className="px-4 sm:px-5 py-3 sm:py-4 border-b border-border">
-          <h2 className="font-semibold text-xs sm:text-sm">Quick Actions</h2>
+      <div className="bg-white/5 border border-white/10 rounded-xl overflow-hidden">
+        <div className="px-4 sm:px-5 py-3 sm:py-4 border-b border-white/10">
+          <h2 className="font-semibold text-xs sm:text-sm text-white">Quick Actions</h2>
         </div>
         <div className="p-3 sm:p-4 grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
           {quickActions.map(a => (
-            <Link key={a.label} to={a.to} className={`flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 sm:py-3 border text-xs sm:text-sm font-medium hover:opacity-80 transition-opacity ${a.color}`}>
+            <Link key={a.label} to={a.to} className={`flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg border text-xs sm:text-sm font-medium transition-all hover:translate-x-0.5 ${a.color}`}>
               <a.icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               <span className="truncate">{a.label}</span>
               <ArrowRight className="w-3 h-3 sm:w-3.5 sm:h-3.5 ml-auto flex-shrink-0" />

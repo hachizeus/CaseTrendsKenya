@@ -32,16 +32,16 @@ const STATUS_OPTIONS = ["pending", "confirmed", "processing", "delivered", "canc
 const PAYMENT_METHOD_OPTIONS = ["all", "whatsapp", "paystack"] as const;
 
 const statusConfig: Record<string, { label: string; icon: any; color: string }> = {
-  pending: { label: "Pending", icon: Clock, color: "bg-amber-50 text-amber-700 border-amber-200" },
-  confirmed: { label: "Confirmed", icon: CheckCircle, color: "bg-sky-50 text-sky-700 border-sky-200" },
-  processing: { label: "Processing", icon: Package, color: "bg-violet-50 text-violet-700 border-violet-200" },
-  delivered: { label: "Delivered", icon: Truck, color: "bg-emerald-50 text-emerald-700 border-emerald-200" },
-  cancelled: { label: "Cancelled", icon: XCircle, color: "bg-rose-50 text-rose-700 border-rose-200" },
+  pending: { label: "Pending", icon: Clock, color: "bg-amber-500/20 text-amber-400 border-amber-500/30" },
+  confirmed: { label: "Confirmed", icon: CheckCircle, color: "bg-sky-500/20 text-sky-400 border-sky-500/30" },
+  processing: { label: "Processing", icon: Package, color: "bg-violet-500/20 text-violet-400 border-violet-500/30" },
+  delivered: { label: "Delivered", icon: Truck, color: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" },
+  cancelled: { label: "Cancelled", icon: XCircle, color: "bg-rose-500/20 text-rose-400 border-rose-500/30" },
 };
 
 const paymentConfig: Record<string, { label: string; icon: any; color: string }> = {
-  whatsapp: { label: "WhatsApp", icon: MessageCircle, color: "bg-teal-50 text-teal-700 border-teal-200" },
-  paystack: { label: "Paystack", icon: CreditCard, color: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+  whatsapp: { label: "WhatsApp", icon: MessageCircle, color: "bg-teal-500/20 text-teal-400 border-teal-500/30" },
+  paystack: { label: "Paystack", icon: CreditCard, color: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" },
 };
 
 // Define allowed state transitions
@@ -49,8 +49,8 @@ const allowedTransitions: Record<string, string[]> = {
   pending: ["confirmed", "cancelled"],
   confirmed: ["processing", "cancelled"],
   processing: ["delivered", "cancelled"],
-  delivered: [], // Once delivered, cannot change
-  cancelled: [], // Once cancelled, cannot change
+  delivered: [],
+  cancelled: [],
 };
 
 // Helper function to check if a status transition is allowed
@@ -109,14 +109,12 @@ const AdminOrders = () => {
     if (isManual) setSendingEmail(true);
 
     try {
-      // FIX: Always send as "admin" to bypass backend role restrictions
-      // This allows moderators and any authenticated user to send emails
       const emailBody = {
         to: order.customer_email,
         type: "status_update",
         data: {
           ...order,
-          actor_role: "admin" // Force admin role for email API compatibility
+          actor_role: "admin"
         },
       };
       
@@ -164,7 +162,7 @@ const AdminOrders = () => {
           details: { 
             customer_email: order.customer_email, 
             status: order.status,
-            actor_role: role // Log actual role for audit trail
+            actor_role: role
           },
           user_id: order.user_id ?? null,
         });
@@ -189,7 +187,6 @@ const AdminOrders = () => {
 
       const currentStatus = order.status;
       
-      // Check if the transition is allowed
       if (!isStatusTransitionAllowed(currentStatus, newStatus)) {
         const currentStatusLabel = statusConfig[currentStatus]?.label || currentStatus;
         const targetStatusLabel = statusConfig[newStatus]?.label || newStatus;
@@ -199,19 +196,16 @@ const AdminOrders = () => {
         return;
       }
 
-      // Add confirmation for destructive changes
       if (newStatus === "cancelled") {
         const confirmed = window.confirm(`Are you sure you want to cancel this order for ${order.customer_name}? This action cannot be undone.`);
         if (!confirmed) return;
       }
 
-      // Confirm delivery
       if (newStatus === "delivered" && currentStatus !== "delivered") {
         const confirmed = window.confirm(`Mark order #${id.slice(-8)} as delivered? This action cannot be reversed.`);
         if (!confirmed) return;
       }
 
-      // Update the order status
       const { error } = await (supabase as any)
         .from("orders")
         .update({ status: newStatus })
@@ -222,18 +216,15 @@ const AdminOrders = () => {
         return; 
       }
       
-      // Update local state
       const updatedOrders = orders.map(o => o.id === id ? { ...o, status: newStatus } : o);
       setOrders(updatedOrders);
       if (selected?.id === id) setSelected((s: any) => ({ ...s, status: newStatus }));
 
       const updatedOrder = { ...order, status: newStatus };
       
-      // Send email notification (automatic for all status changes, regardless of role)
       let emailSent = false;
       if (updatedOrder.customer_email) {
         try {
-          // Always try to send email, don't pass isManual=true so it doesn't show loading state
           emailSent = await sendStatusUpdateEmail(updatedOrder, false);
           if (emailSent) {
             toast.success(`Order ${newStatus} and customer notified.`);
@@ -248,7 +239,6 @@ const AdminOrders = () => {
         toast.success(`Order ${newStatus} (no email on file).`);
       }
 
-      // Log the action with role information
       await logAuditAction({
         actor_id: user?.id ?? null,
         actor_email: user?.email ?? null,
@@ -258,7 +248,7 @@ const AdminOrders = () => {
         details: { 
           old_status: currentStatus, 
           new_status: newStatus,
-          actor_role: role, // Log actual role
+          actor_role: role,
           email_sent: emailSent,
           customer_email: updatedOrder.customer_email
         },
@@ -334,12 +324,12 @@ const AdminOrders = () => {
   const OrderCard = ({ order }: { order: any }) => (
     <div 
       onClick={() => setSelected(order)}
-      className="bg-white border border-border rounded-lg p-4 space-y-3 hover:shadow-md transition-all cursor-pointer active:scale-[0.99]"
+      className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-3 hover:bg-white/10 transition-all cursor-pointer active:scale-[0.99]"
     >
       <div className="flex justify-between items-start">
         <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-sm truncate">{order.customer_name}</h3>
-          <p className="text-xs text-muted-foreground">{order.customer_phone}</p>
+          <h3 className="font-semibold text-sm text-white truncate">{order.customer_name}</h3>
+          <p className="text-xs text-white/50">{order.customer_phone}</p>
         </div>
         <div className="text-right">
           <p className="font-bold text-primary text-sm">
@@ -349,15 +339,15 @@ const AdminOrders = () => {
         </div>
       </div>
       
-      <div className="flex gap-2 text-xs text-muted-foreground">
+      <div className="flex gap-2 text-xs">
         <PaymentBadge method={order.payment_method || "whatsapp"} />
-        <Badge variant="outline" className="gap-1">
+        <Badge variant="outline" className="gap-1 border-white/20 text-white/60">
           <Truck className="w-2.5 h-2.5" />
           {order.delivery_method === "delivery" ? "Delivery" : "Pickup"}
         </Badge>
       </div>
       
-      <div className="flex justify-between items-center text-xs text-muted-foreground">
+      <div className="flex justify-between items-center text-xs text-white/40">
         <span className="flex items-center gap-1">
           <Calendar className="w-3 h-3" />
           {new Date(order.created_at).toLocaleDateString()}
@@ -370,54 +360,54 @@ const AdminOrders = () => {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-b from-[hsl(240,10%,3.9%)] to-[hsl(240,10%,4.5%)]">
       <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 max-w-7xl">
         {/* Header */}
         <div className="mb-6">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Orders</h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          <h1 className="text-2xl sm:text-3xl font-bold text-white">Orders</h1>
+          <p className="text-sm text-white/50 mt-1">
             Manage and track all customer orders
           </p>
         </div>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
-          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+          <Card className="bg-gradient-to-br from-primary/20 to-primary/10 border-primary/30">
             <CardContent className="p-3">
-              <p className="text-xs text-blue-600 font-medium">Total Orders</p>
-              <p className="text-2xl font-bold text-blue-900">{stats.total}</p>
+              <p className="text-xs text-primary font-medium">Total Orders</p>
+              <p className="text-2xl font-bold text-white">{stats.total}</p>
             </CardContent>
           </Card>
-          <Card className="bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200">
+          <Card className="bg-gradient-to-br from-amber-500/20 to-amber-500/10 border-amber-500/30">
             <CardContent className="p-3">
-              <p className="text-xs text-amber-600 font-medium">Pending</p>
-              <p className="text-2xl font-bold text-amber-900">{stats.pending}</p>
+              <p className="text-xs text-amber-400 font-medium">Pending</p>
+              <p className="text-2xl font-bold text-white">{stats.pending}</p>
             </CardContent>
           </Card>
-          <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200">
+          <Card className="bg-gradient-to-br from-emerald-500/20 to-emerald-500/10 border-emerald-500/30">
             <CardContent className="p-3">
-              <p className="text-xs text-emerald-600 font-medium">Delivered</p>
-              <p className="text-2xl font-bold text-emerald-900">{stats.delivered}</p>
+              <p className="text-xs text-emerald-400 font-medium">Delivered</p>
+              <p className="text-2xl font-bold text-white">{stats.delivered}</p>
             </CardContent>
           </Card>
           {!isModerator && (
             <>
-              <Card className="bg-gradient-to-br from-violet-50 to-violet-100 border-violet-200 col-span-2 sm:col-span-1">
+              <Card className="bg-gradient-to-br from-violet-500/20 to-violet-500/10 border-violet-500/30">
                 <CardContent className="p-3">
-                  <p className="text-xs text-violet-600 font-medium">Total Revenue</p>
-                  <p className="text-xl font-bold text-violet-900">KSh {stats.revenue.toLocaleString()}</p>
+                  <p className="text-xs text-violet-400 font-medium">Total Revenue</p>
+                  <p className="text-xl font-bold text-white">KSh {stats.revenue.toLocaleString()}</p>
                 </CardContent>
               </Card>
-              <Card className="bg-gradient-to-br from-teal-50 to-teal-100 border-teal-200 col-span-2 sm:col-span-1">
+              <Card className="bg-gradient-to-br from-teal-500/20 to-teal-500/10 border-teal-500/30">
                 <CardContent className="p-3">
-                  <p className="text-xs text-teal-600 font-medium">WhatsApp</p>
-                  <p className="text-base font-bold text-teal-900">KSh {stats.whatsappRevenue.toLocaleString()}</p>
+                  <p className="text-xs text-teal-400 font-medium">WhatsApp</p>
+                  <p className="text-base font-bold text-white">KSh {stats.whatsappRevenue.toLocaleString()}</p>
                 </CardContent>
               </Card>
-              <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200 col-span-2 sm:col-span-1">
+              <Card className="bg-gradient-to-br from-emerald-500/20 to-emerald-500/10 border-emerald-500/30">
                 <CardContent className="p-3">
-                  <p className="text-xs text-emerald-600 font-medium">Paystack</p>
-                  <p className="text-base font-bold text-emerald-900">KSh {stats.paystackRevenue.toLocaleString()}</p>
+                  <p className="text-xs text-emerald-400 font-medium">Paystack</p>
+                  <p className="text-base font-bold text-white">KSh {stats.paystackRevenue.toLocaleString()}</p>
                 </CardContent>
               </Card>
             </>
@@ -431,17 +421,17 @@ const AdminOrders = () => {
               <button
                 key={s}
                 onClick={() => setStatusFilter(s)}
-                className={`px-3 py-1.5 text-xs font-semibold rounded-full transition-all ${
+                className={`px-3 py-1.5 text-xs font-semibold rounded-full transition-all capitalize ${
                   statusFilter === s
-                    ? "bg-primary text-white shadow-sm"
-                    : "bg-white border border-border text-muted-foreground hover:border-primary hover:text-primary"
+                    ? "bg-primary text-white shadow-lg shadow-primary/25"
+                    : "bg-white/5 border border-white/10 text-white/70 hover:border-primary/50 hover:text-primary"
                 }`}
               >
                 {s === "all" ? `All (${stats.total})` : `${s} (${stats[s as keyof typeof stats]})`}
               </button>
             ))}
           </div>
-          <Separator orientation="vertical" className="h-8" />
+          <Separator orientation="vertical" className="h-8 bg-white/10" />
           <div className="flex gap-2 flex-wrap">
             {PAYMENT_METHOD_OPTIONS.map(method => (
               <button
@@ -449,8 +439,8 @@ const AdminOrders = () => {
                 onClick={() => setPaymentFilter(method)}
                 className={`px-3 py-1.5 text-xs font-semibold rounded-full transition-all capitalize ${
                   paymentFilter === method
-                    ? "bg-primary text-white shadow-sm"
-                    : "bg-white border border-border text-muted-foreground hover:border-primary hover:text-primary"
+                    ? "bg-primary text-white shadow-lg shadow-primary/25"
+                    : "bg-white/5 border border-white/10 text-white/70 hover:border-primary/50 hover:text-primary"
                 }`}
               >
                 {method === "all" ? "All Methods" : method}
@@ -465,43 +455,43 @@ const AdminOrders = () => {
             variant="outline"
             size="sm"
             onClick={() => setIsMobileFilterOpen(true)}
-            className="flex-1"
+            className="flex-1 border-white/10 text-white hover:bg-white/10"
           >
             <Filter className="w-4 h-4 mr-2" />
             Filters
           </Button>
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
             <Input
               placeholder="Search..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className="pl-9"
+              className="pl-9 bg-black/30 border-white/10 text-white placeholder:text-white/30"
             />
           </div>
         </div>
 
         {/* Search - Desktop */}
         <div className="hidden md:block relative mb-4">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
           <Input
             placeholder="Search by customer name or phone number..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            className="pl-9"
+            className="pl-9 bg-black/30 border-white/10 text-white placeholder:text-white/30"
           />
         </div>
 
         {/* Mobile Filter Sheet */}
         <Sheet open={isMobileFilterOpen} onOpenChange={setIsMobileFilterOpen}>
-          <SheetContent side="bottom" className="rounded-t-xl">
+          <SheetContent side="bottom" className="rounded-t-xl bg-[hsl(240,10%,6%)] border-white/10">
             <SheetHeader>
-              <SheetTitle>Filter Orders</SheetTitle>
-              <SheetDescription>Filter by status or payment method</SheetDescription>
+              <SheetTitle className="text-white">Filter Orders</SheetTitle>
+              <SheetDescription className="text-white/50">Filter by status or payment method</SheetDescription>
             </SheetHeader>
             <div className="mt-4 space-y-4">
               <div>
-                <p className="text-sm font-medium mb-2">Status</p>
+                <p className="text-sm font-medium text-white mb-2">Status</p>
                 <div className="flex flex-wrap gap-2">
                   {["all", ...STATUS_OPTIONS].map(s => (
                     <button
@@ -513,7 +503,7 @@ const AdminOrders = () => {
                       className={`px-3 py-1.5 text-xs font-semibold rounded-full transition-all capitalize ${
                         statusFilter === s
                           ? "bg-primary text-white"
-                          : "bg-gray-100 text-gray-600"
+                          : "bg-white/10 text-white/70"
                       }`}
                     >
                       {s}
@@ -522,7 +512,7 @@ const AdminOrders = () => {
                 </div>
               </div>
               <div>
-                <p className="text-sm font-medium mb-2">Payment Method</p>
+                <p className="text-sm font-medium text-white mb-2">Payment Method</p>
                 <div className="flex flex-wrap gap-2">
                   {PAYMENT_METHOD_OPTIONS.map(method => (
                     <button
@@ -534,7 +524,7 @@ const AdminOrders = () => {
                       className={`px-3 py-1.5 text-xs font-semibold rounded-full transition-all capitalize ${
                         paymentFilter === method
                           ? "bg-primary text-white"
-                          : "bg-gray-100 text-gray-600"
+                          : "bg-white/10 text-white/70"
                       }`}
                     >
                       {method === "all" ? "All" : method}
@@ -550,18 +540,18 @@ const AdminOrders = () => {
         <div className="md:hidden space-y-3">
           {loading ? (
             Array.from({ length: 5 }).map((_, i) => (
-              <Card key={i}>
+              <Card key={i} className="bg-white/5 border-white/10">
                 <CardContent className="p-4">
-                  <Skeleton className="h-4 w-32 mb-2" />
-                  <Skeleton className="h-3 w-24 mb-3" />
-                  <Skeleton className="h-8 w-full" />
+                  <Skeleton className="h-4 w-32 bg-white/10 mb-2" />
+                  <Skeleton className="h-3 w-24 bg-white/10 mb-3" />
+                  <Skeleton className="h-8 w-full bg-white/10 rounded" />
                 </CardContent>
               </Card>
             ))
           ) : filtered.length === 0 ? (
-            <Card>
+            <Card className="bg-white/5 border-white/10">
               <CardContent className="p-8 text-center">
-                <p className="text-muted-foreground">No orders found</p>
+                <p className="text-white/50">No orders found</p>
               </CardContent>
             </Card>
           ) : (
@@ -570,34 +560,34 @@ const AdminOrders = () => {
         </div>
 
         {/* Orders Table - Desktop */}
-        <div className="hidden md:block bg-white border border-border rounded-lg overflow-hidden">
+        <div className="hidden md:block bg-white/5 border border-white/10 rounded-xl overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-gray-50 border-b border-border">
+              <thead className="bg-white/10 border-b border-white/10">
                 <tr>
-                  <th className="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wide text-muted-foreground">Customer</th>
-                  <th className="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wide text-muted-foreground">Phone</th>
-                  <th className="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wide text-muted-foreground">Total</th>
-                  <th className="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wide text-muted-foreground">Payment</th>
-                  <th className="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wide text-muted-foreground">Delivery</th>
-                  <th className="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wide text-muted-foreground">Status</th>
-                  <th className="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wide text-muted-foreground">Placed</th>
+                  <th className="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wide text-white/50">Customer</th>
+                  <th className="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wide text-white/50">Phone</th>
+                  <th className="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wide text-white/50">Total</th>
+                  <th className="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wide text-white/50">Payment</th>
+                  <th className="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wide text-white/50">Delivery</th>
+                  <th className="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wide text-white/50">Status</th>
+                  <th className="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wide text-white/50">Placed</th>
                   <th className="text-right px-4 py-3"></th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border">
+              <tbody className="divide-y divide-white/10">
                 {loading ? Array.from({ length: 5 }).map((_, i) => (
                   <tr key={i}>
                     {Array.from({ length: 8 }).map((_, j) => (
                       <td key={j} className="px-4 py-3">
-                        <Skeleton className="h-4 w-full" />
+                        <Skeleton className="h-4 w-full bg-white/10" />
                       </td>
                     ))}
                   </tr>
                 )) : filtered.map(o => (
-                  <tr key={o.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-4 py-3 font-medium">{o.customer_name}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{o.customer_phone}</td>
+                  <tr key={o.id} className="hover:bg-white/5 transition-colors">
+                    <td className="px-4 py-3 font-medium text-white">{o.customer_name}</td>
+                    <td className="px-4 py-3 text-white/60">{o.customer_phone}</td>
                     <td className="px-4 py-3 font-semibold text-primary">
                       {isModerator ? "KSh ****" : `KSh ${Number(o.total_amount).toLocaleString()}`}
                     </td>
@@ -605,7 +595,7 @@ const AdminOrders = () => {
                       <PaymentBadge method={o.payment_method || "whatsapp"} />
                     </td>
                     <td className="px-4 py-3">
-                      <Badge variant="outline" className="gap-1">
+                      <Badge variant="outline" className="gap-1 border-white/20 text-white/60">
                         {o.delivery_method === "delivery" ? <Truck className="w-3 h-3" /> : <Package className="w-3 h-3" />}
                         {o.delivery_method === "delivery" ? "Delivery" : "Pickup"}
                       </Badge>
@@ -614,21 +604,21 @@ const AdminOrders = () => {
                       <select
                         value={o.status}
                         onChange={e => updateStatus(o.id, e.target.value)}
-                        className={`text-[10px] font-semibold px-2 py-1 rounded-lg border-0 outline-none cursor-pointer ${statusConfig[o.status]?.color || statusConfig.pending.color}`}
+                        className={`text-[10px] font-semibold px-2 py-1 rounded-lg border-0 outline-none cursor-pointer bg-transparent ${statusConfig[o.status]?.color || statusConfig.pending.color}`}
                       >
                         {STATUS_OPTIONS.map(s => (
                           <option 
                             key={s} 
                             value={s} 
                             disabled={!isStatusTransitionAllowed(o.status, s)}
-                            className="bg-white text-foreground capitalize"
+                            className="bg-[hsl(240,10%,6%)] text-white capitalize"
                           >
                             {s}
                           </option>
                         ))}
                       </select>
                     </td>
-                    <td className="px-4 py-3 text-muted-foreground text-xs">
+                    <td className="px-4 py-3 text-white/50 text-xs">
                       {new Date(o.created_at).toLocaleDateString()}
                     </td>
                     <td className="px-4 py-3 text-right">
@@ -636,6 +626,7 @@ const AdminOrders = () => {
                         variant="ghost"
                         size="sm"
                         onClick={() => setSelected(o)}
+                        className="text-white/60 hover:text-primary"
                       >
                         <Eye className="w-4 h-4" />
                       </Button>
@@ -646,7 +637,7 @@ const AdminOrders = () => {
             </table>
             {!loading && filtered.length === 0 && (
               <div className="text-center py-12">
-                <p className="text-muted-foreground">No orders match your filters.</p>
+                <p className="text-white/50">No orders match your filters.</p>
               </div>
             )}
           </div>
@@ -654,12 +645,12 @@ const AdminOrders = () => {
 
         {/* Order Detail Sheet */}
         <Sheet open={!!selected} onOpenChange={() => setSelected(null)}>
-          <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
+          <SheetContent className="w-full sm:max-w-lg overflow-y-auto bg-[hsl(240,10%,6%)] border-l border-white/10">
             {selected && (
               <>
                 <SheetHeader>
-                  <SheetTitle>Order Details</SheetTitle>
-                  <SheetDescription>
+                  <SheetTitle className="text-white">Order Details</SheetTitle>
+                  <SheetDescription className="text-white/50">
                     Order #{selected.id.slice(-8)}
                   </SheetDescription>
                 </SheetHeader>
@@ -667,18 +658,18 @@ const AdminOrders = () => {
                 <div className="mt-6 space-y-6">
                   {/* Status Update */}
                   <div className="space-y-2">
-                    <p className="text-sm font-medium">Order Status</p>
+                    <p className="text-sm font-medium text-white">Order Status</p>
                     <select
                       value={selected.status}
                       onChange={e => updateStatus(selected.id, e.target.value)}
-                      className={`w-full text-sm font-semibold px-3 py-2 rounded-lg border outline-none cursor-pointer ${statusConfig[selected.status]?.color || statusConfig.pending.color}`}
+                      className={`w-full text-sm font-semibold px-3 py-2 rounded-lg border outline-none cursor-pointer bg-black/30 ${statusConfig[selected.status]?.color || statusConfig.pending.color}`}
                     >
                       {STATUS_OPTIONS.map(s => (
                         <option 
                           key={s} 
                           value={s} 
                           disabled={!isStatusTransitionAllowed(selected.status, s)}
-                          className="bg-white text-foreground capitalize"
+                          className="bg-[hsl(240,10%,6%)] text-white capitalize"
                         >
                           {s}
                         </option>
@@ -694,7 +685,7 @@ const AdminOrders = () => {
                         disabled={sendingEmail}
                         variant="outline"
                         size="sm"
-                        className="flex-1"
+                        className="flex-1 border-white/10 text-white hover:bg-white/10"
                       >
                         {sendingEmail ? (
                           <Loader className="w-4 h-4 mr-2 animate-spin" />
@@ -708,7 +699,7 @@ const AdminOrders = () => {
                       <Button
                         variant="outline"
                         size="sm"
-                        className="flex-1"
+                        className="flex-1 border-white/10 text-white hover:bg-white/10"
                         onClick={() => window.open(`https://wa.me/${selected.customer_phone.replace(/\D/g, "")}`, "_blank")}
                       >
                         <MessageCircle className="w-4 h-4 mr-2" />
@@ -718,19 +709,19 @@ const AdminOrders = () => {
                   </div>
 
                   {/* Delivery Info */}
-                  <div className="bg-gray-50 rounded-lg p-4 space-y-2">
-                    <div className="flex items-center gap-2 text-sm font-medium">
-                      <Truck className="w-4 h-4" />
+                  <div className="bg-black/30 rounded-xl p-4 space-y-2 border border-white/10">
+                    <div className="flex items-center gap-2 text-sm font-medium text-white">
+                      <Truck className="w-4 h-4 text-primary" />
                       Delivery Information
                     </div>
                     {selected.delivery_method === "delivery" ? (
                       <>
-                        <p className="text-sm text-muted-foreground">{selected.delivery_address || "Address not available"}</p>
+                        <p className="text-sm text-white/60">{selected.delivery_address || "Address not available"}</p>
                         {selected.delivery_latitude && selected.delivery_longitude && (
                           <Button
                             variant="link"
                             size="sm"
-                            className="p-0 h-auto"
+                            className="p-0 h-auto text-primary"
                             onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${selected.delivery_latitude},${selected.delivery_longitude}`, "_blank")}
                           >
                             <MapPin className="w-3 h-3 mr-1" />
@@ -739,18 +730,18 @@ const AdminOrders = () => {
                         )}
                       </>
                     ) : (
-                      <p className="text-sm text-muted-foreground">Store Pickup</p>
+                      <p className="text-sm text-white/60">Store Pickup</p>
                     )}
                   </div>
 
                   {/* Payment Info */}
-                  <div className="bg-gray-50 rounded-lg p-4 space-y-2">
-                    <div className="flex items-center gap-2 text-sm font-medium">
-                      <CreditCard className="w-4 h-4" />
+                  <div className="bg-black/30 rounded-xl p-4 space-y-2 border border-white/10">
+                    <div className="flex items-center gap-2 text-sm font-medium text-white">
+                      <CreditCard className="w-4 h-4 text-primary" />
                       Payment Information
                     </div>
                     <PaymentBadge method={selected.payment_method || "whatsapp"} />
-                    <p className="text-xs text-muted-foreground mt-2">
+                    <p className="text-xs text-white/40 mt-2">
                       {selected.payment_method === "paystack"
                         ? "Card orders are only saved after payment completes."
                         : "WhatsApp orders are saved when the user clicks through to WhatsApp."}
@@ -759,24 +750,24 @@ const AdminOrders = () => {
 
                   {/* Order Items */}
                   <div className="space-y-3">
-                    <p className="text-sm font-medium">Order Items</p>
+                    <p className="text-sm font-medium text-white">Order Items</p>
                     <div className="space-y-2">
                       {(selected.items || []).map((item: any, i: number) => (
-                        <div key={i} className="flex justify-between text-sm py-2 border-b border-border last:border-0">
-                          <span className="flex-1">{item.name}{item.color ? ` (${item.color})` : ""} <span className="text-muted-foreground">×{item.quantity}</span></span>
-                          <span className="font-medium ml-4">KSh {(item.price * item.quantity).toLocaleString()}</span>
+                        <div key={i} className="flex justify-between text-sm py-2 border-b border-white/10 last:border-0">
+                          <span className="flex-1 text-white/80">{item.name}{item.color ? ` (${item.color})` : ""} <span className="text-white/40">×{item.quantity}</span></span>
+                          <span className="font-medium text-white ml-4">KSh {(item.price * item.quantity).toLocaleString()}</span>
                         </div>
                       ))}
                     </div>
-                    <div className="flex justify-between font-bold text-base pt-3 border-t border-border">
-                      <span>Total</span>
+                    <div className="flex justify-between font-bold text-base pt-3 border-t border-white/10">
+                      <span className="text-white">Total</span>
                       <span className="text-primary">
                         {isModerator ? "KSh ****" : `KSh ${Number(selected.total_amount).toLocaleString()}`}
                       </span>
                     </div>
                   </div>
 
-                  <p className="text-xs text-muted-foreground text-center pt-4">
+                  <p className="text-xs text-white/30 text-center pt-4">
                     Placed on {new Date(selected.created_at).toLocaleString()}
                   </p>
                 </div>

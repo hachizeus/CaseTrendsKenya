@@ -29,7 +29,7 @@ export const VideoSection = () => {
           </h2>
           <div className="flex gap-3 md:gap-4 overflow-x-auto pb-6 px-4 no-scrollbar">
             {[...Array(4)].map((_, i) => (
-              <Skeleton key={i} className="h-[180px] md:h-[200px] min-w-[240px] sm:min-w-[280px] md:min-w-[320px] rounded-xl bg-[hsl(240,10%,8%)] border border-white/5" />
+              <Skeleton key={i} className="h-[160px] md:h-[200px] w-[220px] sm:w-[260px] md:w-[320px] rounded-xl bg-[hsl(240,10%,8%)] border border-white/5 flex-shrink-0" />
             ))}
           </div>
         </div>
@@ -53,65 +53,61 @@ export const VideoSection = () => {
             </div>
           </div>
           
-          <div
-            ref={scrollRef}
-            {...handlers}
-            className="flex gap-3 md:gap-4 overflow-x-auto pb-3 px-4 cursor-grab active:cursor-grabbing select-none no-scrollbar"
-            style={{
-              scrollbarWidth: 'none',
-              msOverflowStyle: 'none',
-              WebkitOverflowScrolling: 'touch',
-              touchAction: 'pan-x'
-            }}
-          >
-            <style dangerouslySetInnerHTML={{ __html: `.no-scrollbar::-webkit-scrollbar { display: none !important; }` }} />
-            {videos.map((video) => {
-              const thumb = video.thumbnail_url || getYouTubeThumbnail(video.youtube_url);
-              return (
-                <div
-                  key={video.id}
-                  className="min-w-[240px] sm:min-w-[280px] md:min-w-[320px] flex-shrink-0"
-                  onClick={() => {
-                    if (wasDragged()) return;
-                    setSelectedVideo({
-                      url: video.youtube_url,
-                      title: video.title,
-                    });
-                  }}
-                >
-                  <div className="relative group cursor-pointer">
-                    {/* Video thumbnail container */}
-                    <div className="relative rounded-xl overflow-hidden bg-gradient-to-br from-[hsl(240,10%,8%)] to-[hsl(240,10%,6%)] border border-white/10 hover:border-primary/50 transition-all duration-300 group-hover:shadow-xl group-hover:shadow-primary/5" style={{ height: '160px' }}>
-                      {thumb && (
-                        <img
-                          src={thumb}
-                          alt={video.title || 'Video'}
-                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                          draggable={false}
-                          loading="lazy"
-                        />
-                      )}
-                      
-                      {/* Play button overlay */}
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-black/60 flex items-center justify-center backdrop-blur-sm group-hover:bg-primary/90 transition-all duration-300 group-hover:scale-110">
-                          <Play className="text-white fill-current ml-0.5 w-5 h-5 md:w-5 md:h-5" />
+          {/* Fixed horizontal scroll container */}
+          <div className="relative overflow-x-auto overflow-y-hidden pb-4 px-4 no-scrollbar" style={{ 
+            WebkitOverflowScrolling: 'touch',
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none'
+          }}>
+            <div className="flex gap-3 md:gap-4 w-max">
+              {videos.map((video) => {
+                const thumb = video.thumbnail_url || getYouTubeThumbnail(video.youtube_url);
+                return (
+                  <div
+                    key={video.id}
+                    className="flex-shrink-0 w-[220px] sm:w-[260px] md:w-[320px]"
+                    onClick={() => {
+                      if (wasDragged()) return;
+                      setSelectedVideo({
+                        url: video.youtube_url,
+                        title: video.title,
+                      });
+                    }}
+                  >
+                    <div className="relative group cursor-pointer">
+                      {/* Video thumbnail container */}
+                      <div className="relative rounded-xl overflow-hidden bg-gradient-to-br from-[hsl(240,10%,8%)] to-[hsl(240,10%,6%)] border border-white/10 hover:border-primary/50 transition-all duration-300 group-hover:shadow-xl group-hover:shadow-primary/5" style={{ height: '160px' }}>
+                        {thumb && (
+                          <img
+                            src={thumb}
+                            alt={video.title || 'Video'}
+                            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                            draggable={false}
+                            loading="lazy"
+                          />
+                        )}
+                        
+                        {/* Play button overlay */}
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-black/60 flex items-center justify-center backdrop-blur-sm group-hover:bg-primary/90 transition-all duration-300 group-hover:scale-110">
+                            <Play className="text-white fill-current ml-0.5 w-5 h-5 md:w-5 md:h-5" />
+                          </div>
                         </div>
+                        
+                        {/* Video title overlay on bottom left */}
+                        {video.title && (
+                          <div className="absolute bottom-0 left-0 right-0 p-2 md:p-3 bg-gradient-to-t from-black/90 via-black/50 to-transparent">
+                            <h3 className="text-white text-xs md:text-sm font-medium line-clamp-2 leading-tight">
+                              {video.title}
+                            </h3>
+                          </div>
+                        )}
                       </div>
-                      
-                      {/* Video title overlay on bottom left */}
-                      {video.title && (
-                        <div className="absolute bottom-0 left-0 right-0 p-2 md:p-3 bg-gradient-to-t from-black/90 via-black/50 to-transparent">
-                          <h3 className="text-white text-xs md:text-sm font-medium line-clamp-2 leading-tight">
-                            {video.title}
-                          </h3>
-                        </div>
-                      )}
                     </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
           
           <p className="text-white/40 text-xs mt-3 text-center md:hidden px-4">

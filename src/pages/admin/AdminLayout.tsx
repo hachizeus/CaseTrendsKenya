@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { usePullToRefresh } from "@/hooks/use-pull-to-refresh";
 import { PullToRefreshOverlay } from "@/components/PullToRefreshOverlay";
-import logo from "../../../public/logo.webp";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
 // Define the OrderNotification type
@@ -31,12 +30,11 @@ interface SimpleOrderNotification {
   is_read: boolean;
 }
 
-// Add this to the adminLinks array
 const adminLinks = [
   { path: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { path: "/admin/products", label: "Products", icon: Package },
   { path: "/admin/slides-overview", label: "Hero Slides", icon: Image },
-  { path: "/admin/videos", label: "Videos", icon: Video }, // Add this line
+  { path: "/admin/videos", label: "Videos", icon: Video },
   { path: "/admin/orders", label: "Orders", icon: ShoppingBag },
   { path: "/admin/audit-logs", label: "Audit Logs", icon: Settings },
   { path: "/admin/reviews", label: "Reviews", icon: Star },
@@ -170,17 +168,17 @@ const AdminLayoutContent = () => {
   const { containerRef, isRefreshing, pullDistance, progress } = usePullToRefresh({
     onRefresh: async () => {
       triggerRefresh();
-      // Small delay to ensure UI updates visually
       await new Promise((resolve) => setTimeout(resolve, 500));
     },
     threshold: 100,
   });
 
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0f1117]">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-[hsl(240,10%,3.9%)] to-[hsl(240,10%,4.5%)]">
       <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
     </div>
   );
+  
   if (!role || (role !== "admin" && role !== "moderator")) return <Navigate to="/" replace />;
 
   const isActive = (path: string) =>
@@ -196,10 +194,10 @@ const AdminLayoutContent = () => {
             key={link.path}
             to={link.path}
             onClick={() => setSidebarOpen(false)}
-            className={`flex items-center gap-3 px-3 py-2.5 text-sm font-medium transition-all duration-150 group ${
+            className={`flex items-center gap-3 px-3 py-2.5 text-sm font-medium transition-all duration-150 rounded-lg group ${
               active
-                ? "bg-primary text-white"
-                : "text-white/60 hover:text-white hover:bg-white/8"
+                ? "bg-primary text-white shadow-lg shadow-primary/20"
+                : "text-white/60 hover:text-white hover:bg-white/5"
             }`}
           >
             <link.icon className="w-4 h-4 flex-shrink-0" />
@@ -212,12 +210,12 @@ const AdminLayoutContent = () => {
   );
 
   return (
-    <div className="h-screen flex bg-[#f4f6f9] overflow-hidden">
-      {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex w-64 bg-[#0f1117] text-white flex-col flex-shrink-0 border-r border-white/10 overflow-y-auto h-screen">
+    <div className="h-screen flex bg-gradient-to-b from-[hsl(240,10%,3.9%)] to-[hsl(240,10%,4.5%)] overflow-hidden">
+      {/* Desktop Sidebar - Dark Theme */}
+      <aside className="hidden lg:flex w-64 bg-[hsl(240,10%,3.9%)] text-white flex-col flex-shrink-0 border-r border-white/10 overflow-y-auto h-screen">
         {/* Logo */}
         <div className="px-5 py-5 border-b border-white/10 flex-shrink-0">
-          <img src="/logow.png" alt="Case Trends Kenya" className="h-9 w-auto" />
+          <img src="/logo.webp" alt="Case Trends Kenya" className="h-9 w-auto bg-transparent" />
           <p className="text-[10px] text-white/40 mt-1 uppercase tracking-widest">Admin Panel</p>
         </div>
 
@@ -236,10 +234,10 @@ const AdminLayoutContent = () => {
         </div>
       </aside>
 
-      {/* Main */}
+      {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Desktop notification header */}
-        <div className="hidden lg:flex items-center justify-end gap-3 px-6 py-3 border-b border-white/10 bg-[#0f1117]">
+        {/* Desktop notification header - Dark Theme */}
+        <div className="hidden lg:flex items-center justify-end gap-3 px-6 py-3 border-b border-white/10 bg-[hsl(240,10%,3.9%)]">
           <Popover onOpenChange={handleNotificationOpenChange}>
             <PopoverTrigger asChild>
               <button
@@ -248,7 +246,7 @@ const AdminLayoutContent = () => {
               >
                 <Bell className="w-4 h-4" />
                 {unreadNotificationCount > 0 && (
-                  <span className="absolute -top-1 -right-1 inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-semibold text-white">
+                  <span className="absolute -top-1 -right-1 inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-primary px-1.5 text-[10px] font-semibold text-white">
                     {unreadNotificationCount > 9 ? "9+" : unreadNotificationCount}
                   </span>
                 )}
@@ -256,23 +254,23 @@ const AdminLayoutContent = () => {
             </PopoverTrigger>
             <PopoverContent
               side="bottom"
-              align="center"
+              align="end"
               sideOffset={8}
-              className="w-80 rounded-3xl border border-slate-200 bg-white p-4 text-slate-900 shadow-xl"
+              className="w-80 rounded-xl border border-white/10 bg-[hsl(240,10%,6%)] p-4 text-white shadow-xl"
             >
               <div className="flex items-center justify-between gap-3 border-b border-white/10 pb-3 mb-3">
-                <p className="text-sm font-semibold text-slate-900">Notifications</p>
+                <p className="text-sm font-semibold text-white">Notifications</p>
                 <button
                   type="button"
                   onClick={viewOrders}
-                  className="text-xs font-semibold text-primary hover:text-primary-foreground"
+                  className="text-xs font-semibold text-primary hover:text-primary/80"
                 >
                   View all
                 </button>
               </div>
               <div className="space-y-2 max-h-72 overflow-y-auto pr-1 scrollbar-hide">
                 {notifications.length === 0 ? (
-                  <div className="rounded-2xl bg-slate-50 p-3 text-sm text-slate-600">
+                  <div className="rounded-xl bg-white/5 p-3 text-sm text-white/50">
                     No notifications yet.
                   </div>
                 ) : (
@@ -281,18 +279,18 @@ const AdminLayoutContent = () => {
                       key={notification.id}
                       type="button"
                       onClick={() => handleNotificationClick(notification.order_id)}
-                      className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-3 text-left text-slate-900 shadow-sm transition duration-150 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 active:scale-[0.99]"
+                      className="w-full rounded-xl border border-white/10 bg-white/5 p-3 text-left text-white transition duration-150 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                     >
                       <div className="flex items-start justify-between gap-3">
                         <p className="text-sm font-medium">{notification.customer_name}</p>
                         {!notification.is_read && (
-                          <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-amber-600">New</span>
+                          <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">New</span>
                         )}
                       </div>
-                      <p className="mt-1 text-xs text-slate-600 leading-5">
+                      <p className="mt-1 text-xs text-white/60 leading-5">
                         {notification.message}
                       </p>
-                      <p className="mt-2 text-[10px] text-slate-500">
+                      <p className="mt-2 text-[10px] text-white/40">
                         {new Date(notification.created_at).toLocaleString()}
                       </p>
                     </button>
@@ -303,8 +301,8 @@ const AdminLayoutContent = () => {
           </Popover>
         </div>
 
-        {/* Mobile & Tablet Header */}
-        <header className="lg:hidden bg-[#0f1117] text-white px-4 py-3 flex items-center justify-between border-b border-white/10">
+        {/* Mobile & Tablet Header - Dark Theme */}
+        <header className="lg:hidden bg-[hsl(240,10%,3.9%)] text-white px-4 py-3 flex items-center justify-between border-b border-white/10">
           <div className="flex items-center gap-3">
             <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
               <SheetTrigger asChild>
@@ -312,9 +310,9 @@ const AdminLayoutContent = () => {
                   <Menu className="w-5 h-5" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="left" className="w-64 p-0 bg-[#0f1117] text-white border-r border-white/10 flex flex-col">
+              <SheetContent side="left" className="w-64 p-0 bg-[hsl(240,10%,3.9%)] text-white border-r border-white/10 flex flex-col">
                 <div className="px-5 py-5 border-b border-white/10 flex-shrink-0">
-                  <img src={logo} alt="Case Trends Kenya" className="h-9 w-auto" />
+                  <img src="/logo.webp" alt="Case Trends Kenya" className="h-9 w-auto bg-transparent" />
                   <p className="text-[10px] text-white/40 mt-1 uppercase tracking-widest">Admin Panel</p>
                 </div>
                 <SidebarNav />
@@ -330,7 +328,7 @@ const AdminLayoutContent = () => {
                 </div>
               </SheetContent>
             </Sheet>
-            <img src={logo} alt="Case Trends Kenya" className="h-7 w-auto" />
+            <img src="/logo.webp" alt="Case Trends Kenya" className="h-7 w-auto bg-transparent" />
           </div>
           <div className="ml-auto flex items-center gap-2">
             <p className="text-xs font-semibold text-white/70">Admin</p>
@@ -342,7 +340,7 @@ const AdminLayoutContent = () => {
                 >
                   <Bell className="w-4 h-4" />
                   {unreadNotificationCount > 0 && (
-                    <span className="absolute -top-1 -right-1 inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-semibold text-white">
+                    <span className="absolute -top-1 -right-1 inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-primary px-1.5 text-[10px] font-semibold text-white">
                       {unreadNotificationCount > 9 ? "9+" : unreadNotificationCount}
                     </span>
                   )}
@@ -350,23 +348,23 @@ const AdminLayoutContent = () => {
               </PopoverTrigger>
               <PopoverContent
                 side="bottom"
-                align="center"
+                align="end"
                 sideOffset={8}
-                className="w-80 rounded-3xl border border-slate-200 bg-white p-4 text-slate-900 shadow-xl"
+                className="w-80 rounded-xl border border-white/10 bg-[hsl(240,10%,6%)] p-4 text-white shadow-xl"
               >
                 <div className="flex items-center justify-between gap-3 border-b border-white/10 pb-3 mb-3">
-                  <p className="text-sm font-semibold text-slate-900">Notifications</p>
+                  <p className="text-sm font-semibold text-white">Notifications</p>
                   <button
                     type="button"
                     onClick={viewOrders}
-                    className="text-xs font-semibold text-primary hover:text-primary-foreground"
+                    className="text-xs font-semibold text-primary hover:text-primary/80"
                   >
                     View all
                   </button>
                 </div>
                 <div className="space-y-2 max-h-72 overflow-y-auto pr-1 scrollbar-hide">
                   {notifications.length === 0 ? (
-                    <div className="rounded-2xl bg-slate-50 p-3 text-sm text-slate-600">
+                    <div className="rounded-xl bg-white/5 p-3 text-sm text-white/50">
                       No notifications yet.
                     </div>
                   ) : (
@@ -375,18 +373,18 @@ const AdminLayoutContent = () => {
                         key={notification.id}
                         type="button"
                         onClick={() => handleNotificationClick(notification.order_id)}
-                        className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-3 text-left text-slate-900 shadow-sm transition duration-150 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 active:scale-[0.99]"
+                        className="w-full rounded-xl border border-white/10 bg-white/5 p-3 text-left text-white transition duration-150 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                       >
                         <div className="flex items-start justify-between gap-3">
                           <p className="text-sm font-medium">{notification.customer_name}</p>
                           {!notification.is_read && (
-                            <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-amber-600">New</span>
+                            <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">New</span>
                           )}
                         </div>
-                        <p className="mt-1 text-xs text-slate-600 leading-5">
+                        <p className="mt-1 text-xs text-white/60 leading-5">
                           {notification.message}
                         </p>
-                        <p className="mt-2 text-[10px] text-slate-500">
+                        <p className="mt-2 text-[10px] text-white/40">
                           {new Date(notification.created_at).toLocaleString()}
                         </p>
                       </button>
@@ -398,7 +396,8 @@ const AdminLayoutContent = () => {
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto" ref={containerRef}>
+        {/* Main Content */}
+        <main className="flex-1 overflow-y-auto bg-gradient-to-b from-[hsl(240,10%,4.5%)] to-[hsl(240,10%,3.9%)]" ref={containerRef}>
           <PullToRefreshOverlay isRefreshing={isRefreshing} pullDistance={pullDistance} progress={progress} />
           <div className="p-3 sm:p-4 md:p-6 lg:p-8 max-w-7xl ml-auto">
             <Outlet />
