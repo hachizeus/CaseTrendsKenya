@@ -13,9 +13,10 @@ import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import CaptchaWidget from "@/components/CaptchaWidget";
 import "leaflet/dist/leaflet.css";
-import markerIcon2x from "leaflet/dist/images/marker-icon-2x.webp";
-import markerIcon from "leaflet/dist/images/marker-icon.webp";
-import markerShadow from "leaflet/dist/images/marker-shadow.webp";
+// Remove the marker image imports - they cause build errors
+// import markerIcon2x from "leaflet/dist/images/marker-icon-2x.webp";
+// import markerIcon from "leaflet/dist/images/marker-icon.webp";
+// import markerShadow from "leaflet/dist/images/marker-shadow.webp";
 import TopBar from "@/components/TopBar";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -163,17 +164,18 @@ const CheckoutPage = () => {
       const leafletModule = await import("leaflet");
       const L = leafletModule.default ?? leafletModule;
 
+      // Fix for missing marker images - use CDN URLs instead of local imports
       delete (L.Icon.Default.prototype as any)._getIconUrl;
       L.Icon.Default.mergeOptions({
-        iconUrl: markerIcon,
-        iconRetinaUrl: markerIcon2x,
-        shadowUrl: markerShadow,
+        iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+        iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+        shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
       });
 
       const initialPos: [number, number] = [-1.2921, 36.8219];
       mapRef.current = L.map(mapContainerRef.current).setView(initialPos, 13);
 
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.webp", {
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
       }).addTo(mapRef.current);
 
@@ -358,7 +360,6 @@ const CheckoutPage = () => {
     } catch (error) {
       console.error("Error creating order:", error);
       
-      // Reset CAPTCHA on error - wrap in setTimeout
       setTimeout(() => {
         setResetCaptcha(true);
         setTimeout(() => setResetCaptcha(false), 100);
@@ -541,7 +542,6 @@ const CheckoutPage = () => {
               </div>
             )}
 
-            {/* CAPTCHA Widget */}
             <CaptchaWidget 
               onVerify={setCaptchaToken} 
               reset={resetCaptcha}
