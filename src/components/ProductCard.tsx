@@ -1,4 +1,4 @@
-import { ShoppingCart, Heart, Star, Eye } from "lucide-react";
+import { ShoppingCart, Heart, Star } from "lucide-react";
 import { memo, useState, useEffect, useCallback, useRef } from "react";
 import { Link } from "react-router-dom";
 import { useCart } from "@/contexts/CartContext";
@@ -143,14 +143,14 @@ const ProductCard = memo(({
             loading="lazy"
           />
           
-          <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-10">
+          <div className="absolute top-2 left-2 flex flex-col gap-1 z-10">
             {discount > 0 && (
-              <span className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-md shadow-lg">
+              <span className="bg-red-500 text-white text-[10px] sm:text-xs font-bold px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md shadow-lg">
                 SAVE {discount}%
               </span>
             )}
             {stockStatus === "out_of_stock" && (
-              <span className="bg-white/10 backdrop-blur-sm text-white text-[11px] font-bold px-2 py-1 rounded-md">
+              <span className="bg-white/10 backdrop-blur-sm text-white text-[10px] sm:text-[11px] font-bold px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md">
                 SOLD OUT
               </span>
             )}
@@ -158,19 +158,19 @@ const ProductCard = memo(({
 
           <button
             onClick={toggleFav}
-            className={`absolute top-3 right-3 transition-all rounded-full p-1.5 z-10 ${
+            className={`absolute top-2 right-2 transition-all rounded-full p-1.5 z-10 ${
               isFav ? "bg-primary/20 text-primary" : "bg-black/50 text-white/70 hover:bg-primary/20 hover:text-primary"
             }`}
           >
-            <Heart className={`w-4 h-4 ${isFav ? "fill-current" : ""}`} />
+            <Heart className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${isFav ? "fill-current" : ""}`} />
           </button>
 
-          {/* Quick Add Button - Shows on hover */}
+          {/* Quick Add Button - Shows on hover for desktop only */}
           {stockStatus !== "out_of_stock" && (
-            <div className={`absolute bottom-0 left-0 right-0 transition-transform duration-300 z-10 ${hovered ? 'translate-y-0' : 'translate-y-full'}`}>
+            <div className={`hidden sm:block absolute bottom-0 left-0 right-0 transition-transform duration-300 z-10 ${hovered ? 'translate-y-0' : 'translate-y-full'}`}>
               <button
                 onClick={handleAddToCart}
-                className={`w-full py-2.5 text-xs font-semibold flex items-center justify-center gap-2 transition-colors ${
+                className={`w-full py-2 text-xs font-semibold flex items-center justify-center gap-2 transition-colors ${
                   addingToCart ? "bg-green-500 text-white" : "bg-primary text-white hover:bg-primary/80"
                 }`}
               >
@@ -181,56 +181,54 @@ const ProductCard = memo(({
           )}
         </div>
 
-        <div className="p-3">
-          <p className="text-[11px] text-primary/70 uppercase tracking-wider">{brand || "General"}</p>
-          <h3 className="text-sm font-semibold line-clamp-2 my-1 group-hover:text-primary transition-colors text-white/90">
+        <div className="p-2 sm:p-3">
+          <p className="text-[10px] sm:text-[11px] text-primary/70 uppercase tracking-wider truncate">{brand || "General"}</p>
+          <h3 className="text-xs sm:text-sm font-semibold line-clamp-2 my-1 group-hover:text-primary transition-colors text-white/90">
             {name}
           </h3>
           
-          <div className="flex items-center gap-1 my-1.5">
+          <div className="flex items-center gap-0.5 sm:gap-1 my-1">
             {[1, 2, 3, 4, 5].map(s => (
-              <Star key={s} className={`w-3 h-3 ${s <= avgRating ? "text-yellow-400 fill-yellow-400" : "text-white/20"}`} />
+              <Star key={s} className={`w-2.5 h-2.5 sm:w-3 sm:h-3 ${s <= avgRating ? "text-yellow-400 fill-yellow-400" : "text-white/20"}`} />
             ))}
           </div>
 
-          {/* Price Section */}
+          {/* Price Section - Improved for mobile */}
           <div className="mt-2">
             {originalPrice && originalPrice > price ? (
-              <>
-                {/* Current Price - Large and Bold */}
-                <div className="flex items-center justify-between">
-                  <div>
-                    <span className="text-lg font-bold text-primary">
-                      KSh {price.toLocaleString()}
-                    </span>
-                    {/* Original Price - Strikethrough */}
-                    <div className="text-xs text-white/50 line-through">
-                      KSh {originalPrice.toLocaleString()}
-                    </div>
-                    {/* Savings - Call to action */}
-                    <div className="text-[10px] text-green-400 font-medium">
-                      Save KSh {(originalPrice - price).toLocaleString()}
-                    </div>
-                  </div>
-                  {/* Mobile Cart Button - Always visible on mobile, hidden on desktop (desktop has hover button) */}
+              <div className="space-y-0.5">
+                {/* Current Price */}
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-sm sm:text-lg font-bold text-primary">
+                    KSh {price.toLocaleString()}
+                  </span>
+                  {/* Mobile Cart Button */}
                   <button
                     onClick={handleAddToCart}
-                    className="sm:hidden w-8 h-8 flex items-center justify-center rounded-lg bg-primary/10 border border-primary/30 text-primary"
+                    className="sm:hidden w-7 h-7 flex items-center justify-center rounded-lg bg-primary text-white"
                     aria-label="Add to cart"
                   >
                     <ShoppingCart className="w-3.5 h-3.5" />
                   </button>
                 </div>
-              </>
+                {/* Original Price */}
+                <div className="text-[10px] sm:text-xs text-white/50 line-through">
+                  Was: KSh {originalPrice.toLocaleString()}
+                </div>
+                {/* Savings */}
+                <div className="text-[9px] sm:text-[10px] text-green-400 font-medium">
+                  You save KSh {(originalPrice - price).toLocaleString()}
+                </div>
+              </div>
             ) : (
-              <div className="flex items-center justify-between">
-                <span className="text-lg font-bold text-primary">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-sm sm:text-lg font-bold text-primary">
                   KSh {price.toLocaleString()}
                 </span>
-                {/* Mobile Cart Button - Always visible on mobile */}
+                {/* Mobile Cart Button */}
                 <button
                   onClick={handleAddToCart}
-                  className="sm:hidden w-8 h-8 flex items-center justify-center rounded-lg bg-primary/10 border border-primary/30 text-primary"
+                  className="sm:hidden w-7 h-7 flex items-center justify-center rounded-lg bg-primary text-white"
                   aria-label="Add to cart"
                 >
                   <ShoppingCart className="w-3.5 h-3.5" />
