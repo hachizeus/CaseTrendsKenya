@@ -1,4 +1,4 @@
-import { ShoppingCart, Heart, Star } from "lucide-react";
+import { ShoppingCart, Heart, Star, Eye } from "lucide-react";
 import { memo, useState, useEffect, useCallback, useRef } from "react";
 import { Link } from "react-router-dom";
 import { useCart } from "@/contexts/CartContext";
@@ -165,8 +165,9 @@ const ProductCard = memo(({
             <Heart className={`w-4 h-4 ${isFav ? "fill-current" : ""}`} />
           </button>
 
+          {/* Quick Add Button - Shows on hover */}
           {stockStatus !== "out_of_stock" && (
-            <div className={`absolute bottom-0 left-0 right-0 transition-transform duration-200 z-10 ${hovered ? 'translate-y-0' : 'translate-y-full'}`}>
+            <div className={`absolute bottom-0 left-0 right-0 transition-transform duration-300 z-10 ${hovered ? 'translate-y-0' : 'translate-y-full'}`}>
               <button
                 onClick={handleAddToCart}
                 className={`w-full py-2.5 text-xs font-semibold flex items-center justify-center gap-2 transition-colors ${
@@ -197,24 +198,44 @@ const ProductCard = memo(({
             {originalPrice && originalPrice > price ? (
               <>
                 {/* Current Price - Large and Bold */}
-                <div className="flex items-baseline gap-2">
-                  <span className="text-lg font-bold text-primary">
-                    KSh {price.toLocaleString()}
-                  </span>
-                </div>
-                {/* Original Price - Strikethrough but visible */}
-                <div className="text-sm text-white/60 line-through">
-                  Was: KSh {originalPrice.toLocaleString()}
-                </div>
-                {/* Savings - Call to action */}
-                <div className="text-xs text-green-400 font-medium mt-0.5">
-                  You save KSh {(originalPrice - price).toLocaleString()}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-lg font-bold text-primary">
+                      KSh {price.toLocaleString()}
+                    </span>
+                    {/* Original Price - Strikethrough */}
+                    <div className="text-xs text-white/50 line-through">
+                      KSh {originalPrice.toLocaleString()}
+                    </div>
+                    {/* Savings - Call to action */}
+                    <div className="text-[10px] text-green-400 font-medium">
+                      Save KSh {(originalPrice - price).toLocaleString()}
+                    </div>
+                  </div>
+                  {/* Mobile Cart Button - Always visible on mobile, hidden on desktop (desktop has hover button) */}
+                  <button
+                    onClick={handleAddToCart}
+                    className="sm:hidden w-8 h-8 flex items-center justify-center rounded-lg bg-primary/10 border border-primary/30 text-primary"
+                    aria-label="Add to cart"
+                  >
+                    <ShoppingCart className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               </>
             ) : (
-              <span className="text-lg font-bold text-primary">
-                KSh {price.toLocaleString()}
-              </span>
+              <div className="flex items-center justify-between">
+                <span className="text-lg font-bold text-primary">
+                  KSh {price.toLocaleString()}
+                </span>
+                {/* Mobile Cart Button - Always visible on mobile */}
+                <button
+                  onClick={handleAddToCart}
+                  className="sm:hidden w-8 h-8 flex items-center justify-center rounded-lg bg-primary/10 border border-primary/30 text-primary"
+                  aria-label="Add to cart"
+                >
+                  <ShoppingCart className="w-3.5 h-3.5" />
+                </button>
+              </div>
             )}
           </div>
         </div>
