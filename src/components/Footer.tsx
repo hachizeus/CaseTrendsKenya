@@ -38,9 +38,15 @@ const Footer = () => {
       .select("*")
       .eq("is_active", true)
       .order("display_order")
-      .limit(6)
       .then(({ data }) => setCategories(data || []));
   }, []);
+
+  // Custom display names for specific categories
+  const getFooterDisplayName = (categoryName: string): string => {
+    if (categoryName === "Android Phones (Protectors)") return "Android Phones";
+    if (categoryName === "iPhone Model (Protectors)") return "iPhone Models";
+    return getDisplayCategoryName(categoryName);
+  };
 
   return (
     <footer className="bg-[#0a0a0a] text-white border-t border-white/5 pt-16">
@@ -67,18 +73,20 @@ const Footer = () => {
             </div>
           </div>
 
-          {/* Quick Links Column */}
+          {/* Quick Links Column - Manual Links */}
           <div>
             <h4 className="font-bold text-sm uppercase tracking-widest mb-6">Quick Links</h4>
             <ul className="space-y-3 text-sm text-gray-400">
               <li><Link to="/products" className="hover:text-[#ec4899] transition-colors">All Products</Link></li>
-              {categories.map(cat => (
-                <li key={cat.slug}>
-                  <Link to={`/products?category=${encodeURIComponent(cat.name)}`} className="hover:text-[#ec4899] transition-colors">
-                    {getDisplayCategoryName(cat.name)}
-                  </Link>
-                </li>
-              ))}
+              <li><Link to="/products?category=smartphones" className="hover:text-[#ec4899] transition-colors">Smartphones</Link></li>
+              <li><Link to="/products?category=android-phones" className="hover:text-[#ec4899] transition-colors">Android Phones</Link></li>
+              <li><Link to="/products?category=iphone-model" className="hover:text-[#ec4899] transition-colors">iPhone Models</Link></li>
+              <li><Link to="/products?category=protectors" className="hover:text-[#ec4899] transition-colors">Protectors</Link></li>
+              <li><Link to="/products?category=audio" className="hover:text-[#ec4899] transition-colors">Audio</Link></li>
+              <li><Link to="/products?category=phone-cases" className="hover:text-[#ec4899] transition-colors">Phone Cases</Link></li>
+              <li><Link to="/products?category=charging-devices" className="hover:text-[#ec4899] transition-colors">Charging Devices</Link></li>
+              <li><Link to="/products?category=gaming" className="hover:text-[#ec4899] transition-colors">Gaming</Link></li>
+              <li><Link to="/products?category=tablets" className="hover:text-[#ec4899] transition-colors">Tablets & iPads</Link></li>
             </ul>
           </div>
 
@@ -90,6 +98,7 @@ const Footer = () => {
               <li><Link to="/favorites" className="hover:text-[#ec4899] transition-colors">Wishlist</Link></li>
               <li><Link to="/auth" className="hover:text-[#ec4899] transition-colors">My Account</Link></li>
               <li><Link to="/checkout" className="hover:text-[#ec4899] transition-colors">Checkout</Link></li>
+              <li><Link to="/contact" className="hover:text-[#ec4899] transition-colors">Contact Us</Link></li>
             </ul>
           </div>
 
@@ -126,7 +135,7 @@ const Footer = () => {
             </p>
           </div>
           
-          {/* Payment Logos - The logos themselves should have transparent backgrounds. Tailwind doesn't have a way to make a solid background within an image transparent. If the original images have transparent backgrounds, this is all you need. If they don't, you'll need new logo files with transparency. Added bg-transparent for good measure, though it likely won't have an effect if the image data itself contains the gray. */}
+          {/* Payment Logos */}
           <div className="flex items-center gap-6">
             <img 
               src="https://www.logo.wine/a/logo/Visa_Inc./Visa_Inc.-Logo.wine.svg" 

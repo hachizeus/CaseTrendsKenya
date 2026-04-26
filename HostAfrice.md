@@ -44,3 +44,4 @@ cat output.log
 
 Confirm you see the "✅ Email server running" or "Server started" message.
 Hard Refresh: Go to your browser and press Ctrl + F5 to clear the cache and see the new changes.
+source $(find /home/casetren/nodevenv -name "activate" | head -n 1) && cd /home/casetren/domains/casetrendskenya.co.ke/nodeapp && pkill -u casetren node || true && npm install && nohup node server.js > output.log 2>&1 & sleep 3 && cat output.log

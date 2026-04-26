@@ -5,36 +5,37 @@ import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { LazyImage } from "@/components/LazyImage";
 
 interface ProductCardProps {
   id: string;
   name: string;
-  images: { image_url: string; is_primary: boolean; display_order: number }[];
+  images?: { image_url: string; is_primary: boolean; display_order: number }[] | null;
   price: number;
   originalPrice?: number | null;
-  category: string;
-  brand: string;
+  category?: string;
+  brand?: string;
   model?: string | null;
-  stockStatus: string;
-  index: number;
+  stockStatus?: string;
+  index?: number;
   rating?: number;
   reviewCount?: number;
 }
 
 const ProductCard = memo(({ 
-  id, name, images, price, originalPrice, brand, stockStatus, rating, reviewCount 
+  id, name, images, price, originalPrice, brand, stockStatus, rating 
 }: ProductCardProps) => {
   const discount = originalPrice ? Math.round(((originalPrice - price) / originalPrice) * 100) : 0;
-  const sorted = [...images].sort((a, b) => a.display_order - b.display_order);
+  
+  // SAFE: Check if images exists and is an array
+  const imageArray = Array.isArray(images) ? images : [];
+  const sorted = [...imageArray].sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
   const primaryImg = sorted.find(i => i.is_primary)?.image_url || sorted[0]?.image_url || "/placeholder.svg";
   const secondaryImg = sorted.length > 1 ? sorted[1]?.image_url : primaryImg;
   
-  // Preload secondary image on mount
   const [secondaryPreloaded, setSecondaryPreloaded] = useState(false);
   
   useEffect(() => {
-    if (secondaryImg !== primaryImg) {
+    if (secondaryImg && secondaryImg !== primaryImg) {
       const img = new Image();
       img.src = secondaryImg;
       img.onload = () => setSecondaryPreloaded(true);
@@ -51,7 +52,6 @@ const ProductCard = memo(({
   const { addToCart } = useCart();
   const { user } = useAuth();
   
-  // Smooth image transition with timeout
   const hoverTimerRef = useRef<NodeJS.Timeout>();
 
   useEffect(() => {
@@ -71,11 +71,10 @@ const ProductCard = memo(({
     }
   }, [user?.id, id]);
 
-  // Handle hover with smooth transition
   const handleMouseEnter = useCallback(() => {
     if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
     setHovered(true);
-    if (secondaryPreloaded && secondaryImg !== primaryImg) {
+    if (secondaryPreloaded && secondaryImg !== primaryImg && secondaryImg) {
       setCurrentImage(secondaryImg);
     }
   }, [secondaryPreloaded, secondaryImg, primaryImg]);
@@ -119,11 +118,10 @@ const ProductCard = memo(({
     e.preventDefault();
     e.stopPropagation();
     setAddingToCart(true);
-    await addToCart({ id, name, price, image: primaryImg, brand, stock_status: stockStatus });
+    await addToCart({ id, name, price, image: primaryImg, brand: brand || "", stock_status: stockStatus || "in_stock" });
     setTimeout(() => setAddingToCart(false), 500);
   }, [id, name, price, primaryImg, brand, stockStatus, addToCart]);
 
-  // Cleanup timer
   useEffect(() => {
     return () => {
       if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
@@ -137,27 +135,18 @@ const ProductCard = memo(({
       className="group h-full w-full min-w-0"
     >
       <Link to={`/product/${id}`} className="block h-full bg-[hsl(240,10%,6%)] hover:border-primary/50 border border-white/5 rounded-xl overflow-hidden transition-all duration-200 hover:shadow-xl hover:shadow-primary/5">
-        {/* Image */}
         <div className="relative aspect-[4/5] bg-gradient-to-br from-[hsl(240,10%,4%)] to-[hsl(240,10%,8%)] overflow-hidden">
-          {/* Main image with crossfade transition */}
           <img
             src={currentImage}
             alt={name}
-            className={`w-full h-full object-cover transition-opacity duration-300 ease-in-out ${
-              hovered && secondaryPreloaded ? 'opacity-100' : 'opacity-100'
-            }`}
+            className="w-full h-full object-cover transition-opacity duration-300 ease-in-out"
             loading="lazy"
-            style={{ 
- transition: 'opacity 0.3s ease-in-out',
-              opacity: 1
-            }}
           />
           
-          {/* Badges */}
           <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-10">
             {discount > 0 && (
-              <span className="bg-primary text-white text-[11px] font-bold px-2 py-1 rounded-md shadow-lg">
-                -{discount}% OFF
+              <span className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-md shadow-lg">
+                SAVE {discount}%
               </span>
             )}
             {stockStatus === "out_of_stock" && (
@@ -167,7 +156,6 @@ const ProductCard = memo(({
             )}
           </div>
 
-          {/* Wishlist button */}
           <button
             onClick={toggleFav}
             className={`absolute top-3 right-3 transition-all rounded-full p-1.5 z-10 ${
@@ -177,7 +165,6 @@ const ProductCard = memo(({
             <Heart className={`w-4 h-4 ${isFav ? "fill-current" : ""}`} />
           </button>
 
-          {/* Quick add button - desktop only */}
           {stockStatus !== "out_of_stock" && (
             <div className={`absolute bottom-0 left-0 right-0 transition-transform duration-200 z-10 ${hovered ? 'translate-y-0' : 'translate-y-full'}`}>
               <button
@@ -193,37 +180,41 @@ const ProductCard = memo(({
           )}
         </div>
 
-        {/* Info */}
         <div className="p-3">
-          <p className="text-[11px] text-primary/70 uppercase tracking-wider">{brand}</p>
+          <p className="text-[11px] text-primary/70 uppercase tracking-wider">{brand || "General"}</p>
           <h3 className="text-sm font-semibold line-clamp-2 my-1 group-hover:text-primary transition-colors text-white/90">
             {name}
           </h3>
           
-          {/* Rating */}
           <div className="flex items-center gap-1 my-1.5">
             {[1, 2, 3, 4, 5].map(s => (
               <Star key={s} className={`w-3 h-3 ${s <= avgRating ? "text-yellow-400 fill-yellow-400" : "text-white/20"}`} />
             ))}
           </div>
 
-          {/* Price */}
-          <div className="flex items-center justify-between mt-2">
-            <div>
-              <span className="text-base font-bold text-primary">KSh {price.toLocaleString()}</span>
-              {originalPrice && (
-                <span className="text-[10px] text-white/40 line-through ml-1.5">KSh {originalPrice.toLocaleString()}</span>
-              )}
-            </div>
-            
-            {/* Mobile add to cart */}
-            {stockStatus !== "out_of_stock" && (
-              <button
-                onClick={handleAddToCart}
-                className="sm:hidden w-8 h-8 flex items-center justify-center rounded-lg bg-primary/10 border border-primary/30 text-primary"
-              >
-                <ShoppingCart className="w-3.5 h-3.5" />
-              </button>
+          {/* Price Section */}
+          <div className="mt-2">
+            {originalPrice && originalPrice > price ? (
+              <>
+                {/* Current Price - Large and Bold */}
+                <div className="flex items-baseline gap-2">
+                  <span className="text-lg font-bold text-primary">
+                    KSh {price.toLocaleString()}
+                  </span>
+                </div>
+                {/* Original Price - Strikethrough but visible */}
+                <div className="text-sm text-white/60 line-through">
+                  Was: KSh {originalPrice.toLocaleString()}
+                </div>
+                {/* Savings - Call to action */}
+                <div className="text-xs text-green-400 font-medium mt-0.5">
+                  You save KSh {(originalPrice - price).toLocaleString()}
+                </div>
+              </>
+            ) : (
+              <span className="text-lg font-bold text-primary">
+                KSh {price.toLocaleString()}
+              </span>
             )}
           </div>
         </div>

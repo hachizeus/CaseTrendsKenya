@@ -28,12 +28,29 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useCart } from "@/contexts/CartContext";
 import SearchDropdown from "./SearchDropdown";
 import { getDisplayCategoryName } from "@/lib/utils";
-import {
-  MAIN_CATEGORIES,
-  getSubcategoriesByCategory,
-} from "@/lib/categoryData";
 
-const headerCategoryOptions = MAIN_CATEGORIES.map((cat) => cat.slug);
+// Updated MAIN_CATEGORIES with correct names from database
+const MAIN_CATEGORIES = [
+  { name: "Smartphones", slug: "smartphones", categoryId: "51feace1-d4fc-4c5b-939f-8cecee1f447b" },
+  { name: "Android Phones", slug: "android-phones", categoryId: "4006f669-3bac-4633-8b22-964c6a8d98e7" },
+  { name: "iPhone Models", slug: "iphone-model", categoryId: "21b261a2-7046-488e-8798-cc6b64a4f383" },
+  { name: "Audio", slug: "audio", categoryId: "42085990-1f6d-4417-9c63-74e560a612bf" },
+  { name: "Smart Watch", slug: "smart-watch", categoryId: "2fe2e5f4-86e9-47e6-9666-dad7cda508db" },
+  { name: "Charging Devices", slug: "charging-devices", categoryId: "df0e0cfd-32bd-4aaa-bbf7-6b74ba8d007e" },
+  { name: "Power Banks", slug: "power-banks", categoryId: "b9042c4a-5f2f-4d6f-ae65-32e215a6ec08" },
+  { name: "Camera Lens Protectors", slug: "camera-lens-protectors", categoryId: "4ec7d508-05af-4408-a3a1-05e2352a3f9e" },
+  { name: "Protectors", slug: "protectors", categoryId: "ff82c901-6d28-4fd8-aeb0-f70c4ac7ab91" },
+  { name: "Phone Cases", slug: "phone-cases", categoryId: "8feca2ff-0436-48ae-92ce-226b98944c0c" },
+  { name: "Gaming", slug: "gaming", categoryId: "06dfd5a5-6568-4788-bd85-562f591ee1bf" },
+  { name: "MagSafe Cases", slug: "magsafe-cases", categoryId: "24476a4e-7f81-4e0a-a80d-b0a728a6035a" },
+  { name: "Stickers", slug: "stickers", categoryId: "f1c70937-6e84-477b-bb9a-912638228584" },
+  { name: "Phone Holders", slug: "phone-holders", categoryId: "c3ed521b-8891-4828-98f7-2ddee125b642" },
+  { name: "Accessories", slug: "accessories", categoryId: "4379046f-17bf-40f0-9238-052a68af0391" },
+  { name: "Tablets", slug: "tablets", categoryId: "51e466b1-ddad-4288-a500-3db2747cb93d" },
+  { name: "Streaming Devices", slug: "streaming", categoryId: "da4753e7-88ff-42d3-8276-f147dbea4304" },
+  { name: "Wearables", slug: "wearables", categoryId: "757482d7-41d5-4044-94af-713cb4c9a763" },
+];
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -50,9 +67,9 @@ const useTypingPlaceholder = () => {
   const [isDeleting, setIsDeleting] = useState(false);
 
   const words = [
-    "Covers",
-    "Protectors",
     "Phone Cases",
+    "Protectors",
+    "Smartphones",
     "Android Phones",
     "iPhone Models",
     "Audio",
@@ -61,16 +78,15 @@ const useTypingPlaceholder = () => {
     "Power Banks",
     "Camera Lens Protectors",
     "Accessories",
-    "Phone Holders",
     "Gaming",
   ];
 
   // Color mapping for each word
   const getColorForWord = (word: string): string => {
     const colorMap: Record<string, string> = {
-      Covers: "text-blue-500",
-      Protectors: "text-green-500",
       "Phone Cases": "text-purple-500",
+      Protectors: "text-green-500",
+      Smartphones: "text-blue-500",
       "Android Phones": "text-orange-500",
       "iPhone Models": "text-indigo-500",
       Audio: "text-pink-500",
@@ -79,7 +95,6 @@ const useTypingPlaceholder = () => {
       "Power Banks": "text-teal-500",
       "Camera Lens Protectors": "text-cyan-500",
       Accessories: "text-amber-600",
-      "Phone Holders": "text-emerald-500",
       Gaming: "text-violet-500",
     };
     return colorMap[word] || "text-gray-500";
@@ -123,10 +138,11 @@ const getCategoryIcon = (categoryName: string): LucideIcon => {
     Protectors: Shield,
     "Phone Cases": Smartphone,
     "Android Phones": Smartphone,
-    "iPhone Model": Smartphone,
+    "iPhone Models": Smartphone,
+    Smartphones: Smartphone,
     Audio: Headphones,
     "Smart Watch": Watch,
-    "Charging Devices": Battery,
+    "Charging Devices": Cable,
     "Power Banks": Battery,
     "Camera Lens Protectors": Camera,
     Accessories: Package,
@@ -137,6 +153,178 @@ const getCategoryIcon = (categoryName: string): LucideIcon => {
   };
 
   return iconMap[categoryName] || Package;
+};
+
+// Subcategories data from your database
+const SUBCATEGORIES_DATA: Record<string, Array<{ name: string; slug: string }>> = {
+  // Smartphones subcategories
+  "51feace1-d4fc-4c5b-939f-8cecee1f447b": [
+    { name: "Galaxy S Series", slug: "galaxy-s-series" },
+    { name: "Galaxy A Series", slug: "galaxy-a-series" },
+    { name: "Galaxy M Series", slug: "galaxy-m-series" },
+    { name: "Galaxy Z Series (Fold / Flip)", slug: "galaxy-z-series" },
+    { name: "iPhone 11 – iPhone 17 lineup", slug: "iphone-11-17" },
+    { name: "iPhone Pro / Pro Max", slug: "iphone-pro-pro-max" },
+    { name: "iPhone SE", slug: "iphone-se" },
+    { name: "Xiaomi flagship series (14, 15, 17)", slug: "xiaomi-flagship" },
+    { name: "Xiaomi T Series", slug: "xiaomi-t-series" },
+    { name: "Redmi A Series", slug: "redmi-a-series" },
+    { name: "Redmi Note Series", slug: "redmi-note-series" },
+    { name: "Redmi Number Series", slug: "redmi-number-series" },
+    { name: "Poco C Series", slug: "poco-c-series" },
+    { name: "Poco X Series", slug: "poco-x-series" },
+    { name: "Poco F Series", slug: "poco-f-series" },
+    { name: "Spark Series", slug: "tecno-spark" },
+    { name: "Camon Series", slug: "tecno-camon" },
+    { name: "Phantom Series", slug: "tecno-phantom" },
+    { name: "Smart Series", slug: "infinix-smart" },
+    { name: "Hot Series", slug: "infinix-hot" },
+    { name: "Note Series", slug: "infinix-note" },
+    { name: "Zero Series", slug: "infinix-zero" },
+    { name: "A Series", slug: "oppo-a-series" },
+    { name: "Reno Series", slug: "oppo-reno" },
+    { name: "Find Series", slug: "oppo-find" },
+    { name: "Y Series", slug: "vivo-y-series" },
+    { name: "V Series", slug: "vivo-v-series" },
+    { name: "X Series", slug: "vivo-x-series" },
+    { name: "Nova Series", slug: "huawei-nova" },
+    { name: "P Series", slug: "huawei-p-series" },
+    { name: "Mate Series", slug: "huawei-mate" },
+    { name: "Nokia", slug: "nokia" },
+    { name: "Realme", slug: "realme" },
+    { name: "Honor", slug: "honor" },
+    { name: "Google Pixel Series", slug: "google-pixel" },
+    { name: "OnePlus Number Series", slug: "oneplus-number" },
+    { name: "OnePlus Nord Series", slug: "oneplus-nord" },
+    { name: "Motorola", slug: "motorola" },
+    { name: "Nothing Phone 1", slug: "nothing-phone-1" },
+    { name: "Nothing Phone 2", slug: "nothing-phone-2" },
+    { name: "Nothing Phone 3", slug: "nothing-phone-3" },
+  ],
+  // Protectors subcategories
+  "ff82c901-6d28-4fd8-aeb0-f70c4ac7ab91": [
+    { name: "Curved Screens", slug: "curved-screens" },
+    { name: "Full Glue 900", slug: "full-glue-900" },
+    { name: "UV 1000", slug: "uv-1000" },
+    { name: "Ceramic Privacy", slug: "protectors-ceramic-privacy" },
+    { name: "Glass Privacy", slug: "protectors-glass-privacy" },
+  ],
+  // Android Phones subcategories
+  "4006f669-3bac-4633-8b22-964c6a8d98e7": [
+    { name: "Normal / OG Glass", slug: "android-normal-og-glass" },
+    { name: "Ceramic Matte", slug: "android-ceramic-matte" },
+    { name: "Ceramic Privacy", slug: "android-ceramic-privacy" },
+    { name: "Glass Privacy", slug: "android-glass-privacy" },
+  ],
+  // iPhone Models subcategories
+  "21b261a2-7046-488e-8798-cc6b64a4f383": [
+    { name: "Normal / OG Glass", slug: "iphone-normal-og-glass" },
+    { name: "Glass Privacy", slug: "iphone-glass-privacy" },
+    { name: "Ceramic Privacy", slug: "iphone-ceramic-privacy" },
+  ],
+  // Audio subcategories
+  "42085990-1f6d-4417-9c63-74e560a612bf": [
+    { name: "Headphones", slug: "headphones" },
+    { name: "Earphones", slug: "earphones" },
+    { name: "AirPods Pro", slug: "airpods-pro" },
+    { name: "Neck Band", slug: "neck-band" },
+    { name: "Space Buds", slug: "space-buds" },
+    { name: "AirPods Cases", slug: "airpods-cases" },
+  ],
+  // Smart Watch subcategories
+  "2fe2e5f4-86e9-47e6-9666-dad7cda508db": [
+    { name: "Kids Smart Watch", slug: "kids-smart-watch" },
+    { name: "Apple Watch", slug: "apple-watch" },
+    { name: "Galaxy Watch", slug: "galaxy-watch" },
+    { name: "Oraimo Watch", slug: "oraimo-watch" },
+  ],
+  // Charging Devices subcategories
+  "df0e0cfd-32bd-4aaa-bbf7-6b74ba8d007e": [
+    { name: "Apple Adapters", slug: "apple-adapters" },
+    { name: "Samsung Adapters", slug: "samsung-adapters" },
+    { name: "Complete Chargers (25W / 45W / 65W)", slug: "complete-chargers" },
+    { name: "USB Cables", slug: "usb-cables" },
+    { name: "Type-C Cables", slug: "type-c-cables" },
+    { name: "Lightning Cables", slug: "lightning-cables" },
+    { name: "C to C Cables", slug: "c-to-c-cables" },
+    { name: "USB to Micro", slug: "usb-to-micro" },
+    { name: "USB to C", slug: "usb-to-c" },
+    { name: "AUX Cables", slug: "aux-cables" },
+    { name: "Car Charger", slug: "car-charger" },
+  ],
+  // Power Banks subcategories
+  "b9042c4a-5f2f-4d6f-ae65-32e215a6ec08": [
+    { name: "Wired Power Banks", slug: "wired-power-banks" },
+    { name: "Battery Pack", slug: "battery-pack" },
+    { name: "Wireless Power Bank", slug: "wireless-power-bank" },
+    { name: "Fast Charging Power Bank", slug: "fast-charging-power-bank" },
+  ],
+  // Camera Lens Protectors subcategories
+  "4ec7d508-05af-4408-a3a1-05e2352a3f9e": [
+    { name: "Glitter Lens Protectors", slug: "glitter-lens-protectors" },
+    { name: "Normal Lens Protectors", slug: "normal-lens-protectors" },
+    { name: "Octagon Lens Protectors", slug: "octagon-lens-protectors" },
+  ],
+  // Accessories subcategories
+  "4379046f-17bf-40f0-9238-052a68af0391": [
+    { name: "Phone Charms", slug: "phone-charms" },
+    { name: "Gents Phone Charms", slug: "gents-phone-charms" },
+    { name: "Phone Lanyards", slug: "phone-lanyards" },
+    { name: "Crossbody Phone Lanyards", slug: "crossbody-phone-lanyards" },
+    { name: "Waterproof Bags", slug: "waterproof-bags" },
+    { name: "Fluffy Charms", slug: "fluffy-charms" },
+    { name: "Marble Charms", slug: "marble-charms" },
+    { name: "Fabric Charms", slug: "fabric-charms" },
+    { name: "Charger Protectors", slug: "charger-protectors" },
+    { name: "iPhone Charger Protectors", slug: "iphone-charger-protectors" },
+    { name: "Samsung Charger Protectors", slug: "samsung-charger-protectors" },
+    { name: "S Pen", slug: "s-pen" },
+  ],
+  // Phone Holders subcategories
+  "c3ed521b-8891-4828-98f7-2ddee125b642": [
+    { name: "Car Phone Holder", slug: "car-phone-holder" },
+    { name: "Magnetic Phone Holder", slug: "magnetic-phone-holder" },
+    { name: "Gimbal", slug: "gimbal" },
+    { name: "Phone Stand", slug: "phone-stand" },
+  ],
+  // Gaming subcategories
+  "06dfd5a5-6568-4788-bd85-562f591ee1bf": [
+    { name: "PS5", slug: "ps5" },
+    { name: "Controllers", slug: "controllers" },
+  ],
+  // MagSafe Cases subcategories
+  "24476a4e-7f81-4e0a-a80d-b0a728a6035a": [
+    { name: "Premium Leather Cases", slug: "premium-leather-cases" },
+    { name: "Cases with Lens Protectors", slug: "cases-with-lens-protectors" },
+    { name: "Fancy Cases", slug: "fancy-cases" },
+    { name: "Frosted Cases", slug: "frosted-cases" },
+    { name: "3-in-1 Cases", slug: "3-in-1-cases" },
+    { name: "360 Cases", slug: "360-cases" },
+    { name: "Converter Cases", slug: "converter-cases" },
+  ],
+  // Stickers subcategories
+  "f1c70937-6e84-477b-bb9a-912638228584": [
+    { name: "Laptop Stickers", slug: "laptop-stickers" },
+    { name: "Phone Stickers", slug: "phone-stickers" },
+    { name: "Console Stickers", slug: "console-stickers" },
+    { name: "Machine Cut Phone Stickers", slug: "machine-cut-phone-stickers" },
+  ],
+  // Phone Cases subcategories
+  "8feca2ff-0436-48ae-92ce-226b98944c0c": [
+    { name: "Leather Case", slug: "leather-case" },
+    { name: "3D Pop Socket Cases", slug: "3d-pop-socket-cases" },
+    { name: "MagSafe Cases", slug: "magsafe-cases-sub" },
+    { name: "Clear Cases", slug: "clear-cases" },
+    { name: "Tribal Cases", slug: "tribal-cases" },
+    { name: "Customized Cases", slug: "customized-cases" },
+    { name: "Leather Flip Cases", slug: "leather-flip-cases" },
+    { name: "Silicone Cases", slug: "silicone-cases" },
+    { name: "Soft Silicone Cases", slug: "soft-silicone-cases" },
+    { name: "Metallic Cases", slug: "metallic-cases" },
+    { name: "Vegan Cases", slug: "vegan-cases" },
+    { name: "Floral Cases", slug: "floral-cases" },
+    { name: "Bow Cases", slug: "bow-cases" },
+  ],
 };
 
 const Header = () => {
@@ -173,6 +361,15 @@ const Header = () => {
 
   // Typing placeholder hook
   const { displayText, currentColor, isTyping } = useTypingPlaceholder();
+
+  // Get subcategories for a category by slug
+  const getSubcategoriesForCategory = (categorySlug: string) => {
+    const category = MAIN_CATEGORIES.find(c => c.slug === categorySlug);
+    if (category && SUBCATEGORIES_DATA[category.categoryId]) {
+      return SUBCATEGORIES_DATA[category.categoryId];
+    }
+    return [];
+  };
 
   // Desktop Auto-scrolling categories
   useEffect(() => {
@@ -398,6 +595,10 @@ const Header = () => {
     (cat) => cat.slug === mobileHoveredCategory,
   );
 
+  // Get subcategories for the hovered category
+  const hoveredSubcategories = hoveredCategory ? getSubcategoriesForCategory(hoveredCategory) : [];
+  const mobileHoveredSubcategories = mobileHoveredCategory ? getSubcategoriesForCategory(mobileHoveredCategory) : [];
+
   // Calculate dropdown position relative to the container
   const getDropdownPosition = () => {
     if (!hoveredElement || !categoriesContainerRef.current) return { left: 0 };
@@ -451,9 +652,9 @@ const Header = () => {
                 className="absolute left-0 top-0 h-full px-3 flex items-center gap-1.5 border-r border-white/10 text-white/60 hover:text-white transition-colors text-sm z-10 bg-black"
               >
                 {selectedSubcategory
-                  ? getDisplayCategoryName(selectedSubcategory)
+                  ? selectedSubcategory
                   : selectedCategory
-                    ? getDisplayCategoryName(selectedCategory)
+                    ? MAIN_CATEGORIES.find(c => c.slug === selectedCategory)?.name || "All Categories"
                     : "All Categories"}
                 <ChevronDown className="w-4 h-4" />
               </button>
@@ -500,34 +701,39 @@ const Header = () => {
                         );
                       })}
                     </div>
-                    <div className="space-y-1 border-t border-white/10 md:border-t-0 md:border-l md:pl-2 md:pt-0 md:mt-0">
+                    <div className="space-y-1 border-t border-white/10 md:border-t-0 md:border-l md:pl-2">
                       <div className="px-4 py-2 text-xs uppercase tracking-wide text-white/50">
                         Subcategories
                       </div>
                       {dropdownCategory ? (
-                        getSubcategoriesByCategory(dropdownCategory).map(
-                          (sub) => (
+                        <div className="max-h-80 overflow-y-auto">
+                          {getSubcategoriesForCategory(dropdownCategory).map((sub) => (
                             <button
                               key={sub.slug}
                               type="button"
                               onClick={() => {
                                 setSelectedCategory(dropdownCategory);
-                                setSelectedSubcategory(sub.slug);
+                                setSelectedSubcategory(sub.name);
                                 setShowCategoryDropdown(false);
                               }}
-                              className={`w-full text-left px-4 py-2.5 text-sm transition-colors hover:bg-white/10 ${
-                                selectedSubcategory === sub.slug
+                              className={`w-full text-left px-4 py-2 text-sm transition-colors hover:bg-white/10 ${
+                                selectedSubcategory === sub.name
                                   ? "bg-white/10 font-medium"
                                   : ""
                               } text-white`}
                             >
                               {sub.name}
                             </button>
-                          ),
-                        )
+                          ))}
+                          {getSubcategoriesForCategory(dropdownCategory).length === 0 && (
+                            <p className="px-4 py-2 text-sm text-white/40">
+                              No subcategories available
+                            </p>
+                          )}
+                        </div>
                       ) : (
                         <p className="px-4 py-2 text-sm text-white/40">
-                          Hover a main category to see subcategories.
+                          Select a category to see subcategories
                         </p>
                       )}
                     </div>
@@ -599,7 +805,6 @@ const Header = () => {
               <Search className="w-5 h-5" />
             </button>
 
-            {/* Only show wishlist icon when user is NOT logged in */}
             {!user && (
               <Link
                 to="/favorites"
@@ -736,8 +941,8 @@ const Header = () => {
             </div>
           </div>
 
-          {/* Desktop Hover Dropdown */}
-          {hoveredCategory && currentCategory && hoveredElement && (
+          {/* Desktop Hover Dropdown - Now works for ALL categories */}
+          {hoveredCategory && currentCategory && hoveredElement && hoveredSubcategories.length > 0 && (
             <>
               <div
                 className="absolute w-full h-2 -bottom-2 left-0"
@@ -797,29 +1002,21 @@ const Header = () => {
                       <ChevronRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
                     </button>
 
-                    {getSubcategoriesByCategory(hoveredCategory).length > 0 ? (
-                      getSubcategoriesByCategory(hoveredCategory).map(
-                        (subcategory) => (
-                          <button
-                            key={subcategory.slug}
-                            className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-white/10 transition-colors flex items-center justify-between group text-white"
-                            onClick={() => {
-                              navigate(
-                                `/products?category=${hoveredCategory}&subcategory=${subcategory.slug}`,
-                              );
-                              setHoveredCategory(null);
-                            }}
-                          >
-                            <span>{subcategory.name}</span>
-                            <ChevronRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
-                          </button>
-                        ),
-                      )
-                    ) : (
-                      <p className="px-3 py-2 text-sm text-white/40">
-                        No subcategories available
-                      </p>
-                    )}
+                    {hoveredSubcategories.map((subcategory) => (
+                      <button
+                        key={subcategory.slug}
+                        className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-white/10 transition-colors flex items-center justify-between group text-white"
+                        onClick={() => {
+                          navigate(
+                            `/products?category=${hoveredCategory}&subcategory=${encodeURIComponent(subcategory.name)}`,
+                          );
+                          setHoveredCategory(null);
+                        }}
+                      >
+                        <span>{subcategory.name}</span>
+                        <ChevronRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </button>
+                    ))}
                   </div>
 
                   <div className="mt-3 pt-2 border-t border-white/10">
@@ -880,8 +1077,8 @@ const Header = () => {
             </div>
           </div>
 
-          {/* Mobile Hover Dropdown */}
-          {mobileHoveredCategory && currentMobileCategory && (
+          {/* Mobile Hover Dropdown - Now works for ALL categories */}
+          {mobileHoveredCategory && currentMobileCategory && mobileHoveredSubcategories.length > 0 && (
             <>
               <div
                 className="absolute w-full h-2 -bottom-2 left-0"
@@ -932,30 +1129,21 @@ const Header = () => {
                       <ChevronRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
                     </button>
 
-                    {getSubcategoriesByCategory(mobileHoveredCategory).length >
-                    0 ? (
-                      getSubcategoriesByCategory(mobileHoveredCategory).map(
-                        (subcategory) => (
-                          <button
-                            key={subcategory.slug}
-                            className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-white/10 transition-colors flex items-center justify-between group text-white"
-                            onClick={() => {
-                              navigate(
-                                `/products?category=${mobileHoveredCategory}&subcategory=${subcategory.slug}`,
-                              );
-                              setMobileHoveredCategory(null);
-                            }}
-                          >
-                            <span className="text-sm">{subcategory.name}</span>
-                            <ChevronRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
-                          </button>
-                        ),
-                      )
-                    ) : (
-                      <p className="px-3 py-2 text-sm text-white/40">
-                        No subcategories available
-                      </p>
-                    )}
+                    {mobileHoveredSubcategories.map((subcategory) => (
+                      <button
+                        key={subcategory.slug}
+                        className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-white/10 transition-colors flex items-center justify-between group text-white"
+                        onClick={() => {
+                          navigate(
+                            `/products?category=${mobileHoveredCategory}&subcategory=${encodeURIComponent(subcategory.name)}`,
+                          );
+                          setMobileHoveredCategory(null);
+                        }}
+                      >
+                        <span className="text-sm">{subcategory.name}</span>
+                        <ChevronRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </button>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -1076,7 +1264,6 @@ const Header = () => {
         </div>
       )}
 
-      {/* Add the animation CSS */}
       <style>{`
         @keyframes pulse {
           0%, 100% { opacity: 1; }
@@ -1084,6 +1271,13 @@ const Header = () => {
         }
         .animate-pulse {
           animation: pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
+        .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
         }
       `}</style>
     </header>
