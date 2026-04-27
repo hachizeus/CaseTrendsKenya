@@ -142,7 +142,6 @@ interface ProductFormData {
 interface StorageVariant {
   id?: string;
   storage: string;
-  price_adjustment: number;
   stock_quantity: number;
   sku_suffix: string;
 }
@@ -229,14 +228,12 @@ export default function ProductForm() {
   const [isUploading, setIsUploading] = useState(false);
   const [convertingImages, setConvertingImages] = useState(false);
   
-  // New state for storage variants
+  // Storage variants - simplified without price
   const [storageVariants, setStorageVariants] = useState<StorageVariant[]>([]);
   const [newStorage, setNewStorage] = useState("");
-  const [newStoragePrice, setNewStoragePrice] = useState(0);
   const [newStorageStock, setNewStorageStock] = useState(0);
   const [newStorageSku, setNewStorageSku] = useState("");
 
-  // Calculate form completion progress
   useEffect(() => {
     let completed = 0;
     const total = 8;
@@ -346,23 +343,17 @@ export default function ProductForm() {
 
   const loadProduct = async () => {
     try {
-      const [productResult, imagesResult, storageResult] = await Promise.all([
-        supabaseClient
-          .from("products")
-          .select("*")
-          .eq("id", id!)
-          .single(),
-        supabaseClient
-          .from("product_images")
-          .select("*")
-          .eq("product_id", id!)
-          .order("display_order"),
-        supabaseClient
-          .from("product_storage_variants")
-          .select("*")
-          .eq("product_id", id!)
-          .order("storage")
-      ]);
+      const productResult = await supabaseClient
+        .from("products")
+        .select("*")
+        .eq("id", id!)
+        .single();
+      
+      const imagesResult = await supabaseClient
+        .from("product_images")
+        .select("*")
+        .eq("product_id", id!)
+        .order("display_order");
 
       if (productResult.error) throw productResult.error;
       const product = productResult.data;
@@ -388,11 +379,26 @@ export default function ProductForm() {
       setExistingImages(imagesResult.data || []);
       
       // Load storage variants
+      console.log("Loading storage variants for product:", id);
+      const storageResult = await supabaseClient
+        .from("product_storage_variants")
+        .select("*")
+        .eq("product_id", id!)
+        .order("display_order");
+      
+      console.log("Storage variants loaded:", storageResult.data);
+      
       if (storageResult.data && storageResult.data.length > 0) {
-        setStorageVariants(storageResult.data);
+        setStorageVariants(storageResult.data.map((v: any) => ({
+          id: v.id,
+          storage: v.storage,
+          stock_quantity: v.stock_quantity,
+          sku_suffix: v.sku_suffix || ""
+        })));
+      } else {
+        setStorageVariants([]);
       }
 
-      // Load colors and specifications
       const colorsResult = await supabaseClient
         .from("product_colors")
         .select("color, status")
@@ -546,7 +552,7 @@ export default function ProductForm() {
     setIsDirty(true);
   }, []);
 
-  // Storage variant functions
+  // Storage variant functions - simplified
   const addStorageVariant = useCallback(() => {
     if (!newStorage.trim()) {
       toast.error("Storage size is required");
@@ -559,19 +565,17 @@ export default function ProductForm() {
     
     const newVariant: StorageVariant = {
       storage: newStorage.trim(),
-      price_adjustment: newStoragePrice,
       stock_quantity: newStorageStock,
       sku_suffix: newStorageSku.trim()
     };
     
     setStorageVariants(prev => [...prev, newVariant]);
     setNewStorage("");
-    setNewStoragePrice(0);
     setNewStorageStock(0);
     setNewStorageSku("");
     setIsDirty(true);
     toast.success("Storage variant added");
-  }, [newStorage, newStoragePrice, newStorageStock, newStorageSku, storageVariants]);
+  }, [newStorage, newStorageStock, newStorageSku, storageVariants]);
 
   const removeStorageVariant = useCallback((index: number) => {
     setStorageVariants(prev => prev.filter((_, i) => i !== index));
@@ -623,7 +627,6 @@ export default function ProductForm() {
     
     try {
       toast.info("Duplicating product...");
-      // Implementation for duplication would go here
       toast.success("Product duplicated successfully");
     } catch (error) {
       toast.error("Failed to duplicate product");
@@ -721,26 +724,51 @@ export default function ProductForm() {
   };
 
   const saveStorageVariants = async (productId: string) => {
-    if (storageVariants.length === 0) return;
-
     try {
-      await supabaseClient
+      // First, delete existing storage variants for this product
+      const { error: deleteError } = await supabaseClient
         .from("product_storage_variants")
         .delete()
         .eq("product_id", productId);
       
+      if (deleteError) {
+        console.error("Error deleting existing storage variants:", deleteError);
+        throw deleteError;
+      }
+      
+      if (storageVariants.length === 0) {
+        console.log("No storage variants to save");
+        return;
+      }
+      
+      // Prepare variants for insertion
       const variantsToInsert = storageVariants.map((variant, idx) => ({
         product_id: productId,
         storage: variant.storage,
-        price_adjustment: variant.price_adjustment,
         stock_quantity: variant.stock_quantity,
-        sku_suffix: variant.sku_suffix,
+        sku_suffix: variant.sku_suffix || "",
         display_order: idx,
       }));
       
-      await supabaseClient.from("product_storage_variants").insert(variantsToInsert);
+      console.log("Saving storage variants:", variantsToInsert);
+      
+      // Insert new storage variants
+      const { error: insertError, data } = await supabaseClient
+        .from("product_storage_variants")
+        .insert(variantsToInsert)
+        .select();
+      
+      if (insertError) {
+        console.error("Error inserting storage variants:", insertError);
+        throw insertError;
+      }
+      
+      console.log("Storage variants saved successfully:", data);
+      toast.success(`${variantsToInsert.length} storage variant(s) saved`);
+      
     } catch (err) {
-      console.warn("Storage variants save failed:", err);
+      console.error("Storage variants save failed:", err);
+      toast.error("Failed to save storage variants");
     }
   };
 
@@ -1052,9 +1080,8 @@ export default function ProductForm() {
                 </TabsTrigger>
               </TabsList>
 
-              {/* Basic Info Tab */}
+              {/* Basic Info Tab - Keeping as is from your original */}
               <TabsContent value="basic" className="space-y-6">
-                {/* ... (keep existing basic info section) ... */}
                 <motion.div variants={itemVariants}>
                   <Card className="border border-white/10 bg-white/5 shadow-lg">
                     <CardHeader className="bg-gradient-to-r from-primary/10 to-transparent">
@@ -1222,7 +1249,7 @@ export default function ProductForm() {
                       <div className="grid grid-cols-2 gap-6">
                         <div>
                           <Label htmlFor="price" className="text-white/70 flex items-center gap-2">
-                            Base Price <span className="text-red-500">*</span>
+                            Price <span className="text-red-500">*</span>
                           </Label>
                           <div className="relative mt-2">
                             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/50">KSh</span>
@@ -1576,7 +1603,7 @@ export default function ProductForm() {
                 </motion.div>
               </TabsContent>
 
-              {/* Storage Tab - NEW */}
+              {/* Storage Tab - Simplified without price */}
               <TabsContent value="storage" className="space-y-6">
                 <motion.div variants={itemVariants}>
                   <Card className="border border-white/10 bg-white/5 shadow-lg">
@@ -1598,7 +1625,7 @@ export default function ProductForm() {
                             {storageVariants.map((variant, index) => (
                               <motion.div
                                 key={index}
-                                className="grid grid-cols-4 gap-3 items-center"
+                                className="grid grid-cols-3 gap-3 items-center"
                                 initial={{ opacity: 0, x: -20 }}
                                 animate={{ opacity: 1, x: 0 }}
                                 exit={{ opacity: 0, x: 20 }}
@@ -1609,28 +1636,18 @@ export default function ProductForm() {
                                   placeholder="e.g., 128GB"
                                   className="bg-black/30 border-white/10 text-white placeholder:text-white/30"
                                 />
-                                <div className="relative">
-                                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/50 text-xs">+KSh</span>
-                                  <Input
-                                    type="number"
-                                    value={variant.price_adjustment}
-                                    onChange={(e) => updateStorageVariant(index, 'price_adjustment', parseFloat(e.target.value) || 0)}
-                                    placeholder="Price adj."
-                                    className="pl-12 bg-black/30 border-white/10 text-white placeholder:text-white/30"
-                                  />
-                                </div>
                                 <Input
                                   type="number"
                                   value={variant.stock_quantity}
                                   onChange={(e) => updateStorageVariant(index, 'stock_quantity', parseInt(e.target.value) || 0)}
-                                  placeholder="Stock"
+                                  placeholder="Stock quantity"
                                   className="bg-black/30 border-white/10 text-white placeholder:text-white/30"
                                 />
                                 <div className="flex gap-2">
                                   <Input
                                     value={variant.sku_suffix}
                                     onChange={(e) => updateStorageVariant(index, 'sku_suffix', e.target.value)}
-                                    placeholder="SKU suffix"
+                                    placeholder="SKU suffix (optional)"
                                     className="bg-black/30 border-white/10 text-white placeholder:text-white/30"
                                   />
                                   <Button
@@ -1652,23 +1669,13 @@ export default function ProductForm() {
                       {/* Add New Storage Variant */}
                       <div className="space-y-3">
                         <Label className="text-sm font-medium text-white">Add New Storage Option</Label>
-                        <div className="grid grid-cols-4 gap-3">
+                        <div className="grid grid-cols-3 gap-3">
                           <Input
                             value={newStorage}
                             onChange={(e) => setNewStorage(e.target.value)}
                             placeholder="Storage (e.g., 256GB)"
                             className="bg-black/30 border-white/10 text-white placeholder:text-white/30"
                           />
-                          <div className="relative">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/50 text-xs">+KSh</span>
-                            <Input
-                              type="number"
-                              value={newStoragePrice}
-                              onChange={(e) => setNewStoragePrice(parseFloat(e.target.value) || 0)}
-                              placeholder="Price adjustment"
-                              className="pl-12 bg-black/30 border-white/10 text-white placeholder:text-white/30"
-                            />
-                          </div>
                           <Input
                             type="number"
                             value={newStorageStock}
@@ -1680,7 +1687,7 @@ export default function ProductForm() {
                             <Input
                               value={newStorageSku}
                               onChange={(e) => setNewStorageSku(e.target.value)}
-                              placeholder="SKU suffix"
+                              placeholder="SKU suffix (optional)"
                               className="bg-black/30 border-white/10 text-white placeholder:text-white/30"
                             />
                             <Button 
@@ -1693,7 +1700,7 @@ export default function ProductForm() {
                           </div>
                         </div>
                         <div className="text-xs text-white/40 mt-2">
-                          Tip: Price adjustment is added to the base price. Leave at 0 if same as base price.
+                          Tip: Add storage options like 128GB, 256GB, 512GB. Each can have its own stock quantity and SKU suffix.
                         </div>
                       </div>
 
@@ -1705,10 +1712,9 @@ export default function ProductForm() {
                             <div>
                               <div className="text-sm font-medium text-white">Example Storage Variants</div>
                               <div className="text-xs text-white/50 mt-1">
-                                • 128GB: +KSh 0 (Base price)<br />
-                                • 256GB: +KSh 5,000<br />
-                                • 512GB: +KSh 10,000<br />
-                                • 1TB: +KSh 15,000
+                                • 128GB - Stock: 10<br />
+                                • 256GB - Stock: 15<br />
+                                • 512GB - Stock: 5
                               </div>
                             </div>
                           </div>

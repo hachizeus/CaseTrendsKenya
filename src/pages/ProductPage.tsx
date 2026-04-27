@@ -28,6 +28,7 @@ interface Product {
   model?: string;
   stock_status: string;
   stock_quantity?: number;
+  sku?: string;
   product_images?: ProductImage[];
 }
 
@@ -51,7 +52,6 @@ interface StorageVariant {
   id: string;
   product_id: string;
   storage: string;
-  price_adjustment: number;
   stock_quantity: number;
   sku_suffix: string;
   display_order: number;
@@ -82,7 +82,7 @@ const ProductPage = () => {
   const [quantity, setQuantity] = useState(1);
   const [maxStock, setMaxStock] = useState(10);
   
-  // New state for storage variants
+  // Storage variants state
   const [storageVariants, setStorageVariants] = useState<StorageVariant[]>([]);
   const [selectedStorage, setSelectedStorage] = useState<StorageVariant | null>(null);
 
@@ -200,6 +200,8 @@ const ProductPage = () => {
         .eq("product_id", id!)
         .order("display_order");
       
+      console.log("Storage variants loaded:", storageData);
+      
       if (storageData && storageData.length > 0) {
         setStorageVariants(storageData);
         setSelectedStorage(storageData[0]);
@@ -301,13 +303,6 @@ const ProductPage = () => {
     }
   };
 
-  const getFinalPrice = () => {
-    if (selectedStorage) {
-      return product!.price + selectedStorage.price_adjustment;
-    }
-    return product!.price;
-  };
-
   const handleAddToCart = () => {
     if (colors.length > 0 && !selectedColor) {
       toast.error("Please select a color before adding to cart");
@@ -320,7 +315,6 @@ const ProductPage = () => {
     }
 
     const primaryImage = images[activeImg]?.image_url || "/placeholder.svg";
-    const finalPrice = getFinalPrice();
     const storageText = selectedStorage ? ` ${selectedStorage.storage}` : "";
     const colorText = selectedColor ? ` (${selectedColor})` : "";
     
@@ -328,7 +322,7 @@ const ProductPage = () => {
       addToCart({ 
         id: product!.id, 
         name: `${product!.name}${storageText}`,
-        price: finalPrice,
+        price: product!.price,
         image: primaryImage,
         brand: product!.brand || '',
         category: product!.category || '',
@@ -450,8 +444,7 @@ const ProductPage = () => {
     resize: "contain",
   });
   const discount = product.original_price ? Math.round(((product.original_price - product.price) / product.original_price) * 100) : 0;
-  const finalPrice = getFinalPrice();
-  const totalPrice = finalPrice * quantity;
+  const totalPrice = product.price * quantity;
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-[hsl(240,10%,3.9%)] to-[hsl(240,10%,4.5%)]">
@@ -540,7 +533,7 @@ const ProductPage = () => {
                   <div className="bg-white/5 p-3 rounded-lg border border-white/10">
                     <div className="flex items-baseline gap-3 flex-wrap">
                       <span className="text-2xl sm:text-3xl font-bold text-primary">
-                        KSh {Number(finalPrice).toLocaleString()}
+                        KSh {Number(product.price).toLocaleString()}
                       </span>
                       {product.original_price && (
                         <>
@@ -553,12 +546,6 @@ const ProductPage = () => {
                         </>
                       )}
                     </div>
-                    
-                    {selectedStorage && selectedStorage.price_adjustment > 0 && (
-                      <div className="text-xs text-white/40 mt-1">
-                        +KSh {selectedStorage.price_adjustment.toLocaleString()} for {selectedStorage.storage}
-                      </div>
-                    )}
                     
                     {quantity > 1 && (
                       <div className="mt-2 pt-2 border-t border-white/10">
@@ -612,7 +599,7 @@ const ProductPage = () => {
                     </div>
                   )}
 
-                  {/* Storage Selector - NEW */}
+                  {/* Storage Selector */}
                   {storageVariants.length > 0 && (
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
@@ -620,34 +607,21 @@ const ProductPage = () => {
                           <HardDrive className="w-3 h-3" />
                           Select Storage
                         </p>
-                        {selectedStorage && (
-                          <span className="text-xs text-primary">
-                            +KSh {selectedStorage.price_adjustment.toLocaleString()}
-                          </span>
-                        )}
                       </div>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
-                        {storageVariants.map((variant) => {
-                          const variantPrice = product.price + variant.price_adjustment;
-                          return (
-                            <button
-                              key={variant.id || variant.storage}
-                              onClick={() => setSelectedStorage(variant)}
-                              className={`px-2 py-1.5 text-[11px] font-medium rounded-lg border-2 transition-all ${
-                                selectedStorage?.id === variant.id || selectedStorage?.storage === variant.storage
-                                  ? "border-primary bg-primary/10 text-primary"
-                                  : "border-white/10 hover:border-primary/50 text-white/70 hover:text-white"
-                              }`}
-                            >
-                              <div className="flex flex-col items-center">
-                                <span className="font-semibold">{variant.storage}</span>
-                                <span className="text-[10px] opacity-70">
-                                  KSh {variantPrice.toLocaleString()}
-                                </span>
-                              </div>
-                            </button>
-                          );
-                        })}
+                      <div className="flex flex-wrap gap-1.5">
+                        {storageVariants.map((variant) => (
+                          <button
+                            key={variant.id}
+                            onClick={() => setSelectedStorage(variant)}
+                            className={`px-3 py-1.5 text-xs font-medium rounded-lg border-2 transition-all ${
+                              selectedStorage?.id === variant.id
+                                ? "border-primary bg-primary/10 text-primary"
+                                : "border-white/10 hover:border-primary/50 text-white/70 hover:text-white"
+                            }`}
+                          >
+                            {variant.storage}
+                          </button>
+                        ))}
                       </div>
                     </div>
                   )}
