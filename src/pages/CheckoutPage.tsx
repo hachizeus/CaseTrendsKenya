@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useCart } from "@/contexts/CartContext";
+import { useCart, CartItem } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { payWithPaystack } from "@/lib/paystack";
@@ -13,10 +13,6 @@ import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import CaptchaWidget from "@/components/CaptchaWidget";
 import "leaflet/dist/leaflet.css";
-// Remove the marker image imports - they cause build errors
-// import markerIcon2x from "leaflet/dist/images/marker-icon-2x.webp";
-// import markerIcon from "leaflet/dist/images/marker-icon.webp";
-// import markerShadow from "leaflet/dist/images/marker-shadow.webp";
 import TopBar from "@/components/TopBar";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -60,12 +56,15 @@ const CheckoutPage = () => {
 
   const buildWhatsAppLink = (orderId: string) => {
     const itemLines = items
-      .map((item) =>
-        `${item.quantity} x ${item.name}${item.color ? ` (${item.color})` : ""} (KSh ${item.price.toLocaleString()})`
-      )
+      .map((item: CartItem) => {
+        let itemDetails = item.name;
+        if (item.storage) itemDetails += ` ${item.storage}`;
+        if (item.color) itemDetails += ` (${item.color})`;
+        return `${item.quantity} x ${itemDetails} (KSh ${item.price.toLocaleString()})`;
+      })
       .join("\n");
 
-    const message = `*New Order: ${orderId}*\n--------------------------\n${itemLines}\n\n*Subtotal:* KSh ${totalPrice.toLocaleString()}\n*Total Amount:* KSh ${finalTotal.toLocaleString()}\n\n*Customer Details:*\nName: ${name}\nPhone: ${phone}\nMethod: ${delivery.toUpperCase()}\n\n_Please confirm receipt of this order._`;
+    const message = `*NEW ORDER: ${orderId}*\n─────────────────────\n${itemLines}\n\n*Subtotal:* KSh ${totalPrice.toLocaleString()}\n*Total Amount:* KSh ${finalTotal.toLocaleString()}\n\n*Customer Details:*\nName: ${name}\nPhone: ${phone}\nEmail: ${email}\nDelivery: ${delivery.toUpperCase()}\n\n_Please confirm receipt of this order._`;
 
     return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
   };
@@ -145,17 +144,6 @@ const CheckoutPage = () => {
     return result.order;
   };
 
-  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
-    const R = 6371;
-    const dLat = (lat2 - lat1) * (Math.PI / 180);
-    const dLon = (lon2 - lon1) * (Math.PI / 180);
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c;
-  };
-
   const initMap = async () => {
     if (!mapContainerRef.current || mapRef.current) return;
 
@@ -164,7 +152,6 @@ const CheckoutPage = () => {
       const leafletModule = await import("leaflet");
       const L = leafletModule.default ?? leafletModule;
 
-      // Fix for missing marker images - use CDN URLs instead of local imports
       delete (L.Icon.Default.prototype as any)._getIconUrl;
       L.Icon.Default.mergeOptions({
         iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
@@ -287,12 +274,14 @@ const CheckoutPage = () => {
         delivery_address: delivery === "delivery" ? address : null,
         delivery_latitude: delivery === "delivery" ? coordinates?.lat ?? null : null,
         delivery_longitude: delivery === "delivery" ? coordinates?.lng ?? null : null,
-        items: items.map((i) => ({
+        items: items.map((i: CartItem) => ({
           product_id: i.product_id,
           name: i.name,
           price: i.price,
           quantity: i.quantity,
           color: i.color || null,
+          storage: i.storage || null,
+          sku: i.sku || null,
         })),
         total_amount: finalTotal,
         status: "pending",
@@ -385,7 +374,7 @@ const CheckoutPage = () => {
                 </div>
                 <h2 className="text-xl sm:text-2xl font-bold text-white mb-4">Thank you for your order!</h2>
                 <p className="text-sm text-white/50 mb-6">
-                  Your WhatsApp order has been created and the payment page will open in a new tab.
+                  Your WhatsApp order has been created. Please complete the payment on WhatsApp.
                 </p>
                 <Link to="/" className="inline-flex items-center justify-center rounded-lg bg-primary px-6 py-3 text-sm font-semibold text-white hover:bg-primary/80 transition-colors">
                   Continue Shopping
@@ -421,12 +410,17 @@ const CheckoutPage = () => {
           <div className="bg-white/5 rounded-xl border border-white/10 p-4 sm:p-6 shadow-lg mb-6">
             <h2 className="font-semibold text-base sm:text-lg text-white mb-4">Order Summary</h2>
             <div className="space-y-2">
-              {items.map(item => (
-                <div key={item.product_id} className="flex justify-between text-sm py-2 border-b border-white/10 last:border-0 gap-2">
-                  <span className="flex-1 min-w-0 truncate text-white/70">{item.name}{item.color ? ` (${item.color})` : ""} x{item.quantity}</span>
-                  <span className="font-medium text-white flex-shrink-0">KSh {(item.price * item.quantity).toLocaleString()}</span>
-                </div>
-              ))}
+              {items.map((item: CartItem, index: number) => {
+                let itemDisplay = item.name;
+                if (item.storage) itemDisplay += ` ${item.storage}`;
+                if (item.color) itemDisplay += ` (${item.color})`;
+                return (
+                  <div key={item.product_id + (item.storage || "") + (item.color || "") + index} className="flex justify-between text-sm py-2 border-b border-white/10 last:border-0 gap-2">
+                    <span className="flex-1 min-w-0 truncate text-white/70">{itemDisplay} x{item.quantity}</span>
+                    <span className="font-medium text-white flex-shrink-0">KSh {(item.price * item.quantity).toLocaleString()}</span>
+                  </div>
+                );
+              })}
             </div>
             <div className="flex justify-between font-bold text-base sm:text-lg mt-4 pt-2 border-t border-white/10">
               <span className="text-white">Total</span>

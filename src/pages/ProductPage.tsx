@@ -6,7 +6,7 @@ import { queryOptionalTable } from "@/lib/supabaseHelpers";
 import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { ShoppingCart, Heart, ArrowLeft, Star, ChevronLeft, ChevronRight, Trash2, Check, Minus, Plus, HardDrive } from "lucide-react";
+import { ShoppingCart, Heart, ArrowLeft, Star, ChevronLeft, ChevronRight, Trash2, Check, Minus, Plus, HardDrive, Package, Zap, Shield, Truck, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { getOptimizedImageUrl } from "@/lib/imageOptimization";
 import TopBar from "@/components/TopBar";
@@ -86,6 +86,15 @@ const ProductPage = () => {
   const [storageVariants, setStorageVariants] = useState<StorageVariant[]>([]);
   const [selectedStorage, setSelectedStorage] = useState<StorageVariant | null>(null);
 
+  // Product features - static for now, but could come from database
+  const productFeatures = [
+    "25W Super Fast Charging support",
+    "USB-C to USB-C cable included",
+    "Intelligent power delivery (PPS) for safe charging",
+    "Compact, travel-friendly design",
+    "Compatible with Samsung Galaxy & other USB-C devices"
+  ];
+
   useEffect(() => {
     if (!id) return;
     loadProduct();
@@ -117,7 +126,6 @@ const ProductPage = () => {
     };
   }, []);
 
-  // Reset quantity and selected storage when product changes
   useEffect(() => {
     setQuantity(1);
     if (storageVariants.length > 0 && !selectedStorage) {
@@ -125,7 +133,6 @@ const ProductPage = () => {
     }
   }, [product, storageVariants]);
 
-  // Update max stock based on selected storage
   useEffect(() => {
     if (selectedStorage) {
       setMaxStock(selectedStorage.stock_quantity);
@@ -173,7 +180,6 @@ const ProductPage = () => {
   const loadProduct = async () => {
     setLoading(true);
     try {
-      // Load product with images
       const { data, error } = await supabase
         .from("products" as any)
         .select("*, product_images(*)")
@@ -193,14 +199,11 @@ const ProductPage = () => {
       
       document.title = `${data?.name} | Case Trends Kenya`;
       
-      // Load storage variants
       const { data: storageData } = await supabase
         .from("product_storage_variants" as any)
         .select("*")
         .eq("product_id", id!)
         .order("display_order");
-      
-      console.log("Storage variants loaded:", storageData);
       
       if (storageData && storageData.length > 0) {
         setStorageVariants(storageData);
@@ -214,10 +217,27 @@ const ProductPage = () => {
 
       setSpecifications(specsData);
       
+      // Filter out features from colors - only keep actual color names
       if (colorsData.length > 0) {
-        const colorList = colorsData.map((c: any) => c.color);
-        setColors(colorList);
-        setSelectedColor(colorList[0]);
+        // List of common color names to filter
+        const validColors = ["Black", "White", "Red", "Blue", "Green", "Yellow", "Purple", "Pink", "Gold", "Silver", "Gray", "Brown", "Orange", "Navy", "Coral", "Mint", "Lavender", "Rose", "Space Gray", "Midnight", "Starlight", "Product Red", "Sierra Blue", "Alpine Green", "Deep Purple"];
+        
+        const actualColors = colorsData
+          .map((c: any) => c.color)
+          .filter((color: string) => {
+            // Check if it's an actual color (not a feature)
+            const isColor = validColors.some(validColor => 
+              color.toLowerCase().includes(validColor.toLowerCase())
+            );
+            // Also accept if it's a short word (less than 15 chars) that's not obviously a feature
+            const isShortText = color.length < 15;
+            return isColor || (isShortText && !color.includes("W") && !color.includes("Fast"));
+          });
+        
+        setColors(actualColors);
+        if (actualColors.length > 0) {
+          setSelectedColor(actualColors[0]);
+        }
       }
       
       const { data: related } = await supabase
@@ -586,19 +606,6 @@ const ProductPage = () => {
                     <p className="text-xs text-white/50 leading-relaxed">{product.description}</p>
                   )}
 
-                  {splitModels(product.model).length > 0 && (
-                    <div className="bg-white/5 p-2 rounded-lg border border-white/10">
-                      <p className="text-xs font-semibold text-white mb-1.5">Compatible Models</p>
-                      <div className="flex flex-wrap gap-1.5 max-h-[80px] overflow-y-auto">
-                        {splitModels(product.model).map(model => (
-                          <span key={model} className="text-[11px] bg-black/30 border border-white/10 text-white/70 px-2 py-0.5 rounded-full whitespace-nowrap">
-                            {model}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
                   {/* Storage Selector */}
                   {storageVariants.length > 0 && (
                     <div className="space-y-2">
@@ -626,8 +633,8 @@ const ProductPage = () => {
                     </div>
                   )}
 
-                  {/* Color Selector */}
-                  {colors.length > 0 && (
+                  {/* Color Selector - Only show if there are actual colors */}
+                  {colors.length > 0 && colors[0] !== "🔹 25W Super Fast Charging support" && (
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
                         <p className="text-xs font-semibold text-white">Select Color</p>
@@ -742,6 +749,47 @@ const ProductPage = () => {
                       <p className="text-sm font-medium text-white/50 mb-1">{spec.spec_key}</p>
                       <p className="text-base font-semibold text-white">{spec.spec_value}</p>
                     </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Key Features Section */}
+          <div>
+            <div className="flex items-center gap-2 mb-4">
+              <Zap className="w-5 h-5 text-primary" />
+              <h2 className="text-xl font-bold text-white">Key Features</h2>
+            </div>
+            <div className="bg-gradient-to-r from-primary/5 to-transparent rounded-xl border border-white/10 p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {productFeatures.map((feature, index) => (
+                  <div key={index} className="flex items-start gap-2 group">
+                    <div className="mt-0.5">
+                      <div className="w-1.5 h-1.5 rounded-full bg-primary group-hover:scale-125 transition-transform"></div>
+                    </div>
+                    <span className="text-sm text-white/80 group-hover:text-white transition-colors">
+                      {feature}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Compatible Models Section */}
+          {splitModels(product.model).length > 0 && (
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <Package className="w-5 h-5 text-primary" />
+                <h2 className="text-xl font-bold text-white">Compatible Models</h2>
+              </div>
+              <div className="bg-gradient-to-r from-primary/5 to-transparent rounded-xl border border-white/10 p-6">
+                <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto">
+                  {splitModels(product.model).map(model => (
+                    <span key={model} className="text-sm bg-black/30 text-white/80 px-3 py-1.5 rounded-full hover:bg-primary/20 transition-colors border border-white/10">
+                      {model}
+                    </span>
                   ))}
                 </div>
               </div>
