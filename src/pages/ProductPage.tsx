@@ -6,7 +6,7 @@ import { queryOptionalTable } from "@/lib/supabaseHelpers";
 import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { ShoppingCart, Heart, ArrowLeft, Star, ChevronLeft, ChevronRight, Trash2, Check } from "lucide-react";
+import { ShoppingCart, Heart, ArrowLeft, Star, ChevronLeft, ChevronRight, Trash2, Check, Minus, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { getOptimizedImageUrl } from "@/lib/imageOptimization";
 import TopBar from "@/components/TopBar";
@@ -16,20 +16,62 @@ import { ProductDetailsSkeleton } from "@/components/SkeletonVariants";
 import ImageLightbox from "@/components/ImageLightbox";
 import ProductCard from "@/components/ProductCard";
 
+// Define local types for your tables
+interface Product {
+  id: string;
+  name: string;
+  price: number;
+  original_price?: number;
+  description?: string;
+  brand?: string;
+  category?: string;
+  model?: string;
+  stock_status: string;
+  stock_quantity?: number;
+  product_images?: ProductImage[];
+}
+
+interface ProductImage {
+  id: string;
+  image_url: string;
+  display_order: number;
+}
+
+interface Review {
+  id: string;
+  user_id: string;
+  product_id: string;
+  rating: number;
+  comment: string | null;
+  created_at: string;
+  display_name?: string;
+}
+
+interface Profile {
+  user_id: string;
+  display_name: string;
+}
+
+interface Favorite {
+  id: string;
+  user_id: string;
+  product_id: string;
+}
+
 const ProductPage = () => {
   const { id } = useParams();
   const queryClient = useQueryClient();
   const { addToCart } = useCart();
   const { user } = useAuth();
-  const [product, setProduct] = useState<any>(null);
-  const [images, setImages] = useState<any[]>([]);
-  const [reviews, setReviews] = useState<any[]>([]);
+  const [product, setProduct] = useState<Product | null>(null);
+  const [images, setImages] = useState<ProductImage[]>([]);
+  const [reviews, setReviews] = useState<Review[]>([]);
   const [activeImg, setActiveImg] = useState(0);
   const [isFav, setIsFav] = useState(false);
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [existingReview, setExistingReview] = useState<any>(null);
+  const [existingReview, setExistingReview] = useState<Review | null>(null);
   const [relatedProducts, setRelatedProducts] = useState<any[]>([]);
   const [specifications, setSpecifications] = useState<any[]>([]);
   const [colors, setColors] = useState<string[]>([]);
@@ -38,6 +80,8 @@ const ProductPage = () => {
   const [zoomLevel, setZoomLevel] = useState(1);
   const [zoomX, setZoomX] = useState(0);
   const [zoomY, setZoomY] = useState(0);
+  const [quantity, setQuantity] = useState(1);
+  const [maxStock, setMaxStock] = useState(10);
 
   useEffect(() => {
     if (!id) return;
@@ -70,6 +114,28 @@ const ProductPage = () => {
     };
   }, []);
 
+  useEffect(() => {
+    setQuantity(1);
+    if (product?.stock_quantity) {
+      setMaxStock(product.stock_quantity);
+    } else if (product?.stock_status === "in_stock") {
+      setMaxStock(10);
+    } else if (product?.stock_status === "low_stock") {
+      setMaxStock(3);
+    } else {
+      setMaxStock(0);
+    }
+  }, [product]);
+
+  const handleQuantityChange = (newQuantity: number) => {
+    if (newQuantity < 1) return;
+    if (maxStock > 0 && newQuantity > maxStock) {
+      toast.error(`Only ${maxStock} items available in stock`);
+      return;
+    }
+    setQuantity(newQuantity);
+  };
+
   const handleImageMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
     const x = (e.clientX - rect.left) / rect.width;
@@ -94,7 +160,13 @@ const ProductPage = () => {
   const loadProduct = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.from("products").select("*, product_images(*)").eq("id", id!).single() as any;
+      // Use .any() to bypass type checking temporarily
+      const { data, error } = await supabase
+        .from("products" as any)
+        .select("*, product_images(*)")
+        .eq("id", id!)
+        .single();
+
       if (error || !data) {
         console.error("Product not found:", error);
         setProduct(null);
@@ -102,8 +174,8 @@ const ProductPage = () => {
         return;
       }
       
-      setProduct(data);
-      const sorted = ((data?.product_images as any[]) || []).sort((a: any, b: any) => a.display_order - b.display_order);
+      setProduct(data as Product);
+      const sorted = ((data?.product_images as ProductImage[]) || []).sort((a, b) => a.display_order - b.display_order);
       setImages(sorted);
       
       document.title = `${data?.name} | Case Trends Kenya`;
@@ -121,7 +193,13 @@ const ProductPage = () => {
         setSelectedColor(colorList[0]);
       }
       
-      const { data: related } = await supabase.from("products").select("*, product_images(*)").eq("category", (data as any)?.category).neq("id", id!).limit(4) as any;
+      const { data: related } = await supabase
+        .from("products" as any)
+        .select("*, product_images(*)")
+        .eq("category", (data as any)?.category)
+        .neq("id", id!)
+        .limit(4);
+        
       setRelatedProducts(related || []);
     } finally {
       setLoading(false);
@@ -130,15 +208,19 @@ const ProductPage = () => {
 
   const loadReviews = async () => {
     const { data: reviewData } = await supabase
-      .from("reviews")
+      .from("reviews" as any)
       .select("*")
       .eq("product_id", id!)
       .order("created_at", { ascending: false });
-    if (!reviewData || reviewData.length === 0) { setReviews([]); return; }
+      
+    if (!reviewData || reviewData.length === 0) { 
+      setReviews([]); 
+      return; 
+    }
 
     const userIds = [...new Set(reviewData.map((r: any) => r.user_id))];
     const { data: profileData } = await supabase
-      .from("profiles")
+      .from("profiles" as any)
       .select("user_id, display_name")
       .in("user_id", userIds);
 
@@ -148,7 +230,12 @@ const ProductPage = () => {
 
   const checkFavorite = async () => {
     if (user) {
-      const { data } = await supabase.from("favorites").select("id").eq("user_id", user.id).eq("product_id", id!).maybeSingle();
+      const { data } = await supabase
+        .from("favorites" as any)
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("product_id", id!)
+        .maybeSingle();
       setIsFav(!!data);
     } else {
       const guestFavIds = JSON.parse(localStorage.getItem("guestFavorites") || "[]");
@@ -159,11 +246,17 @@ const ProductPage = () => {
   const toggleFavorite = async () => {
     if (user) {
       if (isFav) {
-        await supabase.from("favorites").delete().eq("user_id", user.id).eq("product_id", id!);
+        await supabase
+          .from("favorites" as any)
+          .delete()
+          .eq("user_id", user.id)
+          .eq("product_id", id!);
         setIsFav(false);
         toast.success("Removed from favorites");
       } else {
-        await supabase.from("favorites").insert({ user_id: user.id, product_id: id! });
+        await supabase
+          .from("favorites" as any)
+          .insert({ user_id: user.id, product_id: id! });
         setIsFav(true);
         toast.success("Added to favorites!");
       }
@@ -189,20 +282,28 @@ const ProductPage = () => {
       return;
     }
 
+    if (maxStock > 0 && quantity > maxStock) {
+      toast.error(`Only ${maxStock} items available in stock`);
+      return;
+    }
+
     const primaryImage = images[activeImg]?.image_url || "/placeholder.svg";
-    addToCart({ 
-      id: product.id, 
-      name: product.name, 
-      price: product.price, 
-      image: primaryImage,
-      brand: product.brand || '',
-      category: product.category || '',
-      stock_status: product.stock_status || 'in_stock',
-      original_price: product.original_price || undefined,
-      color: selectedColor || undefined
-    } as any);
     
-    toast.success(`${product.name}${selectedColor ? ` (${selectedColor})` : ''} added to cart!`);
+    for (let i = 0; i < quantity; i++) {
+      addToCart({ 
+        id: product!.id, 
+        name: product!.name, 
+        price: product!.price, 
+        image: primaryImage,
+        brand: product!.brand || '',
+        category: product!.category || '',
+        stock_status: product!.stock_status || 'in_stock',
+        original_price: product!.original_price || undefined,
+        color: selectedColor || undefined
+      } as any);
+    }
+    
+    toast.success(`${quantity}x ${product!.name}${selectedColor ? ` (${selectedColor})` : ''} added to cart!`);
   };
 
   const submitReview = async (e: React.FormEvent) => {
@@ -211,7 +312,7 @@ const ProductPage = () => {
     setSubmitting(true);
     try {
       const { data: existingUserReview } = await supabase
-        .from("reviews")
+        .from("reviews" as any)
         .select("id")
         .eq("product_id", id!)
         .eq("user_id", user.id)
@@ -224,9 +325,15 @@ const ProductPage = () => {
       }
       
       const { error } = await supabase
-        .from("reviews")
+        .from("reviews" as any)
         .insert({ user_id: user.id, product_id: id!, rating, comment: comment || null });
-      if (error) { toast.error(error.message); setSubmitting(false); return; }
+        
+      if (error) { 
+        toast.error(error.message); 
+        setSubmitting(false); 
+        return; 
+      }
+      
       toast.success("Review posted!");
       setRating(5);
       setComment("");
@@ -239,8 +346,16 @@ const ProductPage = () => {
 
   const deleteReview = async (reviewId: string) => {
     if (!window.confirm("Delete this review?")) return;
-    const { error } = await supabase.from("reviews").delete().eq("id", reviewId);
-    if (error) { toast.error(error.message); return; }
+    const { error } = await supabase
+      .from("reviews" as any)
+      .delete()
+      .eq("id", reviewId);
+      
+    if (error) { 
+      toast.error(error.message); 
+      return; 
+    }
+    
     toast.success("Review deleted");
     await loadReviews();
     queryClient.invalidateQueries({ queryKey: ["products"], exact: false });
@@ -298,13 +413,13 @@ const ProductPage = () => {
     resize: "contain",
   });
   const discount = product.original_price ? Math.round(((product.original_price - product.price) / product.original_price) * 100) : 0;
+  const totalPrice = product.price * quantity;
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-[hsl(240,10%,3.9%)] to-[hsl(240,10%,4.5%)]">
       <TopBar />
       <Header />
       <main className="flex-1">
-        {/* Product Hero Section */}
         <div className="border-b border-white/10">
           <div className="container py-4 md:py-6">
             <Link to="/" className="flex items-center gap-2 text-sm text-white/50 hover:text-primary mb-4 transition-colors">
@@ -312,7 +427,7 @@ const ProductPage = () => {
             </Link>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 lg:gap-8">
-              {/* Image gallery - same as before */}
+              {/* Image gallery */}
               <div className="md:col-span-1 flex flex-col max-h-[400px] md:max-h-[450px]">
                 <div
                   key={activeImg}
@@ -353,10 +468,9 @@ const ProductPage = () => {
                   )}
                 </div>
                 
-                {/* Thumbnails */}
                 {images.length > 1 && (
                   <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
-                    {images.map((img: any, i: number) => (
+                    {images.map((img: ProductImage, i: number) => (
                       <button
                         key={img.id}
                         onClick={() => setActiveImg(i)}
@@ -385,17 +499,31 @@ const ProductPage = () => {
                     <p className="text-xs text-white/40">{product.category}</p>
                   </div>
 
-                  {/* Price section */}
                   <div className="bg-white/5 p-3 rounded-lg border border-white/10">
-                    <div className="flex items-baseline gap-3">
-                      <span className="text-2xl sm:text-3xl font-bold text-primary">KSh {Number(product.price).toLocaleString()}</span>
+                    <div className="flex items-baseline gap-3 flex-wrap">
+                      <span className="text-2xl sm:text-3xl font-bold text-primary">
+                        KSh {Number(product.price).toLocaleString()}
+                      </span>
                       {product.original_price && (
                         <>
-                          <span className="text-xs sm:text-sm text-white/40 line-through">KSh {Number(product.original_price).toLocaleString()}</span>
-                          <span className="bg-primary/20 text-primary text-xs font-bold px-1.5 py-0.5 rounded">-{discount}%</span>
+                          <span className="text-xs sm:text-sm text-white/40 line-through">
+                            KSh {Number(product.original_price).toLocaleString()}
+                          </span>
+                          <span className="bg-primary/20 text-primary text-xs font-bold px-1.5 py-0.5 rounded">
+                            -{discount}%
+                          </span>
                         </>
                       )}
                     </div>
+                    
+                    {quantity > 1 && (
+                      <div className="mt-2 pt-2 border-t border-white/10">
+                        <p className="text-sm text-white/60">
+                          Subtotal: <span className="font-bold text-primary">KSh {totalPrice.toLocaleString()}</span>
+                        </p>
+                      </div>
+                    )}
+                    
                     <div className="flex items-center gap-2 mt-1">
                       <div className="flex gap-0.5">
                         {[1, 2, 3, 4, 5].map(s => (
@@ -408,7 +536,6 @@ const ProductPage = () => {
                     </div>
                   </div>
 
-                  {/* Stock & Trust badges */}
                   <div className="flex flex-wrap items-center gap-2 text-xs">
                     <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
                       product.stock_status === "in_stock" ? "bg-green-500/20 text-green-400" : 
@@ -417,16 +544,19 @@ const ProductPage = () => {
                     }`}>
                       {product.stock_status === "in_stock" ? "In Stock" : product.stock_status === "low_stock" ? "Low Stock" : "Sold Out"}
                     </span>
+                    {maxStock > 0 && maxStock < 10 && product.stock_status !== "out_of_stock" && (
+                      <span className="text-yellow-400 text-xs">
+                        Only {maxStock} left in stock!
+                      </span>
+                    )}
                     <span className="text-white/40 text-xs">✅ Genuine Product</span>
                     <span className="text-white/40 text-xs">🛡️ 1 Year Warranty</span>
                   </div>
 
-                  {/* Description */}
                   {product.description && (
                     <p className="text-xs text-white/50 leading-relaxed">{product.description}</p>
                   )}
 
-                  {/* Phone Models */}
                   {splitModels(product.model).length > 0 && (
                     <div className="bg-white/5 p-2 rounded-lg border border-white/10">
                       <p className="text-xs font-semibold text-white mb-1.5">Compatible Models</p>
@@ -440,7 +570,6 @@ const ProductPage = () => {
                     </div>
                   )}
 
-                  {/* Color Selector */}
                   {colors.length > 0 && (
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
@@ -469,9 +598,52 @@ const ProductPage = () => {
                       </div>
                     </div>
                   )}
+
+                  {product.stock_status !== "out_of_stock" && (
+                    <div className="space-y-2">
+                      <label className="text-xs font-semibold text-white">Quantity</label>
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={() => handleQuantityChange(quantity - 1)}
+                          disabled={quantity <= 1}
+                          className="p-1.5 rounded-lg border border-white/10 hover:border-primary text-white hover:text-primary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          aria-label="Decrease quantity"
+                        >
+                          <Minus className="w-4 h-4" />
+                        </button>
+                        
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            min="1"
+                            max={maxStock}
+                            value={quantity}
+                            onChange={(e) => {
+                              const val = parseInt(e.target.value);
+                              if (!isNaN(val)) {
+                                handleQuantityChange(val);
+                              }
+                            }}
+                            className="w-16 text-center py-1.5 rounded-lg bg-black/30 border border-white/10 text-white text-sm focus:outline-none focus:border-primary"
+                          />
+                          <span className="text-xs text-white/40">
+                            {maxStock > 0 ? `(Max ${maxStock})` : ""}
+                          </span>
+                        </div>
+                        
+                        <button
+                          onClick={() => handleQuantityChange(quantity + 1)}
+                          disabled={maxStock > 0 && quantity >= maxStock}
+                          className="p-1.5 rounded-lg border border-white/10 hover:border-primary text-white hover:text-primary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          aria-label="Increase quantity"
+                        >
+                          <Plus className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
-                {/* CTA Buttons */}
                 <div className="flex gap-2 pt-3 mt-3 border-t border-white/10">
                   <Button 
                     size="default" 
@@ -480,7 +652,11 @@ const ProductPage = () => {
                     disabled={product.stock_status === "out_of_stock"}
                   >
                     <ShoppingCart className="w-3.5 h-3.5 mr-1.5" /> 
-                    {product.stock_status === "out_of_stock" ? "Out of Stock" : "Add to Cart"}
+                    {product.stock_status === "out_of_stock" 
+                      ? "Out of Stock" 
+                      : quantity > 1 
+                        ? `Add ${quantity} to Cart (KSh ${totalPrice.toLocaleString()})` 
+                        : "Add to Cart"}
                   </Button>
                   <Button 
                     size="default" 
@@ -496,9 +672,7 @@ const ProductPage = () => {
           </div>
         </div>
 
-        {/* Below the fold content */}
         <div className="container py-8 md:py-12 space-y-12">
-          {/* Product Specifications */}
           {specifications.length > 0 && (
             <div>
               <h2 className="text-xl font-bold text-white mb-6">Specifications</h2>
@@ -515,7 +689,6 @@ const ProductPage = () => {
             </div>
           )}
 
-          {/* Reviews Section */}
           <div>
             <h2 className="text-xl font-bold text-white mb-6">Reviews ({reviews.length})</h2>
 
@@ -556,7 +729,7 @@ const ProductPage = () => {
             )}
 
             <div className="space-y-4">
-              {reviews.map((r: any) => (
+              {reviews.map((r: Review) => (
                 <div key={r.id} className="bg-white/5 p-4 rounded-xl border border-white/10">
                   <div className="flex items-center justify-between mb-2">
                     <span className="font-medium text-sm text-white">{r.display_name}</span>
@@ -588,7 +761,6 @@ const ProductPage = () => {
             </div>
           </div>
 
-          {/* Related Products - Using the same ProductCard component as homepage */}
           {relatedProducts.length > 0 && (
             <div>
               <h2 className="text-xl font-bold text-white mb-6">Related Products</h2>
