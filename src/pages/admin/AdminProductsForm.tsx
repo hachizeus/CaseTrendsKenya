@@ -43,7 +43,8 @@ import {
   ChevronRight,
   GripVertical,
   Copy,
-  RefreshCw
+  RefreshCw,
+  HardDrive
 } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
@@ -138,6 +139,14 @@ interface ProductFormData {
   is_trending: boolean;
 }
 
+interface StorageVariant {
+  id?: string;
+  storage: string;
+  price_adjustment: number;
+  stock_quantity: number;
+  sku_suffix: string;
+}
+
 interface Category {
   id: string;
   name: string;
@@ -219,11 +228,18 @@ export default function ProductForm() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
   const [convertingImages, setConvertingImages] = useState(false);
+  
+  // New state for storage variants
+  const [storageVariants, setStorageVariants] = useState<StorageVariant[]>([]);
+  const [newStorage, setNewStorage] = useState("");
+  const [newStoragePrice, setNewStoragePrice] = useState(0);
+  const [newStorageStock, setNewStorageStock] = useState(0);
+  const [newStorageSku, setNewStorageSku] = useState("");
 
   // Calculate form completion progress
   useEffect(() => {
     let completed = 0;
-    const total = 7;
+    const total = 8;
     
     if (formData.name) completed++;
     if (formData.description) completed++;
@@ -232,9 +248,10 @@ export default function ProductForm() {
     if (formData.brand) completed++;
     if (existingImages.length > 0 || images.length > 0) completed++;
     if (formData.stock_quantity >= 0) completed++;
+    if (storageVariants.length > 0) completed++;
     
     setCompletionProgress((completed / total) * 100);
-  }, [formData, existingImages, images]);
+  }, [formData, existingImages, images, storageVariants]);
 
   const filteredSubcategories = useMemo(() => {
     if (!formData.category_id) return [];
@@ -329,7 +346,7 @@ export default function ProductForm() {
 
   const loadProduct = async () => {
     try {
-      const [productResult, imagesResult] = await Promise.all([
+      const [productResult, imagesResult, storageResult] = await Promise.all([
         supabaseClient
           .from("products")
           .select("*")
@@ -339,7 +356,12 @@ export default function ProductForm() {
           .from("product_images")
           .select("*")
           .eq("product_id", id!)
-          .order("display_order")
+          .order("display_order"),
+        supabaseClient
+          .from("product_storage_variants")
+          .select("*")
+          .eq("product_id", id!)
+          .order("storage")
       ]);
 
       if (productResult.error) throw productResult.error;
@@ -364,6 +386,11 @@ export default function ProductForm() {
       });
 
       setExistingImages(imagesResult.data || []);
+      
+      // Load storage variants
+      if (storageResult.data && storageResult.data.length > 0) {
+        setStorageVariants(storageResult.data);
+      }
 
       // Load colors and specifications
       const colorsResult = await supabaseClient
@@ -519,6 +546,47 @@ export default function ProductForm() {
     setIsDirty(true);
   }, []);
 
+  // Storage variant functions
+  const addStorageVariant = useCallback(() => {
+    if (!newStorage.trim()) {
+      toast.error("Storage size is required");
+      return;
+    }
+    if (storageVariants.some(v => v.storage === newStorage)) {
+      toast.error("Storage variant already exists");
+      return;
+    }
+    
+    const newVariant: StorageVariant = {
+      storage: newStorage.trim(),
+      price_adjustment: newStoragePrice,
+      stock_quantity: newStorageStock,
+      sku_suffix: newStorageSku.trim()
+    };
+    
+    setStorageVariants(prev => [...prev, newVariant]);
+    setNewStorage("");
+    setNewStoragePrice(0);
+    setNewStorageStock(0);
+    setNewStorageSku("");
+    setIsDirty(true);
+    toast.success("Storage variant added");
+  }, [newStorage, newStoragePrice, newStorageStock, newStorageSku, storageVariants]);
+
+  const removeStorageVariant = useCallback((index: number) => {
+    setStorageVariants(prev => prev.filter((_, i) => i !== index));
+    setIsDirty(true);
+  }, []);
+
+  const updateStorageVariant = useCallback((index: number, field: keyof StorageVariant, value: any) => {
+    setStorageVariants(prev => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [field]: value };
+      return updated;
+    });
+    setIsDirty(true);
+  }, []);
+
   const addSpecification = useCallback(() => {
     if (!newSpecKey.trim()) {
       toast.error("Specification name required");
@@ -652,6 +720,30 @@ export default function ProductForm() {
     }
   };
 
+  const saveStorageVariants = async (productId: string) => {
+    if (storageVariants.length === 0) return;
+
+    try {
+      await supabaseClient
+        .from("product_storage_variants")
+        .delete()
+        .eq("product_id", productId);
+      
+      const variantsToInsert = storageVariants.map((variant, idx) => ({
+        product_id: productId,
+        storage: variant.storage,
+        price_adjustment: variant.price_adjustment,
+        stock_quantity: variant.stock_quantity,
+        sku_suffix: variant.sku_suffix,
+        display_order: idx,
+      }));
+      
+      await supabaseClient.from("product_storage_variants").insert(variantsToInsert);
+    } catch (err) {
+      console.warn("Storage variants save failed:", err);
+    }
+  };
+
   const saveSpecifications = async (productId: string) => {
     if (specifications.length === 0) return;
 
@@ -745,6 +837,7 @@ export default function ProductForm() {
       
       if (productId) {
         savePromises.push(saveColors(productId));
+        savePromises.push(saveStorageVariants(productId));
         savePromises.push(saveSpecifications(productId));
       }
 
@@ -921,13 +1014,13 @@ export default function ProductForm() {
             animate="visible"
           >
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-              <TabsList className="grid w-full grid-cols-4 gap-2 bg-white/10 p-1 rounded-xl">
+              <TabsList className="grid w-full grid-cols-5 gap-2 bg-white/10 p-1 rounded-xl">
                 <TabsTrigger 
                   value="basic" 
                   className="data-[state=active]:bg-white/20 data-[state=active]:text-primary text-white/70 rounded-lg transition-all"
                 >
                   <Package className="w-4 h-4 mr-2" />
-                  Basic Info
+                  Basic
                 </TabsTrigger>
                 <TabsTrigger 
                   value="images"
@@ -935,35 +1028,33 @@ export default function ProductForm() {
                 >
                   <ImageIcon className="w-4 h-4 mr-2" />
                   Images
-                  {(existingImages.length > 0 || imagePreviews.length > 0) && (
-                    <Badge variant="secondary" className="ml-2 bg-primary/20 text-primary">
-                      {existingImages.length + imagePreviews.length}
-                    </Badge>
-                  )}
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="storage"
+                  className="data-[state=active]:bg-white/20 data-[state=active]:text-primary text-white/70 rounded-lg transition-all"
+                >
+                  <HardDrive className="w-4 h-4 mr-2" />
+                  Storage
                 </TabsTrigger>
                 <TabsTrigger 
                   value="specs"
                   className="data-[state=active]:bg-white/20 data-[state=active]:text-primary text-white/70 rounded-lg transition-all"
                 >
                   <Settings className="w-4 h-4 mr-2" />
-                  Specifications
-                  {specifications.length > 0 && (
-                    <Badge variant="secondary" className="ml-2 bg-primary/20 text-primary">
-                      {specifications.length}
-                    </Badge>
-                  )}
+                  Specs
                 </TabsTrigger>
                 <TabsTrigger 
                   value="inventory"
                   className="data-[state=active]:bg-white/20 data-[state=active]:text-primary text-white/70 rounded-lg transition-all"
                 >
                   <Boxes className="w-4 h-4 mr-2" />
-                  Inventory
+                  Stock
                 </TabsTrigger>
               </TabsList>
 
               {/* Basic Info Tab */}
               <TabsContent value="basic" className="space-y-6">
+                {/* ... (keep existing basic info section) ... */}
                 <motion.div variants={itemVariants}>
                   <Card className="border border-white/10 bg-white/5 shadow-lg">
                     <CardHeader className="bg-gradient-to-r from-primary/10 to-transparent">
@@ -1131,7 +1222,7 @@ export default function ProductForm() {
                       <div className="grid grid-cols-2 gap-6">
                         <div>
                           <Label htmlFor="price" className="text-white/70 flex items-center gap-2">
-                            Price <span className="text-red-500">*</span>
+                            Base Price <span className="text-red-500">*</span>
                           </Label>
                           <div className="relative mt-2">
                             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/50">KSh</span>
@@ -1485,6 +1576,149 @@ export default function ProductForm() {
                 </motion.div>
               </TabsContent>
 
+              {/* Storage Tab - NEW */}
+              <TabsContent value="storage" className="space-y-6">
+                <motion.div variants={itemVariants}>
+                  <Card className="border border-white/10 bg-white/5 shadow-lg">
+                    <CardHeader className="bg-gradient-to-r from-primary/10 to-transparent">
+                      <div className="flex items-center gap-2">
+                        <HardDrive className="w-5 h-5 text-primary" />
+                        <CardTitle className="text-white">Storage Variants</CardTitle>
+                      </div>
+                      <CardDescription className="text-white/50">
+                        Add different storage options for smartphones (e.g., 128GB, 256GB, 512GB)
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-6 pt-6">
+                      {/* Existing Storage Variants */}
+                      {storageVariants.length > 0 && (
+                        <div>
+                          <Label className="text-sm font-medium text-white mb-3 block">Storage Options</Label>
+                          <div className="space-y-3">
+                            {storageVariants.map((variant, index) => (
+                              <motion.div
+                                key={index}
+                                className="grid grid-cols-4 gap-3 items-center"
+                                initial={{ opacity: 0, x: -20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: 20 }}
+                              >
+                                <Input
+                                  value={variant.storage}
+                                  onChange={(e) => updateStorageVariant(index, 'storage', e.target.value)}
+                                  placeholder="e.g., 128GB"
+                                  className="bg-black/30 border-white/10 text-white placeholder:text-white/30"
+                                />
+                                <div className="relative">
+                                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/50 text-xs">+KSh</span>
+                                  <Input
+                                    type="number"
+                                    value={variant.price_adjustment}
+                                    onChange={(e) => updateStorageVariant(index, 'price_adjustment', parseFloat(e.target.value) || 0)}
+                                    placeholder="Price adj."
+                                    className="pl-12 bg-black/30 border-white/10 text-white placeholder:text-white/30"
+                                  />
+                                </div>
+                                <Input
+                                  type="number"
+                                  value={variant.stock_quantity}
+                                  onChange={(e) => updateStorageVariant(index, 'stock_quantity', parseInt(e.target.value) || 0)}
+                                  placeholder="Stock"
+                                  className="bg-black/30 border-white/10 text-white placeholder:text-white/30"
+                                />
+                                <div className="flex gap-2">
+                                  <Input
+                                    value={variant.sku_suffix}
+                                    onChange={(e) => updateStorageVariant(index, 'sku_suffix', e.target.value)}
+                                    placeholder="SKU suffix"
+                                    className="bg-black/30 border-white/10 text-white placeholder:text-white/30"
+                                  />
+                                  <Button
+                                    variant="destructive"
+                                    size="icon"
+                                    onClick={() => removeStorageVariant(index)}
+                                    className="shrink-0 bg-red-500/20 text-red-400 hover:bg-red-500/30"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                </div>
+                              </motion.div>
+                            ))}
+                          </div>
+                          <Separator className="my-4 bg-white/10" />
+                        </div>
+                      )}
+
+                      {/* Add New Storage Variant */}
+                      <div className="space-y-3">
+                        <Label className="text-sm font-medium text-white">Add New Storage Option</Label>
+                        <div className="grid grid-cols-4 gap-3">
+                          <Input
+                            value={newStorage}
+                            onChange={(e) => setNewStorage(e.target.value)}
+                            placeholder="Storage (e.g., 256GB)"
+                            className="bg-black/30 border-white/10 text-white placeholder:text-white/30"
+                          />
+                          <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/50 text-xs">+KSh</span>
+                            <Input
+                              type="number"
+                              value={newStoragePrice}
+                              onChange={(e) => setNewStoragePrice(parseFloat(e.target.value) || 0)}
+                              placeholder="Price adjustment"
+                              className="pl-12 bg-black/30 border-white/10 text-white placeholder:text-white/30"
+                            />
+                          </div>
+                          <Input
+                            type="number"
+                            value={newStorageStock}
+                            onChange={(e) => setNewStorageStock(parseInt(e.target.value) || 0)}
+                            placeholder="Stock quantity"
+                            className="bg-black/30 border-white/10 text-white placeholder:text-white/30"
+                          />
+                          <div className="flex gap-2">
+                            <Input
+                              value={newStorageSku}
+                              onChange={(e) => setNewStorageSku(e.target.value)}
+                              placeholder="SKU suffix"
+                              className="bg-black/30 border-white/10 text-white placeholder:text-white/30"
+                            />
+                            <Button 
+                              onClick={addStorageVariant} 
+                              disabled={!newStorage.trim()}
+                              className="shrink-0 bg-primary text-white hover:bg-primary/80"
+                            >
+                              <Plus className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </div>
+                        <div className="text-xs text-white/40 mt-2">
+                          Tip: Price adjustment is added to the base price. Leave at 0 if same as base price.
+                        </div>
+                      </div>
+
+                      {/* Example */}
+                      {storageVariants.length === 0 && (
+                        <div className="p-4 bg-primary/10 rounded-lg border border-primary/30">
+                          <div className="flex items-start gap-3">
+                            <Info className="w-5 h-5 text-primary mt-0.5" />
+                            <div>
+                              <div className="text-sm font-medium text-white">Example Storage Variants</div>
+                              <div className="text-xs text-white/50 mt-1">
+                                • 128GB: +KSh 0 (Base price)<br />
+                                • 256GB: +KSh 5,000<br />
+                                • 512GB: +KSh 10,000<br />
+                                • 1TB: +KSh 15,000
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              </TabsContent>
+
               {/* Specifications Tab */}
               <TabsContent value="specs" className="space-y-6">
                 <motion.div variants={itemVariants}>
@@ -1617,7 +1851,7 @@ export default function ProductForm() {
                       </div>
 
                       <div>
-                        <Label htmlFor="stock_quantity" className="text-white/70">Stock Quantity</Label>
+                        <Label htmlFor="stock_quantity" className="text-white/70">Stock Quantity (Base)</Label>
                         <Input
                           id="stock_quantity"
                           type="number"

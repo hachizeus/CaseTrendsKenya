@@ -6,7 +6,7 @@ import { queryOptionalTable } from "@/lib/supabaseHelpers";
 import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { ShoppingCart, Heart, ArrowLeft, Star, ChevronLeft, ChevronRight, Trash2, Check, Minus, Plus } from "lucide-react";
+import { ShoppingCart, Heart, ArrowLeft, Star, ChevronLeft, ChevronRight, Trash2, Check, Minus, Plus, HardDrive } from "lucide-react";
 import { toast } from "sonner";
 import { getOptimizedImageUrl } from "@/lib/imageOptimization";
 import TopBar from "@/components/TopBar";
@@ -47,15 +47,14 @@ interface Review {
   display_name?: string;
 }
 
-interface Profile {
-  user_id: string;
-  display_name: string;
-}
-
-interface Favorite {
+interface StorageVariant {
   id: string;
-  user_id: string;
   product_id: string;
+  storage: string;
+  price_adjustment: number;
+  stock_quantity: number;
+  sku_suffix: string;
+  display_order: number;
 }
 
 const ProductPage = () => {
@@ -82,6 +81,10 @@ const ProductPage = () => {
   const [zoomY, setZoomY] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [maxStock, setMaxStock] = useState(10);
+  
+  // New state for storage variants
+  const [storageVariants, setStorageVariants] = useState<StorageVariant[]>([]);
+  const [selectedStorage, setSelectedStorage] = useState<StorageVariant | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -114,9 +117,19 @@ const ProductPage = () => {
     };
   }, []);
 
+  // Reset quantity and selected storage when product changes
   useEffect(() => {
     setQuantity(1);
-    if (product?.stock_quantity) {
+    if (storageVariants.length > 0 && !selectedStorage) {
+      setSelectedStorage(storageVariants[0]);
+    }
+  }, [product, storageVariants]);
+
+  // Update max stock based on selected storage
+  useEffect(() => {
+    if (selectedStorage) {
+      setMaxStock(selectedStorage.stock_quantity);
+    } else if (product?.stock_quantity) {
       setMaxStock(product.stock_quantity);
     } else if (product?.stock_status === "in_stock") {
       setMaxStock(10);
@@ -125,7 +138,7 @@ const ProductPage = () => {
     } else {
       setMaxStock(0);
     }
-  }, [product]);
+  }, [selectedStorage, product]);
 
   const handleQuantityChange = (newQuantity: number) => {
     if (newQuantity < 1) return;
@@ -160,7 +173,7 @@ const ProductPage = () => {
   const loadProduct = async () => {
     setLoading(true);
     try {
-      // Use .any() to bypass type checking temporarily
+      // Load product with images
       const { data, error } = await supabase
         .from("products" as any)
         .select("*, product_images(*)")
@@ -179,6 +192,18 @@ const ProductPage = () => {
       setImages(sorted);
       
       document.title = `${data?.name} | Case Trends Kenya`;
+      
+      // Load storage variants
+      const { data: storageData } = await supabase
+        .from("product_storage_variants" as any)
+        .select("*")
+        .eq("product_id", id!)
+        .order("display_order");
+      
+      if (storageData && storageData.length > 0) {
+        setStorageVariants(storageData);
+        setSelectedStorage(storageData[0]);
+      }
       
       const [specsData, colorsData] = await Promise.all([
         queryOptionalTable<any>("product_specifications", "*", [{ column: "product_id", value: id! }], { column: "display_order", asc: true }),
@@ -276,6 +301,13 @@ const ProductPage = () => {
     }
   };
 
+  const getFinalPrice = () => {
+    if (selectedStorage) {
+      return product!.price + selectedStorage.price_adjustment;
+    }
+    return product!.price;
+  };
+
   const handleAddToCart = () => {
     if (colors.length > 0 && !selectedColor) {
       toast.error("Please select a color before adding to cart");
@@ -288,22 +320,27 @@ const ProductPage = () => {
     }
 
     const primaryImage = images[activeImg]?.image_url || "/placeholder.svg";
+    const finalPrice = getFinalPrice();
+    const storageText = selectedStorage ? ` ${selectedStorage.storage}` : "";
+    const colorText = selectedColor ? ` (${selectedColor})` : "";
     
     for (let i = 0; i < quantity; i++) {
       addToCart({ 
         id: product!.id, 
-        name: product!.name, 
-        price: product!.price, 
+        name: `${product!.name}${storageText}`,
+        price: finalPrice,
         image: primaryImage,
         brand: product!.brand || '',
         category: product!.category || '',
         stock_status: product!.stock_status || 'in_stock',
         original_price: product!.original_price || undefined,
-        color: selectedColor || undefined
+        color: selectedColor || undefined,
+        storage: selectedStorage?.storage || undefined,
+        sku: product!.sku && selectedStorage ? `${product!.sku}-${selectedStorage.sku_suffix}` : product!.sku
       } as any);
     }
     
-    toast.success(`${quantity}x ${product!.name}${selectedColor ? ` (${selectedColor})` : ''} added to cart!`);
+    toast.success(`${quantity}x ${product!.name}${storageText}${colorText} added to cart!`);
   };
 
   const submitReview = async (e: React.FormEvent) => {
@@ -413,7 +450,8 @@ const ProductPage = () => {
     resize: "contain",
   });
   const discount = product.original_price ? Math.round(((product.original_price - product.price) / product.original_price) * 100) : 0;
-  const totalPrice = product.price * quantity;
+  const finalPrice = getFinalPrice();
+  const totalPrice = finalPrice * quantity;
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-[hsl(240,10%,3.9%)] to-[hsl(240,10%,4.5%)]">
@@ -502,7 +540,7 @@ const ProductPage = () => {
                   <div className="bg-white/5 p-3 rounded-lg border border-white/10">
                     <div className="flex items-baseline gap-3 flex-wrap">
                       <span className="text-2xl sm:text-3xl font-bold text-primary">
-                        KSh {Number(product.price).toLocaleString()}
+                        KSh {Number(finalPrice).toLocaleString()}
                       </span>
                       {product.original_price && (
                         <>
@@ -515,6 +553,12 @@ const ProductPage = () => {
                         </>
                       )}
                     </div>
+                    
+                    {selectedStorage && selectedStorage.price_adjustment > 0 && (
+                      <div className="text-xs text-white/40 mt-1">
+                        +KSh {selectedStorage.price_adjustment.toLocaleString()} for {selectedStorage.storage}
+                      </div>
+                    )}
                     
                     {quantity > 1 && (
                       <div className="mt-2 pt-2 border-t border-white/10">
@@ -538,13 +582,11 @@ const ProductPage = () => {
 
                   <div className="flex flex-wrap items-center gap-2 text-xs">
                     <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
-                      product.stock_status === "in_stock" ? "bg-green-500/20 text-green-400" : 
-                      product.stock_status === "low_stock" ? "bg-yellow-500/20 text-yellow-400" : 
-                      "bg-red-500/20 text-red-400"
+                      maxStock > 0 ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"
                     }`}>
-                      {product.stock_status === "in_stock" ? "In Stock" : product.stock_status === "low_stock" ? "Low Stock" : "Sold Out"}
+                      {maxStock > 0 ? "In Stock" : "Out of Stock"}
                     </span>
-                    {maxStock > 0 && maxStock < 10 && product.stock_status !== "out_of_stock" && (
+                    {maxStock > 0 && maxStock < 10 && (
                       <span className="text-yellow-400 text-xs">
                         Only {maxStock} left in stock!
                       </span>
@@ -570,6 +612,47 @@ const ProductPage = () => {
                     </div>
                   )}
 
+                  {/* Storage Selector - NEW */}
+                  {storageVariants.length > 0 && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs font-semibold text-white flex items-center gap-2">
+                          <HardDrive className="w-3 h-3" />
+                          Select Storage
+                        </p>
+                        {selectedStorage && (
+                          <span className="text-xs text-primary">
+                            +KSh {selectedStorage.price_adjustment.toLocaleString()}
+                          </span>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                        {storageVariants.map((variant) => {
+                          const variantPrice = product.price + variant.price_adjustment;
+                          return (
+                            <button
+                              key={variant.id || variant.storage}
+                              onClick={() => setSelectedStorage(variant)}
+                              className={`px-2 py-1.5 text-[11px] font-medium rounded-lg border-2 transition-all ${
+                                selectedStorage?.id === variant.id || selectedStorage?.storage === variant.storage
+                                  ? "border-primary bg-primary/10 text-primary"
+                                  : "border-white/10 hover:border-primary/50 text-white/70 hover:text-white"
+                              }`}
+                            >
+                              <div className="flex flex-col items-center">
+                                <span className="font-semibold">{variant.storage}</span>
+                                <span className="text-[10px] opacity-70">
+                                  KSh {variantPrice.toLocaleString()}
+                                </span>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Color Selector */}
                   {colors.length > 0 && (
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
@@ -599,7 +682,8 @@ const ProductPage = () => {
                     </div>
                   )}
 
-                  {product.stock_status !== "out_of_stock" && (
+                  {/* Quantity Selector */}
+                  {maxStock > 0 && (
                     <div className="space-y-2">
                       <label className="text-xs font-semibold text-white">Quantity</label>
                       <div className="flex items-center gap-3">
@@ -649,10 +733,10 @@ const ProductPage = () => {
                     size="default" 
                     className="flex-1 text-sm py-2 bg-primary text-white hover:bg-primary/80"
                     onClick={handleAddToCart} 
-                    disabled={product.stock_status === "out_of_stock"}
+                    disabled={maxStock === 0}
                   >
                     <ShoppingCart className="w-3.5 h-3.5 mr-1.5" /> 
-                    {product.stock_status === "out_of_stock" 
+                    {maxStock === 0 
                       ? "Out of Stock" 
                       : quantity > 1 
                         ? `Add ${quantity} to Cart (KSh ${totalPrice.toLocaleString()})` 
@@ -673,6 +757,7 @@ const ProductPage = () => {
         </div>
 
         <div className="container py-8 md:py-12 space-y-12">
+          {/* Product Specifications */}
           {specifications.length > 0 && (
             <div>
               <h2 className="text-xl font-bold text-white mb-6">Specifications</h2>
@@ -689,6 +774,7 @@ const ProductPage = () => {
             </div>
           )}
 
+          {/* Reviews Section */}
           <div>
             <h2 className="text-xl font-bold text-white mb-6">Reviews ({reviews.length})</h2>
 
@@ -761,6 +847,7 @@ const ProductPage = () => {
             </div>
           </div>
 
+          {/* Related Products */}
           {relatedProducts.length > 0 && (
             <div>
               <h2 className="text-xl font-bold text-white mb-6">Related Products</h2>
