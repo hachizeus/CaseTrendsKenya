@@ -181,54 +181,59 @@ const ProductCard = memo(({
           )}
         </div>
 
-        <div className="p-2 sm:p-3">
-          <p className="text-[10px] sm:text-[11px] text-primary/70 uppercase tracking-wider truncate">{brand || "General"}</p>
-          <h3 className="text-xs sm:text-sm font-semibold line-clamp-2 my-1 group-hover:text-primary transition-colors text-white/90">
-            {name}
-          </h3>
+        <div className="p-2 sm:p-3 flex flex-col">
+          {/* Brand - fixed height */}
+          <div className="h-4 sm:h-5">
+            <p className="text-[10px] sm:text-[11px] text-primary/70 uppercase tracking-wider truncate">
+              {brand || "General"}
+            </p>
+          </div>
           
-          <div className="flex items-center gap-0.5 sm:gap-1 my-1">
+          {/* Product Name - FIXED HEIGHT for exactly 2 lines, even if text is short */}
+          <div className="h-8 sm:h-10 mt-1">
+            <h3 className="text-xs sm:text-sm font-semibold line-clamp-2 group-hover:text-primary transition-colors text-white/90 break-words">
+              {name}
+            </h3>
+          </div>
+          
+          {/* Review Stars - fixed height */}
+          <div className="h-4 sm:h-5 flex items-center gap-0.5 sm:gap-1 mt-1">
             {[1, 2, 3, 4, 5].map(s => (
               <Star key={s} className={`w-2.5 h-2.5 sm:w-3 sm:h-3 ${s <= avgRating ? "text-yellow-400 fill-yellow-400" : "text-white/20"}`} />
             ))}
           </div>
 
-          {/* Price Section - Improved for mobile */}
-          <div className="mt-2">
+          {/* Price Section - fixed height container */}
+          <div className="mt-2 min-h-[4rem] sm:min-h-[5rem]">
             {originalPrice && originalPrice > price ? (
               <div className="space-y-0.5">
-                {/* Current Price */}
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-sm sm:text-lg font-bold text-primary">
+                  <span className="text-sm sm:text-lg font-bold text-primary whitespace-nowrap">
                     KSh {price.toLocaleString()}
                   </span>
-                  {/* Mobile Cart Button */}
                   <button
                     onClick={handleAddToCart}
-                    className="sm:hidden w-7 h-7 flex items-center justify-center rounded-lg bg-primary text-white"
+                    className="sm:hidden w-7 h-7 flex-shrink-0 flex items-center justify-center rounded-lg bg-primary text-white"
                     aria-label="Add to cart"
                   >
                     <ShoppingCart className="w-3.5 h-3.5" />
                   </button>
                 </div>
-                {/* Original Price */}
-                <div className="text-[10px] sm:text-xs text-white/50 line-through">
+                <div className="text-[10px] sm:text-xs text-white/50 line-through truncate">
                   Was: KSh {originalPrice.toLocaleString()}
                 </div>
-                {/* Savings */}
-                <div className="text-[9px] sm:text-[10px] text-green-400 font-medium">
+                <div className="text-[9px] sm:text-[10px] text-green-400 font-medium truncate">
                   You save KSh {(originalPrice - price).toLocaleString()}
                 </div>
               </div>
             ) : (
               <div className="flex items-center justify-between gap-2">
-                <span className="text-sm sm:text-lg font-bold text-primary">
+                <span className="text-sm sm:text-lg font-bold text-primary whitespace-nowrap">
                   KSh {price.toLocaleString()}
                 </span>
-                {/* Mobile Cart Button */}
                 <button
                   onClick={handleAddToCart}
-                  className="sm:hidden w-7 h-7 flex items-center justify-center rounded-lg bg-primary text-white"
+                  className="sm:hidden w-7 h-7 flex-shrink-0 flex items-center justify-center rounded-lg bg-primary text-white"
                   aria-label="Add to cart"
                 >
                   <ShoppingCart className="w-3.5 h-3.5" />
