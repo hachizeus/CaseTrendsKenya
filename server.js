@@ -221,7 +221,7 @@ app.use(express.static(path.join(__dirname, 'dist'), {
   etag: false,
 }));
 
-const POSTMARK_API_TOKEN = process.env.POSTMARK_API_TOKEN || "10b0fffa-aa2b-4302-8568-199e0ecb31df";
+const POSTMARK_API_TOKEN = process.env.POSTMARK_API_TOKEN || "3418169e-777a-47bc-b6b4-2109f3e8f207";
 
 const postmarkClient = new ServerClient(POSTMARK_API_TOKEN);
 
