@@ -13,6 +13,38 @@ export interface Video {
   updated_at: string;
 }
 
+// Extract YouTube ID from both regular and Shorts URLs
+const extractYouTubeId = (url: string): string | null => {
+  if (!url) return null;
+  
+  const patterns = [
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&?#]+)/,
+    /youtube\.com\/watch\?.*v=([^&]+)/,
+    /youtube\.com\/shorts\/([^/?]+)/
+  ];
+  
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (match && match[1]) {
+      return match[1];
+    }
+  }
+  
+  return null;
+};
+
+// Get YouTube thumbnail URL (works for all video types)
+export const getYouTubeThumbnail = (url: string, quality: 'default' | 'mqdefault' | 'hqdefault' | 'sddefault' | 'maxresdefault' = 'hqdefault'): string | null => {
+  const videoId = extractYouTubeId(url);
+  if (!videoId) return null;
+  return `https://img.youtube.com/vi/${videoId}/${quality}.jpg`;
+};
+
+// Validate YouTube URL (supports both regular and Shorts)
+export const isValidYoutubeUrl = (url: string): boolean => {
+  return extractYouTubeId(url) !== null;
+};
+
 // Fetch videos directly from Supabase (no API endpoint needed)
 const fetchVideosFromSupabase = async (adminView: boolean = false): Promise<Video[]> => {
   let query = supabase
@@ -37,6 +69,11 @@ const fetchVideosFromSupabase = async (adminView: boolean = false): Promise<Vide
 
 // Add video to Supabase
 const addVideoToSupabase = async (video: Omit<Video, 'id' | 'created_at' | 'updated_at' | 'display_order'>) => {
+  // Validate URL before adding
+  if (!isValidYoutubeUrl(video.youtube_url)) {
+    throw new Error('Invalid YouTube URL. Please enter a valid YouTube video or Shorts URL.');
+  }
+  
   // Get current max display_order
   const { data: existingVideos } = await supabase
     .from('videos')
@@ -64,6 +101,11 @@ const addVideoToSupabase = async (video: Omit<Video, 'id' | 'created_at' | 'upda
 
 // Update video in Supabase
 const updateVideoInSupabase = async ({ id, ...updates }: Partial<Video> & { id: string }) => {
+  // Validate URL if it's being updated
+  if (updates.youtube_url && !isValidYoutubeUrl(updates.youtube_url)) {
+    throw new Error('Invalid YouTube URL. Please enter a valid YouTube video or Shorts URL.');
+  }
+  
   const { data, error } = await supabase
     .from('videos')
     .update(updates)

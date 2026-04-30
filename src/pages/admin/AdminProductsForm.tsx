@@ -144,6 +144,7 @@ interface StorageVariant {
   storage: string;
   stock_quantity: number;
   sku_suffix: string;
+  price_adjustment: number;
 }
 
 interface Category {
@@ -228,9 +229,10 @@ export default function ProductForm() {
   const [isUploading, setIsUploading] = useState(false);
   const [convertingImages, setConvertingImages] = useState(false);
   
-  // Storage variants - simplified without price
+  // Storage variants with price adjustment
   const [storageVariants, setStorageVariants] = useState<StorageVariant[]>([]);
   const [newStorage, setNewStorage] = useState("");
+  const [newPriceAdjustment, setNewPriceAdjustment] = useState(0);
   const [newStorageStock, setNewStorageStock] = useState(0);
   const [newStorageSku, setNewStorageSku] = useState("");
 
@@ -378,7 +380,7 @@ export default function ProductForm() {
 
       setExistingImages(imagesResult.data || []);
       
-      // Load storage variants
+      // Load storage variants with price adjustment
       console.log("Loading storage variants for product:", id);
       const storageResult = await supabaseClient
         .from("product_storage_variants")
@@ -393,7 +395,8 @@ export default function ProductForm() {
           id: v.id,
           storage: v.storage,
           stock_quantity: v.stock_quantity,
-          sku_suffix: v.sku_suffix || ""
+          sku_suffix: v.sku_suffix || "",
+          price_adjustment: v.price_adjustment || 0
         })));
       } else {
         setStorageVariants([]);
@@ -552,7 +555,7 @@ export default function ProductForm() {
     setIsDirty(true);
   }, []);
 
-  // Storage variant functions - simplified
+  // Storage variant functions with price adjustment
   const addStorageVariant = useCallback(() => {
     if (!newStorage.trim()) {
       toast.error("Storage size is required");
@@ -566,16 +569,18 @@ export default function ProductForm() {
     const newVariant: StorageVariant = {
       storage: newStorage.trim(),
       stock_quantity: newStorageStock,
-      sku_suffix: newStorageSku.trim()
+      sku_suffix: newStorageSku.trim(),
+      price_adjustment: newPriceAdjustment
     };
     
     setStorageVariants(prev => [...prev, newVariant]);
     setNewStorage("");
+    setNewPriceAdjustment(0);
     setNewStorageStock(0);
     setNewStorageSku("");
     setIsDirty(true);
     toast.success("Storage variant added");
-  }, [newStorage, newStorageStock, newStorageSku, storageVariants]);
+  }, [newStorage, newPriceAdjustment, newStorageStock, newStorageSku, storageVariants]);
 
   const removeStorageVariant = useCallback((index: number) => {
     setStorageVariants(prev => prev.filter((_, i) => i !== index));
@@ -741,16 +746,17 @@ export default function ProductForm() {
         return;
       }
       
-      // Prepare variants for insertion
+      // Prepare variants for insertion with price adjustment
       const variantsToInsert = storageVariants.map((variant, idx) => ({
         product_id: productId,
         storage: variant.storage,
         stock_quantity: variant.stock_quantity,
         sku_suffix: variant.sku_suffix || "",
+        price_adjustment: variant.price_adjustment || 0,
         display_order: idx,
       }));
       
-      console.log("Saving storage variants:", variantsToInsert);
+      console.log("Saving storage variants with price adjustments:", variantsToInsert);
       
       // Insert new storage variants
       const { error: insertError, data } = await supabaseClient
@@ -1249,7 +1255,7 @@ export default function ProductForm() {
                       <div className="grid grid-cols-2 gap-6">
                         <div>
                           <Label htmlFor="price" className="text-white/70 flex items-center gap-2">
-                            Price <span className="text-red-500">*</span>
+                            Base Price <span className="text-red-500">*</span>
                           </Label>
                           <div className="relative mt-2">
                             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/50">KSh</span>
@@ -1262,6 +1268,7 @@ export default function ProductForm() {
                               className="pl-12 text-lg font-medium bg-black/30 border-white/10 text-white"
                             />
                           </div>
+                          <p className="text-xs text-white/30 mt-1">Base price for default storage (e.g., 128GB)</p>
                         </div>
 
                         <div>
@@ -1603,17 +1610,18 @@ export default function ProductForm() {
                 </motion.div>
               </TabsContent>
 
-              {/* Storage Tab - Simplified without price */}
+              {/* Storage Tab - WITH PRICE ADJUSTMENT */}
               <TabsContent value="storage" className="space-y-6">
                 <motion.div variants={itemVariants}>
                   <Card className="border border-white/10 bg-white/5 shadow-lg">
                     <CardHeader className="bg-gradient-to-r from-primary/10 to-transparent">
                       <div className="flex items-center gap-2">
                         <HardDrive className="w-5 h-5 text-primary" />
-                        <CardTitle className="text-white">Storage Variants</CardTitle>
+                        <CardTitle className="text-white">Storage Variants with Pricing</CardTitle>
                       </div>
                       <CardDescription className="text-white/50">
-                        Add different storage options for smartphones (e.g., 128GB, 256GB, 512GB)
+                        Add different storage options for smartphones (e.g., 128GB, 256GB, 512GB). 
+                        Set an additional price for larger storage options.
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-6 pt-6">
@@ -1625,7 +1633,7 @@ export default function ProductForm() {
                             {storageVariants.map((variant, index) => (
                               <motion.div
                                 key={index}
-                                className="grid grid-cols-3 gap-3 items-center"
+                                className="grid grid-cols-1 md:grid-cols-5 gap-3 items-center"
                                 initial={{ opacity: 0, x: -20 }}
                                 animate={{ opacity: 1, x: 0 }}
                                 exit={{ opacity: 0, x: 20 }}
@@ -1636,6 +1644,16 @@ export default function ProductForm() {
                                   placeholder="e.g., 128GB"
                                   className="bg-black/30 border-white/10 text-white placeholder:text-white/30"
                                 />
+                                <div className="relative">
+                                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/50 text-xs">+KSh</span>
+                                  <Input
+                                    type="number"
+                                    value={variant.price_adjustment}
+                                    onChange={(e) => updateStorageVariant(index, 'price_adjustment', parseFloat(e.target.value) || 0)}
+                                    placeholder="Extra price"
+                                    className="pl-12 bg-black/30 border-white/10 text-white placeholder:text-white/30"
+                                  />
+                                </div>
                                 <Input
                                   type="number"
                                   value={variant.stock_quantity}
@@ -1643,22 +1661,20 @@ export default function ProductForm() {
                                   placeholder="Stock quantity"
                                   className="bg-black/30 border-white/10 text-white placeholder:text-white/30"
                                 />
-                                <div className="flex gap-2">
-                                  <Input
-                                    value={variant.sku_suffix}
-                                    onChange={(e) => updateStorageVariant(index, 'sku_suffix', e.target.value)}
-                                    placeholder="SKU suffix (optional)"
-                                    className="bg-black/30 border-white/10 text-white placeholder:text-white/30"
-                                  />
-                                  <Button
-                                    variant="destructive"
-                                    size="icon"
-                                    onClick={() => removeStorageVariant(index)}
-                                    className="shrink-0 bg-red-500/20 text-red-400 hover:bg-red-500/30"
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                  </Button>
-                                </div>
+                                <Input
+                                  value={variant.sku_suffix}
+                                  onChange={(e) => updateStorageVariant(index, 'sku_suffix', e.target.value)}
+                                  placeholder="SKU suffix"
+                                  className="bg-black/30 border-white/10 text-white placeholder:text-white/30"
+                                />
+                                <Button
+                                  variant="destructive"
+                                  size="icon"
+                                  onClick={() => removeStorageVariant(index)}
+                                  className="shrink-0 bg-red-500/20 text-red-400 hover:bg-red-500/30"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
                               </motion.div>
                             ))}
                           </div>
@@ -1669,13 +1685,23 @@ export default function ProductForm() {
                       {/* Add New Storage Variant */}
                       <div className="space-y-3">
                         <Label className="text-sm font-medium text-white">Add New Storage Option</Label>
-                        <div className="grid grid-cols-3 gap-3">
+                        <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
                           <Input
                             value={newStorage}
                             onChange={(e) => setNewStorage(e.target.value)}
                             placeholder="Storage (e.g., 256GB)"
                             className="bg-black/30 border-white/10 text-white placeholder:text-white/30"
                           />
+                          <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/50 text-xs">+KSh</span>
+                            <Input
+                              type="number"
+                              value={newPriceAdjustment}
+                              onChange={(e) => setNewPriceAdjustment(parseFloat(e.target.value) || 0)}
+                              placeholder="Extra price"
+                              className="pl-12 bg-black/30 border-white/10 text-white placeholder:text-white/30"
+                            />
+                          </div>
                           <Input
                             type="number"
                             value={newStorageStock}
@@ -1683,24 +1709,24 @@ export default function ProductForm() {
                             placeholder="Stock quantity"
                             className="bg-black/30 border-white/10 text-white placeholder:text-white/30"
                           />
-                          <div className="flex gap-2">
-                            <Input
-                              value={newStorageSku}
-                              onChange={(e) => setNewStorageSku(e.target.value)}
-                              placeholder="SKU suffix (optional)"
-                              className="bg-black/30 border-white/10 text-white placeholder:text-white/30"
-                            />
-                            <Button 
-                              onClick={addStorageVariant} 
-                              disabled={!newStorage.trim()}
-                              className="shrink-0 bg-primary text-white hover:bg-primary/80"
-                            >
-                              <Plus className="w-4 h-4" />
-                            </Button>
-                          </div>
+                          <Input
+                            value={newStorageSku}
+                            onChange={(e) => setNewStorageSku(e.target.value)}
+                            placeholder="SKU suffix (optional)"
+                            className="bg-black/30 border-white/10 text-white placeholder:text-white/30"
+                          />
+                          <Button 
+                            onClick={addStorageVariant} 
+                            disabled={!newStorage.trim()}
+                            className="shrink-0 bg-primary text-white hover:bg-primary/80"
+                          >
+                            <Plus className="w-4 h-4 mr-2" />
+                            Add
+                          </Button>
                         </div>
                         <div className="text-xs text-white/40 mt-2">
-                          Tip: Add storage options like 128GB, 256GB, 512GB. Each can have its own stock quantity and SKU suffix.
+                          Tip: Add storage options like 128GB (+KSh 0), 256GB (+KSh 5000), 512GB (+KSh 12000). 
+                          The price will automatically add up on the frontend.
                         </div>
                       </div>
 
@@ -1710,11 +1736,11 @@ export default function ProductForm() {
                           <div className="flex items-start gap-3">
                             <Info className="w-5 h-5 text-primary mt-0.5" />
                             <div>
-                              <div className="text-sm font-medium text-white">Example Storage Variants</div>
+                              <div className="text-sm font-medium text-white">Example Storage Variants with Pricing</div>
                               <div className="text-xs text-white/50 mt-1">
-                                • 128GB - Stock: 10<br />
-                                • 256GB - Stock: 15<br />
-                                • 512GB - Stock: 5
+                                • 128GB - Base price (KSh 0 extra)<br />
+                                • 256GB - Add KSh 5,000 (Total = Base + 5,000)<br />
+                                • 512GB - Add KSh 12,000 (Total = Base + 12,000)
                               </div>
                             </div>
                           </div>
@@ -1857,7 +1883,7 @@ export default function ProductForm() {
                       </div>
 
                       <div>
-                        <Label htmlFor="stock_quantity" className="text-white/70">Stock Quantity (Base)</Label>
+                        <Label htmlFor="stock_quantity" className="text-white/70">Base Stock Quantity</Label>
                         <Input
                           id="stock_quantity"
                           type="number"
@@ -1868,6 +1894,7 @@ export default function ProductForm() {
                           })}
                           className="mt-2 text-lg bg-black/30 border-white/10 text-white"
                         />
+                        <p className="text-xs text-white/30 mt-1">Base stock for default variant (if no storage variants)</p>
                       </div>
 
                       <div className={cn(

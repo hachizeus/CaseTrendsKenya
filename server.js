@@ -802,7 +802,36 @@ app.post("/api/remove-bg", async (req, res) => {
   }
 });
 
-// ============ VIDEO ROUTES ============
+// ============ VIDEO ROUTES WITH YOUTUBE SHORTS SUPPORT ============
+
+// Helper function to extract YouTube ID from both regular and Shorts URLs
+function extractYouTubeId(url) {
+  if (!url) return null;
+  
+  const patterns = [
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&?#]+)/,
+    /youtube\.com\/watch\?.*v=([^&]+)/,
+    /youtube\.com\/shorts\/([^/?]+)/
+  ];
+  
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (match && match[1]) {
+      return match[1];
+    }
+  }
+  
+  return null;
+}
+
+// Helper function to get YouTube thumbnail (works for all video types)
+function getYouTubeThumbnailUrl(youtubeUrl, quality = 'hqdefault') {
+  const videoId = extractYouTubeId(youtubeUrl);
+  if (!videoId) return null;
+  
+  // Available qualities: default, mqdefault, hqdefault, sddefault, maxresdefault
+  return `https://img.youtube.com/vi/${videoId}/${quality}.jpg`;
+}
 
 // Get all videos (admin view - includes hidden)
 app.get('/api/admin/videos', async (req, res) => {
@@ -842,6 +871,12 @@ app.post('/api/admin/videos', async (req, res) => {
   try {
     const { youtube_url, title, thumbnail_url, visible } = req.body;
     
+    // Validate YouTube URL (supports both regular and Shorts)
+    const videoId = extractYouTubeId(youtube_url);
+    if (!videoId) {
+      return res.status(400).json({ error: 'Invalid YouTube URL. Please enter a valid YouTube video or Shorts URL.' });
+    }
+    
     // Get current max display_order
     const { data: maxOrderData } = await supabaseAdmin
       .from('videos')
@@ -858,7 +893,7 @@ app.post('/api/admin/videos', async (req, res) => {
       .insert({
         youtube_url,
         title,
-        thumbnail_url,
+        thumbnail_url: thumbnail_url || null, // Allow null, frontend will use YouTube thumbnail
         visible: visible ?? true,
         display_order
       })
@@ -915,9 +950,18 @@ app.put('/api/admin/videos/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const { youtube_url, title, thumbnail_url, visible } = req.body;
+    
+    // Validate YouTube URL if provided
+    if (youtube_url) {
+      const videoId = extractYouTubeId(youtube_url);
+      if (!videoId) {
+        return res.status(400).json({ error: 'Invalid YouTube URL. Please enter a valid YouTube video or Shorts URL.' });
+      }
+    }
+    
     const { data, error } = await supabaseAdmin
       .from('videos')
-      .update({ youtube_url, title, thumbnail_url, visible })
+      .update({ youtube_url, title, thumbnail_url: thumbnail_url || null, visible })
       .eq('id', id)
       .select()
       .single();
@@ -978,5 +1022,5 @@ app.listen(PORT, () => {
   console.log(`✅ Server running on port ${PORT}`);
   console.log(`📧 Email configured: ${EMAIL_USER}`);
   console.log(`🔒 CAPTCHA enabled: ${process.env.TURNSTILE_SECRET_KEY ? 'Yes' : 'No'}`);
-  console.log(`🎬 Video routes enabled`);
+  console.log(`🎬 Video routes enabled with YouTube Shorts support`);
 });

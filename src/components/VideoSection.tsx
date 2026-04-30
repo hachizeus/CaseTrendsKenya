@@ -31,9 +31,30 @@ export const VideoSection = () => {
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
-  const getYouTubeThumbnail = (url: string) => {
-    const id = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&?#]+)/)?.[1];
-    return id ? `https://img.youtube.com/vi/${id}/hqdefault.jpg` : null;
+  // Extract YouTube ID from both regular and Shorts URLs
+  const getYouTubeId = (url: string): string | null => {
+    if (!url) return null;
+    
+    const patterns = [
+      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&?#]+)/,
+      /youtube\.com\/watch\?.*v=([^&]+)/,
+      /youtube\.com\/shorts\/([^/?]+)/
+    ];
+    
+    for (const pattern of patterns) {
+      const match = url.match(pattern);
+      if (match && match[1]) {
+        return match[1];
+      }
+    }
+    
+    return null;
+  };
+
+  const getYouTubeThumbnail = (url: string, quality: 'default' | 'mqdefault' | 'hqdefault' | 'sddefault' | 'maxresdefault' = 'hqdefault') => {
+    const id = getYouTubeId(url);
+    if (!id) return null;
+    return `https://img.youtube.com/vi/${id}/${quality}.jpg`;
   };
 
   // duplicate for seamless infinite loop
@@ -195,7 +216,8 @@ export const VideoSection = () => {
               }}
             >
               {loopVideos.map((video, index) => {
-                const thumb = video.thumbnail_url || getYouTubeThumbnail(video.youtube_url);
+                // Use custom thumbnail if provided, otherwise get YouTube thumbnail (works for all formats)
+                const thumb = video.thumbnail_url || getYouTubeThumbnail(video.youtube_url, 'hqdefault');
 
                 return (
                   <div
@@ -218,6 +240,15 @@ export const VideoSection = () => {
                             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                             draggable={false}
                             loading="lazy"
+                            onError={(e) => {
+                              // Fallback to different quality if image fails to load
+                              const target = e.target as HTMLImageElement;
+                              if (target.src.includes('hqdefault')) {
+                                target.src = getYouTubeThumbnail(video.youtube_url, 'mqdefault') || '';
+                              } else if (target.src.includes('mqdefault')) {
+                                target.src = getYouTubeThumbnail(video.youtube_url, 'default') || '';
+                              }
+                            }}
                           />
                         )}
 

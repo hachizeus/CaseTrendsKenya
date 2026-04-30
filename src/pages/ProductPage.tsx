@@ -54,6 +54,7 @@ interface StorageVariant {
   storage: string;
   stock_quantity: number;
   sku_suffix: string;
+  price_adjustment: number;
   display_order: number;
 }
 
@@ -82,9 +83,13 @@ const ProductPage = () => {
   const [quantity, setQuantity] = useState(1);
   const [maxStock, setMaxStock] = useState(10);
   
-  // Storage variants state
+  // Storage variants state with price adjustment
   const [storageVariants, setStorageVariants] = useState<StorageVariant[]>([]);
   const [selectedStorage, setSelectedStorage] = useState<StorageVariant | null>(null);
+  
+  // Dynamic pricing state
+  const [basePrice, setBasePrice] = useState(0);
+  const [finalPrice, setFinalPrice] = useState(0);
 
   // Product features - static for now, but could come from database
   const productFeatures = [
@@ -126,13 +131,20 @@ const ProductPage = () => {
     };
   }, []);
 
+  // Set base price from product
   useEffect(() => {
-    setQuantity(1);
-    if (storageVariants.length > 0 && !selectedStorage) {
-      setSelectedStorage(storageVariants[0]);
+    if (product) {
+      setBasePrice(product.price);
     }
-  }, [product, storageVariants]);
+  }, [product]);
 
+  // Calculate final price based on selected storage adjustment
+  useEffect(() => {
+    const adjustment = selectedStorage?.price_adjustment || 0;
+    setFinalPrice(basePrice + adjustment);
+  }, [basePrice, selectedStorage]);
+
+  // Update max stock based on selected storage variant or base stock
   useEffect(() => {
     if (selectedStorage) {
       setMaxStock(selectedStorage.stock_quantity);
@@ -146,6 +158,11 @@ const ProductPage = () => {
       setMaxStock(0);
     }
   }, [selectedStorage, product]);
+
+  // Reset quantity when selected storage changes
+  useEffect(() => {
+    setQuantity(1);
+  }, [selectedStorage]);
 
   const handleQuantityChange = (newQuantity: number) => {
     if (newQuantity < 1) return;
@@ -199,6 +216,7 @@ const ProductPage = () => {
       
       document.title = `${data?.name} | Case Trends Kenya`;
       
+      // Load storage variants with price adjustment
       const { data: storageData } = await supabase
         .from("product_storage_variants" as any)
         .select("*")
@@ -338,11 +356,14 @@ const ProductPage = () => {
     const storageText = selectedStorage ? ` ${selectedStorage.storage}` : "";
     const colorText = selectedColor ? ` (${selectedColor})` : "";
     
+    // Use final price which includes storage adjustment
+    const itemPrice = finalPrice;
+    
     for (let i = 0; i < quantity; i++) {
       addToCart({ 
         id: product!.id, 
         name: `${product!.name}${storageText}`,
-        price: product!.price,
+        price: itemPrice,
         image: primaryImage,
         brand: product!.brand || '',
         category: product!.category || '',
@@ -354,7 +375,11 @@ const ProductPage = () => {
       } as any);
     }
     
-    toast.success(`${quantity}x ${product!.name}${storageText}${colorText} added to cart!`);
+    const priceInfo = selectedStorage?.price_adjustment 
+      ? ` (Base KSh ${basePrice.toLocaleString()} + ${selectedStorage.price_adjustment.toLocaleString()})`
+      : '';
+    
+    toast.success(`${quantity}x ${product!.name}${storageText}${colorText}${priceInfo} added to cart!`);
   };
 
   const submitReview = async (e: React.FormEvent) => {
@@ -463,8 +488,8 @@ const ProductPage = () => {
     quality: 80,
     resize: "contain",
   });
-  const discount = product.original_price ? Math.round(((product.original_price - product.price) / product.original_price) * 100) : 0;
-  const totalPrice = product.price * quantity;
+  const discount = product.original_price ? Math.round(((product.original_price - finalPrice) / product.original_price) * 100) : 0;
+  const totalPrice = finalPrice * quantity;
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-[hsl(240,10%,3.9%)] to-[hsl(240,10%,4.5%)]">
@@ -553,12 +578,12 @@ const ProductPage = () => {
                   <div className="bg-white/5 p-3 rounded-lg border border-white/10">
                     <div className="flex items-baseline gap-3 flex-wrap">
                       <span className="text-2xl sm:text-3xl font-bold text-primary">
-                        KSh {Number(product.price).toLocaleString()}
+                        KSh {finalPrice.toLocaleString()}
                       </span>
                       {product.original_price && (
                         <>
                           <span className="text-xs sm:text-sm text-white/40 line-through">
-                            KSh {Number(product.original_price).toLocaleString()}
+                            KSh {product.original_price.toLocaleString()}
                           </span>
                           <span className="bg-primary/20 text-primary text-xs font-bold px-1.5 py-0.5 rounded">
                             -{discount}%
@@ -566,6 +591,13 @@ const ProductPage = () => {
                         </>
                       )}
                     </div>
+                    
+                    {/* Show price breakdown if storage has adjustment */}
+                    {selectedStorage && selectedStorage.price_adjustment > 0 && (
+                      <div className="mt-2 text-xs text-white/40">
+                        Base: KSh {basePrice.toLocaleString()} + {selectedStorage.storage}: +KSh {selectedStorage.price_adjustment.toLocaleString()}
+                      </div>
+                    )}
                     
                     {quantity > 1 && (
                       <div className="mt-2 pt-2 border-t border-white/10">
@@ -606,7 +638,7 @@ const ProductPage = () => {
                     <p className="text-xs text-white/50 leading-relaxed">{product.description}</p>
                   )}
 
-                  {/* Storage Selector */}
+                  {/* Storage Selector with Price Display */}
                   {storageVariants.length > 0 && (
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
@@ -615,20 +647,33 @@ const ProductPage = () => {
                           Select Storage
                         </p>
                       </div>
-                      <div className="flex flex-wrap gap-1.5">
-                        {storageVariants.map((variant) => (
-                          <button
-                            key={variant.id}
-                            onClick={() => setSelectedStorage(variant)}
-                            className={`px-3 py-1.5 text-xs font-medium rounded-lg border-2 transition-all ${
-                              selectedStorage?.id === variant.id
-                                ? "border-primary bg-primary/10 text-primary"
-                                : "border-white/10 hover:border-primary/50 text-white/70 hover:text-white"
-                            }`}
-                          >
-                            {variant.storage}
-                          </button>
-                        ))}
+                      <div className="flex flex-wrap gap-2">
+                        {storageVariants.map((variant) => {
+                          const variantPrice = basePrice + variant.price_adjustment;
+                          return (
+                            <button
+                              key={variant.id}
+                              onClick={() => setSelectedStorage(variant)}
+                              className={`px-3 py-2 text-sm font-medium rounded-lg border-2 transition-all ${
+                                selectedStorage?.id === variant.id
+                                  ? "border-primary bg-primary/10 text-primary"
+                                  : "border-white/10 hover:border-primary/50 text-white/70 hover:text-white"
+                              }`}
+                            >
+                              <div className="flex flex-col items-center">
+                                <span>{variant.storage}</span>
+                                {variant.price_adjustment > 0 && (
+                                  <span className="text-xs text-primary/70">
+                                    +KSh {variant.price_adjustment.toLocaleString()}
+                                  </span>
+                                )}
+                                {variant.price_adjustment === 0 && (
+                                  <span className="text-xs text-white/30">Base</span>
+                                )}
+                              </div>
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
                   )}
@@ -721,7 +766,7 @@ const ProductPage = () => {
                       ? "Out of Stock" 
                       : quantity > 1 
                         ? `Add ${quantity} to Cart (KSh ${totalPrice.toLocaleString()})` 
-                        : "Add to Cart"}
+                        : `Add to Cart - KSh ${finalPrice.toLocaleString()}`}
                   </Button>
                   <Button 
                     size="default" 

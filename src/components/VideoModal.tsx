@@ -12,7 +12,7 @@ interface VideoModalProps {
 export function VideoModal({ isOpen, onClose, videoUrl, title }: VideoModalProps) {
   const [embedUrl, setEmbedUrl] = useState<string | null>(null);
   
-  // Extract YouTube video ID from various URL formats
+  // Extract YouTube video ID from various URL formats (including Shorts)
   const getYouTubeId = (url: string): string | null => {
     if (!url) return null;
     
@@ -36,6 +36,7 @@ export function VideoModal({ isOpen, onClose, videoUrl, title }: VideoModalProps
     if (isOpen && videoUrl) {
       const videoId = getYouTubeId(videoUrl);
       if (videoId) {
+        // Use youtube-nocookie.com for privacy, autoplay enabled
         setEmbedUrl(`https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1&playsinline=1`);
       } else {
         setEmbedUrl(null);
